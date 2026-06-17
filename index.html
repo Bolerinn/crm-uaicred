@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UaiCred — CRM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: #f0f4ff;
+    color: #1e3a5f;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .st-aguardando-doc { background: #fef3c7; color: #92400e; }
+  .st-aguardando-vis { background: #e0e7ff; color: #3730a3; }
+  .st-aguardando-laudo { background: #fce7f3; color: #9d174d; }
+  .st-conformidade { background: #d1fae5; color: #065f46; }
+  .st-em-registro { background: #dbeafe; color: #1e40af; }
+
+  .table-container {
+    overflow-x: auto;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(30, 58, 95, 0.08);
+    border: 1px solid #dbe5f0;
+  }
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #1e3a5f;
+    color: white;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 50;
+    background: #1e3a5f;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-weight: 500;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  .filter-btn {
+    padding: 4px 14px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+  }
+  .filter-btn.active {
+    border-color: #f97316;
+    background: #fff7ed;
+    color: #c2410c;
+  }
+  .logo-bg { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8a 100%); }
+
+  [contenteditable="true"]:focus {
+    outline: 2px solid #f97316;
+    outline-offset: -2px;
+    background: #fff7ed;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== CONFIG SUPABASE ========== -->
+<script>
+// ⚠️ ALTERE AQUI para suas credenciais do Supabase
+const SUPABASE_URL = 'https://dztiktcvueorlafiocdf.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
+</script>
+
+<!-- ========== LOGIN SCREEN ========== -->
+<div id="loginScreen" class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 50%, #fef7ed 100%);">
+  <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md border border-blue-100">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 logo-bg rounded-2xl mb-4 shadow-lg shadow-blue-200">
+        <span class="text-white text-2xl font-bold" style="font-family: Georgia, serif;">U</span>
+      </div>
+      <h1 class="text-2xl font-bold" style="color: #1e3a5f;">UaiCred</h1>
+      <p class="text-gray-500 mt-1 text-sm">Correspondente Caixa Aqui</p>
+    </div>
+
+    <!-- Login form -->
+    <div id="loginForm">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+          <input id="loginEmail" type="email" class="w-full px-4 py-2.5 border border-blue-200 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-300 outline-none transition" placeholder="seu@email.com">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+          <input id="loginPassword" type="password" class="w-full px-4 py-2.5 border border-blue-200 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-300 outline-none transition" placeholder="••••••">
+        </div>
+        <button onclick="entrar()" class="w-full logo-bg text-white py-2.5 rounded-xl font-medium hover:brightness-110 transition shadow-md shadow-blue-200">
+          Entrar
+        </button>
+        <p id="loginError" class="text-red-500 text-sm text-center hidden"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MAIN APP ========== -->
+<div id="appScreen" class="hidden min-h-screen" style="background: #f0f4ff;">
+  <header class="logo-bg text-white px-6 py-3 flex items-center justify-between shadow-md">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+        <span class="text-white font-bold text-sm" style="font-family: Georgia, serif;">U</span>
+      </div>
+      <div>
+        <h1 class="text-lg font-semibold">UaiCred</h1>
+        <p class="text-xs text-blue-200">Correspondente Caixa Aqui</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="text-sm text-blue-200">
+        <span class="text-blue-300">Olá,</span>
+        <strong id="currentUser" class="text-white"></strong>
+      </span>
+      <button onclick="sair()" class="text-sm text-blue-300 hover:text-orange-300 transition">Sair</button>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <div class="px-6 py-4 flex flex-wrap gap-3 text-sm">
+    <div class="bg-white rounded-lg px-4 py-2 shadow-sm border border-blue-100">
+      <span class="text-gray-400">Total</span>
+      <span class="ml-2 font-semibold" id="totalCount" style="color:#1e3a5f;">0</span>
+    </div>
+    <div class="bg-white rounded-lg px-4 py-2 shadow-sm border border-blue-100">
+      <span class="text-gray-400">📋 Aguard. Doc</span>
+      <span class="ml-2 font-semibold text-amber-600" id="docCount">0</span>
+    </div>
+    <div class="bg-white rounded-lg px-4 py-2 shadow-sm border border-blue-100">
+      <span class="text-gray-400">🔍 Aguard. Vistoria</span>
+      <span class="ml-2 font-semibold text-indigo-600" id="visCount">0</span>
+    </div>
+    <div class="bg-white rounded-lg px-4 py-2 shadow-sm border border-blue-100">
+      <span class="text-gray-400">✅ Conformidade</span>
+      <span class="ml-2 font-semibold text-emerald-600" id="confCount">0</span>
+    </div>
+  </div>
+
+  <!-- Filter: Status -->
+  <div class="px-6 mb-2 flex flex-wrap items-center gap-2">
+    <span class="text-xs font-semibold uppercase tracking-wider" style="color:#1e3a5f;">Status:</span>
+    <button class="filter-btn filter-btn-status active" onclick="filtrarStatus('todos', this)">Todos</button>
+    <button class="filter-btn filter-btn-status" onclick="filtrarStatus('aguardando-doc', this)">Aguardando Doc</button>
+    <button class="filter-btn filter-btn-status" onclick="filtrarStatus('aguardando-vis', this)">Aguardando Vistoria</button>
+    <button class="filter-btn filter-btn-status" onclick="filtrarStatus('aguardando-laudo', this)">Aguardando Laudo</button>
+    <button class="filter-btn filter-btn-status" onclick="filtrarStatus('conformidade', this)">Conformidade</button>
+    <button class="filter-btn filter-btn-status" onclick="filtrarStatus('em-registro', this)">Em Registro</button>
+  </div>
+
+  <!-- Filter: Produto -->
+  <div class="px-6 mb-4 flex flex-wrap items-center gap-2">
+    <span class="text-xs font-semibold uppercase tracking-wider" style="color:#1e3a5f;">Produto:</span>
+    <button class="filter-btn filter-btn-produto active" onclick="filtrarProduto('todos', this)">Todos</button>
+    <button class="filter-btn filter-btn-produto" onclick="filtrarProduto('SBPE', this)">SBPE</button>
+    <button class="filter-btn filter-btn-produto" onclick="filtrarProduto('FGTS', this)">FGTS</button>
+  </div>
+
+  <!-- Table -->
+  <div class="px-6 pb-6">
+    <div class="table-container bg-white">
+      <table class="w-full text-sm" id="crmTable">
+        <thead>
+          <tr>
+            <th class="text-left px-2 py-3 w-10">#</th>
+            <th class="text-left px-3 py-3">Indicação</th>
+            <th class="text-left px-3 py-3">Cliente</th>
+            <th class="text-left px-3 py-3">CPF</th>
+            <th class="text-left px-3 py-3">Agência</th>
+            <th class="text-left px-3 py-3">Valor Imóvel</th>
+            <th class="text-left px-3 py-3">Valor Financ.</th>
+            <th class="text-left px-3 py-3">Produto</th>
+            <th class="text-left px-3 py-3">Data Vistoria</th>
+            <th class="text-left px-3 py-3">Status</th>
+            <th class="text-left px-3 py-3">Obs</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-3">
+      <button onclick="adicionarCliente()" class="inline-flex items-center gap-2 logo-bg hover:brightness-110 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm shadow-blue-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Novo Cliente
+      </button>
+      <button onclick="exportarExcel()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm shadow-emerald-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Exportar Planilha
+      </button>
+      <button onclick="exportarCSV()" class="inline-flex items-center gap-2 bg-white border border-blue-200 hover:border-orange-300 hover:bg-orange-50 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Exportar CSV
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ========== SUPABASE ==========
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ========== STATE ==========
+const STATUS_OPTS = [
+  { id: 'aguardando-doc',  label: 'Aguardando Documentação' },
+  { id: 'aguardando-vis',  label: 'Aguardando Vistoria' },
+  { id: 'aguardando-laudo',label: 'Aguardando Laudo' },
+  { id: 'conformidade',    label: 'Conformidade' },
+  { id: 'em-registro',     label: 'Em Registro' },
+];
+const PRODUTO_OPTS = ['SBPE', 'FGTS'];
+
+let clientes = [];
+let usuarioEmail = '';
+let filtroStatus = 'todos';
+let filtroProduto = 'todos';
+
+// ========== AUTH ==========
+async function entrar() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errorEl = document.getElementById('loginError');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Preencha e-mail e senha.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    errorEl.textContent = error.message;
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  usuarioEmail = data.user.email;
+  document.getElementById('currentUser').textContent = data.user.email.split('@')[0];
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
+  carregarDados();
+  ouvirTempoReal();
+}
+
+async function sair() {
+  await supabase.auth.signOut();
+  document.getElementById('appScreen').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+// ========== CRUD ==========
+async function carregarDados() {
+  const { data, error } = await supabase
+    .from('clientes')
+    .select('*')
+    .order('id');
+
+  if (error) { mostrarToast('Erro ao carregar dados'); return; }
+  clientes = data || [];
+  renderizarTabela();
+}
+
+async function adicionarCliente() {
+  const { data: user } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('clientes')
+    .insert({
+      cliente: 'Novo Cliente',
+      produto: 'SBPE',
+      status: 'aguardando-doc',
+      data_vistoria: '—',
+      created_by: user.user?.id
+    })
+    .select()
+    .single();
+
+  if (error) { mostrarToast('Erro ao adicionar'); return; }
+  clientes.push(data);
+  renderizarTabela();
+  mostrarToast('Cliente adicionado ✏️');
+  setTimeout(() => {
+    const row = document.querySelector(`tr[data-id="${data.id}"]`);
+    if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }, 50);
+}
+
+async function atualizarCampo(id, campo, valor) {
+  const { error } = await supabase
+    .from('clientes')
+    .update({ [campo]: valor })
+    .eq('id', id);
+
+  if (error) { mostrarToast('Erro ao salvar'); return; }
+
+  const c = clientes.find(c => c.id === id);
+  if (c) { c[campo] = valor; }
+  atualizarStats();
+}
+
+// ========== REALTIME ==========
+function ouvirTempoReal() {
+  supabase
+    .channel('clientes-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, payload => {
+      if (payload.eventType === 'INSERT') {
+        clientes.push(payload.new);
+      } else if (payload.eventType === 'UPDATE') {
+        const idx = clientes.findIndex(c => c.id === payload.new.id);
+        if (idx >= 0) clientes[idx] = payload.new;
+      } else if (payload.eventType === 'DELETE') {
+        clientes = clientes.filter(c => c.id !== payload.old.id);
+      }
+      renderizarTabela();
+    })
+    .subscribe();
+}
+
+// ========== FILTERS ==========
+function filtrarStatus(status, btn) {
+  filtroStatus = status;
+  document.querySelectorAll('.filter-btn-status').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarTabela();
+}
+
+function filtrarProduto(produto, btn) {
+  filtroProduto = produto;
+  document.querySelectorAll('.filter-btn-produto').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarTabela();
+}
+
+// ========== RENDER ==========
+function renderizarTabela() {
+  const tbody = document.getElementById('tableBody');
+  const filtrados = clientes.filter(c => {
+    const passaStatus = filtroStatus === 'todos' || c.status === filtroStatus;
+    const passaProduto = filtroProduto === 'todos' || c.produto === filtroProduto;
+    return passaStatus && passaProduto;
+  });
+
+  if (filtrados.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-12 text-gray-400">Nenhum cliente encontrado.</td></tr>';
+    atualizarStats();
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map((c, i) => {
+    const idx = clientes.indexOf(c);
+    return `
+    <tr class="border-b border-blue-50 hover:bg-orange-50/40 transition" data-id="${c.id}">
+      <td class="px-2 py-2.5 text-gray-400 text-xs text-center">${idx + 1}</td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.indicacao||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.cliente||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cpf" class="editavel px-1 -mx-1 rounded font-mono text-xs" onblur="editarCampo(this)">${c.cpf||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="agencia" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.agencia||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.valor_imovel||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.valor_financiado||''}</span></td>
+      <td class="px-3 py-2.5">
+        <select onchange="atualizarCampo(${c.id},'produto',this.value)" class="text-xs font-semibold border-0 bg-transparent cursor-pointer focus:ring-2 focus:ring-orange-300 rounded-lg p-1">
+          ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="data_vistoria" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.data_vistoria||''}</span></td>
+      <td class="px-3 py-2.5">
+        <select onchange="atualizarCampo(${c.id},'status',this.value)" class="text-xs border-0 bg-transparent cursor-pointer focus:ring-2 focus:ring-orange-300 rounded-lg p-1">
+          ${STATUS_OPTS.map(s => `<option value="${s.id}" ${s.id===c.status?'selected':''}>${s.label}</option>`).join('')}
+        </select>
+      </td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.obs||''}</span></td>
+    </tr>`;
+  }).join('');
+  atualizarStats();
+}
+
+function editarCampo(el) {
+  const id = parseInt(el.dataset.id);
+  const campo = el.dataset.campo;
+  atualizarCampo(id, campo, el.textContent.trim());
+}
+
+function atualizarStats() {
+  document.getElementById('totalCount').textContent = clientes.length;
+  document.getElementById('docCount').textContent = clientes.filter(c => c.status === 'aguardando-doc').length;
+  document.getElementById('visCount').textContent = clientes.filter(c => c.status === 'aguardando-vis').length;
+  document.getElementById('confCount').textContent = clientes.filter(c => c.status === 'conformidade').length;
+}
+
+// ========== EXPORTS ==========
+function exportarCSV() {
+  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Data Vistoria','Status','Obs'];
+  const rows = clientes.map(c => [
+    c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.data_vistoria,
+    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.map(v => '"'+(v||'')+'"').join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'uaicred-clientes.csv';
+  link.click();
+  URL.revokeObjectURL(link.href);
+  mostrarToast('CSV exportado 📥');
+}
+
+function exportarExcel() {
+  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Data Vistoria','Status','Obs'];
+  const rows = clientes.map(c => [
+    c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.data_vistoria,
+    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+  ]);
+  const data = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{ wch:22 },{ wch:26 },{ wch:16 },{ wch:22 },{ wch:16 },{ wch:16 },{ wch:10 },{ wch:16 },{ wch:22 },{ wch:30 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+  XLSX.writeFile(wb, 'uaicred-clientes.xlsx');
+  mostrarToast('Planilha exportada 📊');
+}
+
+function mostrarToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ========== CHECK SESSION ==========
+(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    usuarioEmail = session.user.email;
+    document.getElementById('currentUser').textContent = session.user.email.split('@')[0];
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.remove('hidden');
+    carregarDados();
+    ouvirTempoReal();
+  }
+})();
+</script>
+</body>
+</html>

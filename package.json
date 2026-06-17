@@ -1,0 +1,13 @@
+{
+  "name": "crm-uaicred",
+  "version": "1.0.0",
+  "description": "CRM UaiCred — Correspondente Caixa Aqui",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "cp -r public/* ."
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "pg": "^8.21.0"
+  }
+}
