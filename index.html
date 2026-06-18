@@ -1697,9 +1697,6 @@ function renderizarTabelaAndamento() {
       </td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
       <td class="px-2 py-2.5 text-center">
-        <input type="checkbox" ${c.convertido?'checked':''} onchange="converterCliente(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Converter em processo ativo">
-      </td>
-      <td class="px-2 py-2.5 text-center">
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
     </tr>
@@ -1918,7 +1915,7 @@ function atualizarStats() {
   statsBar.innerHTML = `
     <div class="stat-card">
       <span class="stat-label">Total</span>
-      <span class="stat-value" style="color:#fff;">${clientes.length}</span>
+      <span class="stat-value" style="color:var(--accent);">${clientes.length}</span>
     </div>
   `;
 }
