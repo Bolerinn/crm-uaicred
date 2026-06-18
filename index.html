@@ -21,8 +21,8 @@ async function initProfile() {
   let nome = meta.nome || email.split('@')[0].replace(/[.+]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   let tipo = meta.tipo || (email === 'contatoadouglas@gmail.com' ? 'master' : 'user');
   let forcePw = meta.force_password_change;
-  // Master nunca é forçado a trocar senha
-  if (email === 'contatoadouglas@gmail.com') forcePw = false;
+  // Master nunca é forçado; usuários também não (trocam nas Configurações)
+  forcePw = false;
   if (!meta.nome || !meta.tipo || forcePw === undefined) {
     const { error } = await sb.auth.updateUser({ data: { nome, tipo, force_password_change: forcePw ?? true } });
     if (!error) {
