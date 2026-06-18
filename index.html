@@ -862,6 +862,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Data Vistoria</th>
                 <th class="text-left px-3 py-3">Status</th>
                 <th class="text-left px-3 py-3">Obs</th>
+                <th class="text-left px-2 py-3 w-10"></th>
               </tr>
             </thead>
             <tbody id="tableBodyEmitidos"></tbody>
@@ -1495,6 +1496,12 @@ function gerarBriefing(id) {
   mostrarToast('📄 Briefing em desenvolvimento — em breve disponível');
 }
 
+async function reverterEmitido(id) {
+  if (!isMaster()) { mostrarToast('Apenas Master pode reverter'); return; }
+  await atualizarCampo(id, 'status', 'aguardando-doc');
+  mostrarToast('↩ Processo revertido para Análises');
+}
+
 // ========== BANCO MULTI / RESULTADO ==========
 function getBancosMarcados(c) {
   const bancos = [];
@@ -1698,10 +1705,12 @@ function renderizarTabelaEmitidos() {
   const filtrados = clientes.filter(c => c.status === 'emitido');
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
     atualizarStatsEmitidos();
     return;
   }
+
+  const master = isMaster();
 
   tbody.innerHTML = filtrados.map((c, i) => {
     const idx = clientes.indexOf(c);
@@ -1719,6 +1728,9 @@ function renderizarTabelaEmitidos() {
       <td class="px-3 py-2.5 text-gray-400 text-xs">${c.data_vistoria||'—'}</td>
       <td class="px-3 py-2.5"><span class="status-badge st-emitido">Contrato Emitido ✨</span></td>
       <td class="px-3 py-2.5 text-gray-500 text-xs max-w-[120px] truncate">${c.obs||'—'}</td>
+      <td class="px-2 py-2.5 text-center">
+        ${master ? `<button onclick="reverterEmitido(${c.id})" class="text-xs px-2 py-1 rounded-lg border transition" style="color:var(--accent);border-color:var(--accent);background:transparent;" title="Reverter para Análises">↩</button>` : ''}
+      </td>
     </tr>`;
   }).join('');
   atualizarStatsEmitidos();
