@@ -736,9 +736,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
 
       <!-- Month Selector -->
       <div class="flex items-center gap-4 px-6 py-2" id="mesSelectorAnalises">
-        <button onclick="mudarMesAnalises(-1)" class="text-lg hover:text-orange-500 transition">◀</button>
-        <span id="mesLabelAnalises" class="font-semibold text-sm" style="color:var(--text);"></span>
-        <button onclick="mudarMesAnalises(1)" class="text-lg hover:text-orange-500 transition">▶</button>
+        <button onclick="mudarMesAnalises(-1)" class="text-sm px-2 py-1 rounded-lg transition" style="color:var(--text-muted);border:1px solid var(--border);background:var(--bg-card);" title="Mês anterior">◀</button>
+        <span id="mesLabelAnalises" class="text-sm font-semibold px-2" style="color:var(--text);min-width:100px;text-align:center;"></span>
+        <button onclick="mudarMesAnalises(1)" class="text-sm px-2 py-1 rounded-lg transition" style="color:var(--text-muted);border:1px solid var(--border);background:var(--bg-card);" title="Próximo mês">▶</button>
       </div>
 
       <!-- Table -->
