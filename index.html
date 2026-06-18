@@ -1452,7 +1452,8 @@ function mudarMesAnalises(delta) {
 function atualizarMesLabelAnalises() {
   const el = document.getElementById('mesLabelAnalises');
   if (el) {
-    el.textContent = new Date(anoAtual, mesAtual).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    el.textContent = meses[mesAtual] + ' ' + anoAtual;
   }
 }
 
