@@ -1977,8 +1977,11 @@ async function iniciarNovaCompetencia() {
   
   const origem = clientes.filter(c => c.mes_referencia === mesSelecionado && c.status !== 'emitido');
   const followUps = clientes.filter(c => c.follow_up === true && !c.mes_referencia && c.convertido !== true);
-  const todos = [...origem, ...followUps.filter(f => !origem.some(o => o.id === f.id))];
-  console.log('iniciarNova: origem='+origem.length+' followUps='+followUps.length+' total='+todos.length);
+  // Filtra clientes que ja existem no mes alvo (evita duplicatas)
+  const existentesNoAlvo = clientes.filter(c => c.mes_referencia === mesAlvo).map(c => c.cliente);
+  const todos = [...origem, ...followUps.filter(f => !origem.some(o => o.id === f.id))]
+    .filter(c => !existentesNoAlvo.includes(c.cliente));
+  console.log('iniciarNova: origem='+origem.length+' followUps='+followUps.length+' total='+todos.length+' existentes='+existentesNoAlvo.length);
   if (todos.length === 0) {
     mostrarToast('Nenhum processo pendente para duplicar.');
     return;
