@@ -620,9 +620,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
 <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4" style="background: var(--bg-body);">
   <div class="login-card w-full max-w-md">
     <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style="background: linear-gradient(135deg, #f97316, #ea580c);">
-        <span class="text-white text-xl font-bold" style="font-family: Georgia, serif;">RP</span>
-      </div>
+      <img src="logo-p.png" alt="Rede Prime" class="mx-auto w-16 h-16 rounded-2xl mb-4 object-contain">
       <h1 class="text-2xl font-bold" style="color:var(--text);">Rede Prime Assessoria RMS</h1>
       <p class="mt-1 text-sm" style="color:var(--text-muted);">CRM Prime Assessoria RMS</p>
     </div>
@@ -633,10 +631,12 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
           <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">Nome</label>
           <input id="loginEmail" type="text" class="login-input" placeholder="Seu primeiro nome" autocomplete="off">
         </div>
-        <div style="position:relative;">
+        <div>
           <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">Senha</label>
+          <div style="position:relative;">
           <input id="loginPassword" type="password" class="login-input" placeholder="••••••" style="padding-right:44px;">
-          <button type="button" onclick="toggleSenha('loginPassword', this)" style="position:absolute;right:8px;bottom:8px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);padding:4px;" title="Mostrar senha">👁️</button>
+          <button type="button" onclick="toggleSenha('loginPassword', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);padding:4px;" title="Mostrar senha">👁️</button>
+          </div>
         </div>
         <button onclick="entrar()" class="w-full text-white py-2.5 rounded-xl font-medium transition shadow-lg" style="background: linear-gradient(135deg, #f97316, #ea580c);">
           Entrar
@@ -651,23 +651,25 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
 <div id="pwChangeScreen" class="hidden modal-overlay">
   <div class="modal-box" style="text-align:center;">
     <div class="text-center mb-6">
-      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3" style="background: linear-gradient(135deg, #f97316, #ea580c);">
-        <span class="text-white text-lg font-bold" style="font-family: Georgia, serif;">RP</span>
-      </div>
+      <img src="logo-p.png" alt="Rede Prime" class="w-14 h-14 rounded-2xl mb-3 object-contain">
       <h2 class="text-xl font-bold" style="color:var(--text);">🔒 Bem-vindo à Rede Prime!</h2>
       <p class="text-sm mt-1" style="color:var(--text-secondary);">Crie sua senha pessoal para continuar</p>
     </div>
     <div class="space-y-4">
-      <div style="position:relative;">
+      <div>
         <label class="block text-sm font-medium mb-1 text-left" style="color:var(--text-secondary);">Nova Senha</label>
+        <div style="position:relative;">
         <input id="pwNew" type="password" oninput="validarPw()" class="input-fw" placeholder="Mínimo 8 caracteres" style="padding-right:44px;">
-        <button type="button" onclick="toggleSenha('pwNew', this)" style="position:absolute;right:8px;bottom:8px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);padding:4px;" title="Mostrar senha">👁️</button>
+        <button type="button" onclick="toggleSenha('pwNew', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);padding:4px;" title="Mostrar senha">👁️</button>
+        </div>
         <p id="pwNewMsg" class="text-xs mt-1 text-left"></p>
       </div>
-      <div style="position:relative;">
+      <div>
         <label class="block text-sm font-medium mb-1 text-left" style="color:var(--text-secondary);">Confirmar Senha</label>
+        <div style="position:relative;">
         <input id="pwConfirm" type="password" oninput="validarPw()" class="input-fw" placeholder="Repita a senha" style="padding-right:44px;">
-        <button type="button" onclick="toggleSenha('pwConfirm', this)" style="position:absolute;right:8px;bottom:8px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);padding:4px;" title="Mostrar senha">👁️</button>
+        <button type="button" onclick="toggleSenha('pwConfirm', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);padding:4px;" title="Mostrar senha">👁️</button>
+        </div>
         <p id="pwConfirmMsg" class="text-xs mt-1 text-left"></p>
       </div>
       <p id="pwError" class="text-red-500 text-sm text-center hidden"></p>
@@ -683,7 +685,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
   <!-- SIDEBAR -->
   <aside id="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-icon">RP</div>
+      <div class="logo-icon"><img src="logo-p.png" alt="P" class="w-6 h-6 object-contain"></div>
       <div>
         <div class="logo-text">Rede Prime</div>
         <div class="logo-sub">Assessoria RMS</div>
@@ -2001,196 +2003,9 @@ function renderizarFiltros() {
   }
 }
 
-function renderizarMetricas() {
-  const container = document.getElementById('metricasContent');
-  const total = clientes.length;
-  const emitidos = clientes.filter(c => c.status === 'emitido').length;
-  const emAndamento = total - emitidos;
-
-  // Status distribution
-  const distStatus = {};
-  STATUS_OPTS.forEach(s => { distStatus[s.id] = clientes.filter(c => c.status === s.id).length; });
-
-  // Product distribution
-  const sbpe = clientes.filter(c => c.produto === 'SBPE').length;
-  const fgts = clientes.filter(c => c.produto === 'FGTS').length;
-
-  // Top indicators
-  const indicadores = {};
-  clientes.forEach(c => {
-    const ind = c.indicacao || 'Sem indicação';
-    indicadores[ind] = (indicadores[ind] || 0) + 1;
-  });
-  const topIndicadores = Object.entries(indicadores).sort((a,b) => b[1]-a[1]).slice(0,5);
-
-  // Total valor financiado
-  const totalFinanciado = clientes.reduce((sum, c) => {
-    const v = parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g, '').replace(',','.')) || 0;
-    return sum + v;
-  }, 0);
-
-  const maxStatus = Math.max(1, ...Object.values(distStatus));
-
-  let html = '';
-
-  // KPI cards
-  html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-    <div class="metrica-card text-center">
-      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Processos</div>
-      <div class="metrica-number">${total}</div>
-    </div>
-    <div class="metrica-card text-center">
-      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Em Andamento</div>
-      <div class="metrica-number" style="color:#60a5fa;">${emAndamento}</div>
-    </div>
-    <div class="metrica-card text-center">
-      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Emitidos</div>
-      <div class="metrica-number" style="color:#d4a853;">${emitidos}</div>
-    </div>
-    <div class="metrica-card text-center">
-      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Financiado</div>
-      <div class="metrica-number" style="font-size:1.4rem;color:#34d399;">R$ ${totalFinanciado.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
-    </div>
-  </div>`;
-
-  // Status distribution bars
-  html += `<div class="metrica-card mb-4">
-    <div class="text-gray-400 text-xs uppercase tracking-wider mb-4">Distribuição por Status</div>
-    ${STATUS_OPTS.map(s => {
-      const count = distStatus[s.id] || 0;
-      const pct = maxStatus > 0 ? (count/maxStatus*100) : 0;
-      const barColor = s.id === 'emitido' ? '#d4a853' : '#f97316';
-      return `<div class="flex items-center gap-3 mb-3">
-        <span class="text-xs text-gray-500 w-36 truncate">${s.label}</span>
-        <div class="flex-1 metrica-bar">
-          <div class="metrica-bar-fill" style="width:${pct}%;background:${barColor};"></div>
-        </div>
-        <span class="text-xs text-gray-400 w-8 text-right font-mono">${count}</span>
-      </div>`;
-    }).join('')}
-  </div>`;
-
-  // Product + top indicators
-  html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="metrica-card">
-      <div class="text-gray-400 text-xs uppercase tracking-wider mb-4">Por Produto</div>
-      <div class="flex items-center gap-3 mb-3">
-        <span class="text-xs text-gray-500 w-16">SBPE</span>
-        <div class="flex-1 metrica-bar"><div class="metrica-bar-fill" style="width:${total>0?(sbpe/total*100):0}%;background:#f97316;"></div></div>
-        <span class="text-xs text-gray-400 w-8 text-right font-mono">${sbpe}</span>
-      </div>
-      <div class="flex items-center gap-3 mb-3">
-        <span class="text-xs text-gray-500 w-16">FGTS</span>
-        <div class="flex-1 metrica-bar"><div class="metrica-bar-fill" style="width:${total>0?(fgts/total*100):0}%;background:#d4a853;"></div></div>
-        <span class="text-xs text-gray-400 w-8 text-right font-mono">${fgts}</span>
-      </div>
-    </div>
-    <div class="metrica-card">
-      <div class="text-gray-400 text-xs uppercase tracking-wider mb-4">Top Indicações</div>
-      ${topIndicadores.length === 0 ? '<p class="text-gray-600 text-sm">Sem dados</p>' : topIndicadores.map(([nome, qtd], i) => `
-        <div class="flex items-center justify-between py-1.5 border-b border-[#1f1f1f] last:border-0">
-          <span class="text-sm text-gray-300">${i+1}. ${nome}</span>
-          <span class="text-xs font-mono font-semibold" style="color:#f97316;">${qtd}</span>
-        </div>
-      `).join('')}
-    </div>
-  </div>`;
-
-  container.innerHTML = html;
-}
-
-function editarCampo(el) {
-  const id = parseInt(el.dataset.id);
-  const campo = el.dataset.campo;
-  atualizarCampo(id, campo, el.textContent.trim());
-}
-
-function atualizarStats() {
-  const statsBar = document.getElementById('statsBar');
-  if (!statsBar) return;
-
-  statsBar.innerHTML = `
-    <div class="stat-card">
-      <span class="stat-label">Total</span>
-      <span class="stat-value" style="color:var(--accent);">${clientes.length}</span>
-    </div>
-  `;
-}
-
-function atualizarStatsAndamento() {
-  const bar = document.getElementById('statsBarAndamento');
-  const ativos = clientes.filter(c => c.status !== 'emitido');
-  const statusCounts = {};
-  STATUS_OPTS.forEach(s => { statusCounts[s.id] = ativos.filter(c => c.status === s.id).length; });
-
-  bar.innerHTML = `
-    <div class="stat-card"><span class="stat-label">Em Andamento</span><span class="stat-value" style="color:#60a5fa;">${ativos.length}</span></div>
-    <div class="stat-card"><span class="stat-label">📋 Aguard. Doc</span><span class="stat-value" style="color:#fbbf24;">${statusCounts['aguardando-doc']||0}</span></div>
-    <div class="stat-card"><span class="stat-label">🔍 Aguard. Vistoria</span><span class="stat-value" style="color:#818cf8;">${statusCounts['aguardando-vis']||0}</span></div>
-    <div class="stat-card"><span class="stat-label">✅ Conformidade</span><span class="stat-value" style="color:#34d399;">${statusCounts['conformidade']||0}</span></div>
-    <div class="stat-card"><span class="stat-label">⚖️ Análise Jurídica</span><span class="stat-value" style="color:#f87171;">${statusCounts['analise-juridica']||0}</span></div>
-  `;
-}
-
-function atualizarStatsEmitidos() {
-  const bar = document.getElementById('statsBarEmitidos');
-  const emitidos = getFiltrados();
-  const totalFin = emitidos.reduce((sum, c) => sum + (parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g,'').replace(',','.'))||0), 0);
-
-  bar.innerHTML = `
-    <div class="stat-card"><span class="stat-label">✅ Contratos Emitidos</span><span class="stat-value" style="color:#d4a853;">${emitidos.length}</span></div>
-    <div class="stat-card"><span class="stat-label">💰 Total Financiado</span><span class="stat-value" style="color:#34d399;font-size:1.1rem;">R$ ${totalFin.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>
-    <div class="stat-card"><span class="stat-label">🏦 SBPE</span><span class="stat-value" style="color:#f97316;">${emitidos.filter(c=>c.produto==='SBPE').length}</span></div>
-    <div class="stat-card"><span class="stat-label">🏗️ FGTS</span><span class="stat-value" style="color:#d4a853;">${emitidos.filter(c=>c.produto==='FGTS').length}</span></div>
-  `;
-}
-
-// ========== EXPORTS ==========
-function exportarCSV() {
-  const headers = ['Indicação','Cliente','CPF','Banco Caixa','Banco Bradesco','Banco Itaú','Banco Santander','Banco Inter','Resultado Caixa','Resultado Bradesco','Resultado Itaú','Resultado Santander','Resultado Inter','Agência','Valor Imóvel','Valor Financiado','Produto','Obs'];
-  const rows = clientes.map(c => [
-    c.indicacao, c.cliente, c.cpf,
-    c.banco_caixa ? 'Sim' : 'Não', c.banco_bradesco ? 'Sim' : 'Não', c.banco_itau ? 'Sim' : 'Não', c.banco_santander ? 'Sim' : 'Não', c.banco_inter ? 'Sim' : 'Não',
-    c.resultado_caixa, c.resultado_bradesco, c.resultado_itau, c.resultado_santander, c.resultado_inter,
-    c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.obs
-  ]);
-  const csv = [headers.join(','), ...rows.map(r => r.map(v => '"'+(v||'')+'"').join(','))].join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'rede-prime-clientes.csv';
-  link.click();
-  URL.revokeObjectURL(link.href);
-  mostrarToast('CSV exportado 📥');
-}
-
-function exportarExcel() {
-  const headers = ['Indicação','Cliente','CPF','Banco Caixa','Banco Bradesco','Banco Itaú','Banco Santander','Banco Inter','Resultado Caixa','Resultado Bradesco','Resultado Itaú','Resultado Santander','Resultado Inter','Agência','Valor Imóvel','Valor Financiado','Produto','Obs'];
-  const rows = clientes.map(c => [
-    c.indicacao, c.cliente, c.cpf,
-    c.banco_caixa ? 'Sim' : 'Não', c.banco_bradesco ? 'Sim' : 'Não', c.banco_itau ? 'Sim' : 'Não', c.banco_santander ? 'Sim' : 'Não', c.banco_inter ? 'Sim' : 'Não',
-    c.resultado_caixa, c.resultado_bradesco, c.resultado_itau, c.resultado_santander, c.resultado_inter,
-    c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.obs
-  ]);
-  const data = [headers, ...rows];
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{ wch:22 },{ wch:26 },{ wch:16 },{ wch:12 },{ wch:14 },{ wch:12 },{ wch:14 },{ wch:12 },{ wch:14 },{ wch:14 },{ wch:14 },{ wch:14 },{ wch:14 },{ wch:22 },{ wch:16 },{ wch:16 },{ wch:10 },{ wch:30 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Processos');
-  XLSX.writeFile(wb, 'rede-prime-processos.xlsx');
-  mostrarToast('Planilha exportada 📊');
-}
-
-function mostrarToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-// ========== CHECK SESSION ==========
+// ========== SESSION RESUME ==========
 (async () => {
+  try {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     usuarioEmail = session.user.email;
@@ -2215,8 +2030,10 @@ function mostrarToast(msg) {
     carregarDados();
     ouvirTempoReal();
   }
+  } catch(e) {
+    console.error('Session resume error:', e);
+  }
 })();
 </script>
-<datalist id="indicacaoSuggestions"></datalist>
 </body>
 </html>
