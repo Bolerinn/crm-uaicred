@@ -1972,10 +1972,8 @@ function renderizarFiltrosEmitidos() {
   `).join('');
 }
 
-let duplicandoMes = false;
 async function iniciarNovaCompetencia() {
-  if (duplicandoMes) return;
-  duplicandoMes = true;
+  console.log('>>> CLICOU <<<');
   const [ano, mes] = mesSelecionado.split('-').map(Number);
   const dataSeguinte = new Date(ano, mes, 1);
   const mesAlvo = dataSeguinte.toISOString().slice(0,7);
@@ -1990,7 +1988,7 @@ async function iniciarNovaCompetencia() {
     mostrarToast('Nenhum processo pendente para duplicar.');
     return;
   }
-  try { await duplicarClientes(todos, mesAlvo); } finally { duplicandoMes = false; }
+  await duplicarClientes(todos, mesAlvo);
 }
 
 async function duplicarClientes(lista, novoMes) {
