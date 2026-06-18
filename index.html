@@ -900,8 +900,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="px-3 py-2 text-left">Cliente</th>
                 <th class="px-3 py-2 text-left">Banco</th>
                 <th class="px-3 py-2 text-left">Produto</th>
+                <th class="px-3 py-2 text-left">Etapa</th>
                 <th class="px-3 py-2 text-left">Excluído em</th>
-                <th class="px-3 py-2 text-left">Ação</th>
+                <th class="px-3 py-2 text-left">Ações</th>
               </tr>
             </thead>
             <tbody id="tableBodyLixeira"></tbody>
@@ -2017,13 +2018,19 @@ function renderizarTabelaLixeira() {
   vazia.classList.add('hidden');
   tbody.innerHTML = clientesLixeira.map((c, i) => {
     const data = c.deleted_at ? new Date(c.deleted_at).toLocaleDateString('pt-BR') : '—';
+    const etapa = c.status === 'emitido' ? 'EMITIDO' : c.mes_referencia ? 'EM ANDAMENTO' : 'ANÁLISE';
+    const etapaCor = etapa === 'EMITIDO' ? '#b8860b' : etapa === 'EM ANDAMENTO' ? '#f97316' : '#6b7280';
     return '<tr>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + (i+1) + '</td>' +
       '<td class="px-3 py-2 font-medium" style="color:var(--text);">' + (c.cliente || '—') + '</td>' +
       '<td class="px-3 py-2">' + (c.banco || '—') + '</td>' +
       '<td class="px-3 py-2">' + (c.produto || '—') + '</td>' +
+      '<td class="px-3 py-2"><span style="color:' + etapaCor + ';font-weight:600;font-size:0.7rem;">' + etapa + '</span></td>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + data + '</td>' +
-      '<td class="px-3 py-2"><button onclick="restaurarDaLixeira(' + c.id + ')" style="background:#10b981;color:#fff;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:0.7rem;">↩ Restaurar</button></td>' +
+      '<td class="px-3 py-2">' +
+        '<button onclick="restaurarDaLixeira(' + c.id + ')" style="background:#10b981;color:#fff;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:0.7rem;">↩ Restaurar</button> ' +
+        '<button onclick="excluirPermanentemente(' + c.id + ')" style="background:#ef4444;color:#fff;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:0.7rem;">✕ Excluir</button>' +
+      '</td>' +
       '</tr>';
   }).join('');
 }
@@ -2034,6 +2041,15 @@ async function restaurarDaLixeira(id) {
   clientesLixeira = clientesLixeira.filter(c => c.id !== id);
   renderizarTabelaLixeira();
   mostrarToast('Processo restaurado ↩️');
+}
+
+async function excluirPermanentemente(id) {
+  if (!confirm('ATENÇÃO: Este processo será EXCLUÍDO PERMANENTEMENTE e não poderá ser recuperado. Continuar?')) return;
+  const { error } = await sbAdmin.from('clientes').delete().eq('id', id);
+  if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
+  clientesLixeira = clientesLixeira.filter(c => c.id !== id);
+  renderizarTabelaLixeira();
+  mostrarToast('Processo excluído permanentemente ❌');
 }
 
 function renderizarTudo() {
