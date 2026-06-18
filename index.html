@@ -1349,9 +1349,12 @@ async function adicionarCliente() {
 
 async function excluirCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
-  const { data, error } = await sb.from('clientes').delete().eq('id', id).select();
-  if (error || !data || data.length === 0) {
-    mostrarToast('Erro ao excluir (sem permissão ou já removido)');
+  const { error } = await sb.from('clientes').delete().eq('id', id);
+  if (error) { mostrarToast('Erro ao excluir'); return; }
+  // Verificar se realmente foi deletado (RLS pode bloquear sem dar erro)
+  const { data: check } = await sb.from('clientes').select('id').eq('id', id).maybeSingle();
+  if (check) {
+    mostrarToast('Erro ao excluir (sem permissão)');
     return;
   }
   clientes = clientes.filter(c => c.id !== id);
@@ -1746,8 +1749,11 @@ async function iniciarNovaCompetencia() {
 
 async function duplicarClientes(lista, novoMes) {
   let count = 0;
+  const { data: { user } } = await sb.auth.getUser();
+  const userId = user?.id;
   for (const c of lista) {
-    const { id, created_at, updated_at, created_by, ...dados } = c;
+    const { id, created_at, updated_at, ...dados } = c;
+    dados.created_by = userId; // garante permissão de delete
     dados.mes_referencia = novoMes;
     dados.status = dados.status || 'aguardando-doc';
     const { error } = await sb.from('clientes').insert(dados);
