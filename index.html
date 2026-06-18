@@ -1657,7 +1657,7 @@ function apenasNumeros(input) {
 function capitalizarCliente(el) {
   const txt = el.textContent.trim();
   if (!txt) return;
-  el.textContent = txt.replace(/\b\w/g, c => c.toUpperCase()).replace(/\B\w/g, c => c.toLowerCase());
+  el.textContent = txt.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
 }
 function formatarMoeda(input) {
   let v = input.value.replace(/\D/g, '');
