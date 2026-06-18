@@ -1673,6 +1673,12 @@ function mascaraData(input) {
   v = v.replace(/^(\d{2})\/(\d{2})(\d)/, '$1/$2/$3');
   input.value = v;
 }
+function editarCampo(el) {
+  const id = parseInt(el.dataset.id);
+  const campo = el.dataset.campo;
+  atualizarCampo(id, campo, el.textContent.trim());
+}
+
 function editarCampoInput(el) {
   const id = parseInt(el.dataset.id);
   const campo = el.dataset.campo;
@@ -2074,6 +2080,137 @@ async function excluirPermanentemente(id) {
   clientesLixeira = clientesLixeira.filter(c => c.id !== id);
   renderizarTabelaLixeira();
   mostrarToast('Processo excluído permanentemente '+String.fromCharCode(10060));
+}
+
+
+function exportarCSV() {
+  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Data Vistoria','Status','Obs'];
+  const rows = clientes.map(c => [
+    c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.banco, c.data_vistoria,
+    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.map(v => '"'+(v||'')+'"').join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'rede-prime-clientes.csv';
+  link.click();
+  URL.revokeObjectURL(link.href);
+  mostrarToast('CSV exportado 📥');
+}
+
+function exportarExcel() {
+  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Data Vistoria','Status','Obs'];
+  const rows = clientes.map(c => [
+    c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.banco, c.data_vistoria,
+    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+  ]);
+  const data = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{ wch:22 },{ wch:26 },{ wch:16 },{ wch:22 },{ wch:16 },{ wch:16 },{ wch:10 },{ wch:12 },{ wch:16 },{ wch:22 },{ wch:30 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Processos');
+  XLSX.writeFile(wb, 'rede-prime-processos.xlsx');
+  mostrarToast('Planilha exportada 📊');
+}
+
+
+function renderizarMetricas() {
+  const container = document.getElementById('metricasContent');
+  const total = clientes.length;
+  const emitidos = clientes.filter(c => c.status === 'em-registro').length;
+  const emAndamento = total - emitidos;
+
+  // Status distribution
+  const distStatus = {};
+  STATUS_OPTS.forEach(s => { distStatus[s.id] = clientes.filter(c => c.status === s.id).length; });
+
+  // Product distribution
+  const sbpe = clientes.filter(c => c.produto === 'SBPE').length;
+  const fgts = clientes.filter(c => c.produto === 'FGTS').length;
+
+  // Top indicators
+  const indicadores = {};
+  clientes.forEach(c => {
+    const ind = c.indicacao || 'Sem indicação';
+    indicadores[ind] = (indicadores[ind] || 0) + 1;
+  });
+  const topIndicadores = Object.entries(indicadores).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+  // Total valor financiado
+  const totalFinanciado = clientes.reduce((sum, c) => {
+    const v = parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g, '').replace(',','.')) || 0;
+    return sum + v;
+  }, 0);
+
+  const maxStatus = Math.max(1, ...Object.values(distStatus));
+
+  let html = '';
+
+  // KPI cards
+  html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="metrica-card text-center">
+      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Processos</div>
+      <div class="metrica-number">${total}</div>
+    </div>
+    <div class="metrica-card text-center">
+      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Em Andamento</div>
+      <div class="metrica-number" style="color:#60a5fa;">${emAndamento}</div>
+    </div>
+    <div class="metrica-card text-center">
+      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Emitidos</div>
+      <div class="metrica-number" style="color:#d4a853;">${emitidos}</div>
+    </div>
+    <div class="metrica-card text-center">
+      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Financiado</div>
+      <div class="metrica-number" style="font-size:1.4rem;color:#34d399;">R$ ${totalFinanciado.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+    </div>
+  </div>`;
+
+  // Status distribution bars
+  html += `<div class="metrica-card mb-4">
+    <div class="text-gray-400 text-xs uppercase tracking-wider mb-4">Distribuição por Status</div>
+    ${STATUS_OPTS.map(s => {
+      const count = distStatus[s.id] || 0;
+      const pct = maxStatus > 0 ? (count/maxStatus*100) : 0;
+      const barColor = s.id === 'em-registro' ? '#d4a853' : '#f97316';
+      return `<div class="flex items-center gap-3 mb-3">
+        <span class="text-xs text-gray-500 w-36 truncate">${s.label}</span>
+        <div class="flex-1 metrica-bar">
+          <div class="metrica-bar-fill" style="width:${pct}%;background:${barColor};"></div>
+        </div>
+        <span class="text-xs text-gray-400 w-8 text-right font-mono">${count}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  // Product + top indicators
+  html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="metrica-card">
+      <div class="text-gray-400 text-xs uppercase tracking-wider mb-4">Por Produto</div>
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-xs text-gray-500 w-16">SBPE</span>
+        <div class="flex-1 metrica-bar"><div class="metrica-bar-fill" style="width:${total>0?(sbpe/total*100):0}%;background:#f97316;"></div></div>
+        <span class="text-xs text-gray-400 w-8 text-right font-mono">${sbpe}</span>
+      </div>
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-xs text-gray-500 w-16">FGTS</span>
+        <div class="flex-1 metrica-bar"><div class="metrica-bar-fill" style="width:${total>0?(fgts/total*100):0}%;background:#d4a853;"></div></div>
+        <span class="text-xs text-gray-400 w-8 text-right font-mono">${fgts}</span>
+      </div>
+    </div>
+    <div class="metrica-card">
+      <div class="text-gray-400 text-xs uppercase tracking-wider mb-4">Top Indicações</div>
+      ${topIndicadores.length === 0 ? '<p class="text-gray-600 text-sm">Sem dados</p>' : topIndicadores.map(([nome, qtd], i) => `
+        <div class="flex items-center justify-between py-1.5 border-b border-[#1f1f1f] last:border-0">
+          <span class="text-sm text-gray-300">${i+1}. ${nome}</span>
+          <span class="text-xs font-mono font-semibold" style="color:#f97316;">${qtd}</span>
+        </div>
+      `).join('')}
+    </div>
+  </div>`;
+
+  container.innerHTML = html;
 }
 
 function renderizarTudo() {
