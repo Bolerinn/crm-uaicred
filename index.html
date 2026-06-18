@@ -1400,9 +1400,11 @@ async function adicionarCliente() {
       created_by: user.user?.id,
       criado_por: usuarioNome || user.user?.email?.split('@')[0] || '—'
     };
-    // Se estiver na aba ANDAMENTO, já insere com mes_referencia
-    if (tabAtivo === 'andamento') {
+    if (tabAtivo === 'analises') {
       insertData.mes_referencia = mesSelecionado;
+    } else if (tabAtivo === 'andamento') {
+      insertData.mes_referencia = mesSelecionado;
+      insertData.convertido = true;
     }
     const { data, error } = await sb
       .from('clientes')
