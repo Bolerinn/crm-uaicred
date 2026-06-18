@@ -1349,8 +1349,11 @@ async function adicionarCliente() {
 
 async function excluirCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
-  const { error } = await sb.from('clientes').delete().eq('id', id);
-  if (error) { mostrarToast('Erro ao excluir'); return; }
+  const { data, error } = await sb.from('clientes').delete().eq('id', id).select();
+  if (error || !data || data.length === 0) {
+    mostrarToast('Erro ao excluir (sem permissão ou já removido)');
+    return;
+  }
   clientes = clientes.filter(c => c.id !== id);
   renderizarTabelas();
   mostrarToast('Cliente excluído 🗑️');
