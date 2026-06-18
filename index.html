@@ -1533,7 +1533,7 @@ function ouvirTempoReal() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, payload => {
       if (payload.eventType === 'INSERT') {
         if (deletedIds.has(payload.new.id)) return;
-        clientes.push(payload.new);
+        clientes = [...new Map([...clientes, payload.new].map(c => [c.id, c])).values()];
         renderizarTudo();
       } else if (payload.eventType === 'UPDATE') {
         if (deletedIds.has(payload.new.id)) return;
@@ -1614,6 +1614,7 @@ async function iniciarNovaCompetenciaAnalises() {
   const todos = followUps.filter(c => !existentesNoAlvo.includes(c.cliente));
   if (todos.length === 0) { mostrarToast('Nenhum follow-up para duplicar.'); _dupLock = false; return; }
   await duplicarClientes(todos, mesAlvo);
+  await carregarDados();
   _dupLock = false;
 }
 
@@ -1997,6 +1998,7 @@ async function iniciarNovaCompetencia() {
     return;
   }
   await duplicarClientes(todos, mesAlvo);
+  await carregarDados();
   _dupLock = false;
 }
 
