@@ -1369,7 +1369,6 @@ async function carregarDados() {
   });
   if (resp.ok) {
     clientes = await resp.json(); clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
-    console.log('carregarDados: '+clientes.length+' registros');
   } else {
     // Fallback sem filtro
     const r2 = await fetch(SUPABASE_URL + '/rest/v1/clientes?select=*&order=id', {
@@ -1576,13 +1575,6 @@ function filtrarProduto(produto, btn) {
   renderizarTabelas();
 }
 
-function filtrarPorMes(clientesArr) {
-  return clientesArr.filter(c => {
-    if (!c.created_at) return true;
-    const d = new Date(c.created_at);
-    return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
-  });
-}
 
 function renderizarMesSelectorAnalises() {
   const container = document.getElementById('mesSelectorAnalises');
@@ -1991,7 +1983,6 @@ let _dupLock = false;
 async function iniciarNovaCompetencia() {
   if (_dupLock) return;
   _dupLock = true;
-  console.log('>>> CLICOU <<<');
   const [ano, mes] = mesSelecionado.split('-').map(Number);
   const dataSeguinte = new Date(ano, mes, 1);
   const mesAlvo = dataSeguinte.toISOString().slice(0,7);
@@ -1999,7 +1990,6 @@ async function iniciarNovaCompetencia() {
   const origem = clientes.filter(c => c.mes_referencia === mesSelecionado && c.status !== 'emitido' && c.convertido === true);
   const existentesNoAlvo = clientes.filter(c => c.mes_referencia === mesAlvo).map(c => c.cliente);
   const todos = origem.filter(c => !existentesNoAlvo.includes(c.cliente));
-  console.log('iniciarNova: origem='+origem.length+' total='+todos.length+' existentes='+existentesNoAlvo.length);
   if (todos.length === 0) {
     mostrarToast('Nenhum processo pendente para duplicar.');
     return;
@@ -2014,7 +2004,6 @@ async function duplicarClientes(lista, novoMes) {
   const userId = user?.id;
   for (const c of lista) {
     const { id, created_at, updated_at, ...dados } = c;
-    console.log('dup: '+c.cliente+' fu='+dados.follow_up+' cv='+dados.convertido);
     dados.created_by = userId; // garante permissão de delete
     dados.mes_referencia = novoMes;
     dados.status = dados.status || 'aguardando-doc';
