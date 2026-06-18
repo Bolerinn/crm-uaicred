@@ -735,11 +735,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="px-6 py-3 flex flex-wrap gap-3 text-sm" id="statsBar"></div>
 
       <!-- Month Selector -->
-      <div class="flex items-center gap-4 px-6 py-2" id="mesSelectorAnalises">
-        <button onclick="mudarMesAnalises(-1)" class="text-sm px-2 py-1 rounded-lg transition" style="color:var(--text-muted);border:1px solid var(--border);background:var(--bg-card);" title="Mês anterior">◀</button>
-        <span id="mesLabelAnalises" class="text-sm font-semibold px-2" style="color:var(--text);min-width:100px;text-align:center;"></span>
-        <button onclick="mudarMesAnalises(1)" class="text-sm px-2 py-1 rounded-lg transition" style="color:var(--text-muted);border:1px solid var(--border);background:var(--bg-card);" title="Próximo mês">▶</button>
-      </div>
+      <div class="flex items-center gap-4 px-6 py-2" id="mesSelectorAnalises"></div>
 
       <!-- Table -->
       <div class="px-6 pb-6">
@@ -1444,21 +1440,37 @@ function filtrarPorMes(clientesArr) {
   });
 }
 
-function mudarMesAnalises(delta) {
-  mesAtual += delta;
-  if (mesAtual < 0) { mesAtual = 11; anoAtual--; }
-  if (mesAtual > 11) { mesAtual = 0; anoAtual++; }
-  atualizarMesLabelAnalises();
+function renderizarMesSelectorAnalises() {
+  const container = document.getElementById('mesSelectorAnalises');
+  if (!container) return;
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const nomeMes = meses[mesAtual];
+  const hojeMes = new Date().getMonth();
+  const hojeAno = new Date().getFullYear();
+  const ehHoje = mesAtual === hojeMes && anoAtual === hojeAno;
+  container.innerHTML = `
+    <button onclick="mudarMesAnalises(-1)" class="text-sm px-2 py-1 rounded-lg transition" style="color:var(--text-muted);border:1px solid var(--border);background:var(--bg-card);" title="Mês anterior">◀</button>
+    <span class="text-sm font-semibold px-2" style="color:var(--text);min-width:100px;text-align:center;">${nomeMes} ${anoAtual}</span>
+    <button onclick="mudarMesAnalises(1)" class="text-sm px-2 py-1 rounded-lg transition" style="color:var(--text-muted);border:1px solid var(--border);background:var(--bg-card);" title="Próximo mês">▶</button>
+    <button onclick="irParaMesAtualAnalises()" class="text-xs px-3 py-1.5 rounded-lg font-medium transition" style="background:var(--accent);color:#fff;border:none;" title="Ir para o mês atual">📋 ${ehHoje ? '✓ Mês Atual' : 'Ir para ' + nomeMes}</button>
+  `;
+}
+
+function irParaMesAtualAnalises() {
+  mesAtual = new Date().getMonth();
+  anoAtual = new Date().getFullYear();
+  renderizarMesSelectorAnalises();
   renderizarTabelaAnalises();
   atualizarStats();
 }
 
-function atualizarMesLabelAnalises() {
-  const el = document.getElementById('mesLabelAnalises');
-  if (el) {
-    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    el.textContent = meses[mesAtual] + ' ' + anoAtual;
-  }
+function mudarMesAnalises(delta) {
+  mesAtual += delta;
+  if (mesAtual < 0) { mesAtual = 11; anoAtual--; }
+  if (mesAtual > 11) { mesAtual = 0; anoAtual++; }
+  renderizarMesSelectorAnalises();
+  renderizarTabelaAnalises();
+  atualizarStats();
 }
 
 function getFiltrados(sourceClientes) {
@@ -1722,7 +1734,7 @@ function renderizarTudo() {
   } else if (tabAtivo === 'metricas') {
     renderizarMetricas();
   } else {
-    atualizarMesLabelAnalises();
+    renderizarMesSelectorAnalises();
     renderizarTabelaAnalises();
     renderizarFiltros();
     atualizarStats();
