@@ -1368,7 +1368,7 @@ async function carregarDados() {
     headers: { 'apikey': SERVICE_ROLE_KEY, 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY }
   });
   if (resp.ok) {
-    clientes = await resp.json();
+    clientes = await resp.json(); clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
     console.log('carregarDados: '+clientes.length+' registros');
   } else {
     // Fallback sem filtro
