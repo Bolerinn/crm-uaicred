@@ -1766,7 +1766,28 @@ function atualizarStatsAndamento() {
   if (!container) return;
   const filtrados = getFiltrados(null, 'andamento');
   const count = filtrados.length;
-  container.innerHTML = `<div class="stat-card"><div class="stat-label">Processos</div><div class="stat-value" style="color:var(--accent);">${count}</div></div>`;
+  const master = isMaster();
+  
+  let html = `<div class="stat-card"><div class="stat-label">Processos</div><div class="stat-value" style="color:var(--accent);">${count}</div></div>`;
+  
+  if (master) {
+    // Por banco (usa campo 'banco' único)
+    const bancos = ['Caixa','Bradesco','Itaú','Santander','Inter'];
+    bancos.forEach(nome => {
+      const n = filtrados.filter(c => c.banco === nome).length;
+      html += `<div class="stat-card"><div class="stat-label">${nome}</div><div class="stat-value" style="color:var(--accent);">${n}</div></div>`;
+    });
+    // Total financiamento
+    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt((c.valor_financiado || '').replace(/\D/g, '')) || 0), 0);
+    html += `<div class="stat-card"><div class="stat-label">Total Financ.</div><div class="stat-value" style="color:#059669;">R$ ${totalFinanc.toLocaleString('pt-BR')}</div></div>`;
+    // Por produto
+    PRODUTO_OPTS.forEach(p => {
+      const n = filtrados.filter(c => c.produto === p).length;
+      if (n > 0) html += `<div class="stat-card"><div class="stat-label">${p}</div><div class="stat-value" style="color:var(--accent);">${n}</div></div>`;
+    });
+  }
+  
+  container.innerHTML = html;
 }
 
 function atualizarStatsEmitidos() {
@@ -1774,7 +1795,28 @@ function atualizarStatsEmitidos() {
   if (!container) return;
   const filtrados = getFiltrados(null, 'emitidos');
   const count = filtrados.length;
-  container.innerHTML = `<div class="stat-card"><div class="stat-label">Emitidos</div><div class="stat-value" style="color:var(--accent);">${count}</div></div>`;
+  const master = isMaster();
+  
+  let html = `<div class="stat-card"><div class="stat-label">Emitidos</div><div class="stat-value" style="color:var(--accent);">${count}</div></div>`;
+  
+  if (master) {
+    // Por banco
+    const bancos = ['Caixa','Bradesco','Itaú','Santander','Inter'];
+    bancos.forEach(nome => {
+      const n = filtrados.filter(c => c.banco === nome).length;
+      html += `<div class="stat-card"><div class="stat-label">${nome}</div><div class="stat-value" style="color:var(--accent);">${n}</div></div>`;
+    });
+    // Total financiamento
+    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt((c.valor_financiado || '').replace(/\D/g, '')) || 0), 0);
+    html += `<div class="stat-card"><div class="stat-label">Total Financ.</div><div class="stat-value" style="color:#059669;">R$ ${totalFinanc.toLocaleString('pt-BR')}</div></div>`;
+    // Por produto
+    PRODUTO_OPTS.forEach(p => {
+      const n = filtrados.filter(c => c.produto === p).length;
+      if (n > 0) html += `<div class="stat-card"><div class="stat-label">${p}</div><div class="stat-value" style="color:var(--accent);">${n}</div></div>`;
+    });
+  }
+  
+  container.innerHTML = html;
 }
 
 function renderizarMesSelector() {
