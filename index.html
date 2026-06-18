@@ -1640,7 +1640,7 @@ function getFiltrados(sourceClientes, tab) {
   return src.filter(c => {
     let passaStatus;
     if (t === 'andamento') {
-      passaStatus = c.status !== 'emitido' && c.follow_up !== true && (c.mes_referencia || '') === mesSelecionado;
+      passaStatus = c.status !== 'emitido' && c.convertido === true && (c.mes_referencia || '') === mesSelecionado;
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     } else if (t === 'emitidos') {
       passaStatus = c.status === 'emitido';
