@@ -803,6 +803,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-2 py-3 w-10">#</th>
                 <th class="text-left px-3 py-3">Indicação</th>
                 <th class="text-left px-3 py-3">Cliente</th>
+                <th class="text-left px-1 py-3 w-8"></th>
                 <th class="text-left px-3 py-3">CPF</th>
                 <th class="text-left px-3 py-3">Banco</th>
                 <th class="text-left px-3 py-3">Agência</th>
@@ -1441,6 +1442,51 @@ function editarCampoInput(el) {
   atualizarCampo(id, campo, el.value.trim());
 }
 
+// ========== EXPAND / FGTS / IQ / BRIEFING (EM ANDAMENTO) ==========
+function toggleExpand(id) {
+  const expandedRow = document.querySelector(`tr.expanded-row[data-parent="${id}"]`);
+  const mainRow = document.querySelector(`tr.main-row[data-id="${id}"]`);
+  if (!expandedRow) return;
+  const isHidden = expandedRow.classList.contains('hidden');
+  if (isHidden) {
+    expandedRow.classList.remove('hidden');
+    if (mainRow) mainRow.classList.add('expanded');
+  } else {
+    expandedRow.classList.add('hidden');
+    if (mainRow) mainRow.classList.remove('expanded');
+  }
+}
+
+function toggleFGTS(id) {
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  const novo = !c.fgts;
+  atualizarCampo(id, 'fgts', novo);
+  const valorField = document.querySelector(`.valor-fgts-field[data-id="${id}"]`);
+  if (valorField) {
+    if (novo) { valorField.classList.remove('hidden'); valorField.style.display = ''; }
+    else { valorField.classList.add('hidden'); valorField.style.display = 'none'; valorField.value = ''; }
+  }
+  if (!novo) atualizarCampo(id, 'valor_fgts', '');
+}
+
+function toggleIQ(id) {
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  const novo = !c.iq;
+  atualizarCampo(id, 'iq', novo);
+  const dataField = document.querySelector(`.data-iq-field[data-id="${id}"]`);
+  if (dataField) {
+    if (novo) { dataField.classList.remove('hidden'); dataField.style.display = ''; }
+    else { dataField.classList.add('hidden'); dataField.style.display = 'none'; dataField.value = ''; }
+  }
+  if (!novo) atualizarCampo(id, 'data_iq', '');
+}
+
+function gerarBriefing(id) {
+  mostrarToast('📄 Briefing em desenvolvimento — em breve disponível');
+}
+
 // ========== BANCO MULTI / RESULTADO ==========
 function getBancosMarcados(c) {
   const bancos = [];
@@ -1550,7 +1596,7 @@ function renderizarTabelaAndamento() {
   const filtrados = getFiltrados();
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-16" style="color:var(--text-muted);">Nenhum processo em andamento.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-16" style="color:var(--text-muted);">Nenhum processo em andamento.</td></tr>';
     atualizarStatsAndamento();
     return;
   }
@@ -1559,11 +1605,16 @@ function renderizarTabelaAndamento() {
     const idx = clientes.indexOf(c);
     const banco = c.banco || '';
     const { opts: statusOpts, validStatus } = getStatusOpts(banco, c.status || '');
+    const fgts = c.fgts || false;
+    const iq = c.iq || false;
     return `
-    <tr style="border-bottom:1px solid var(--border-light);" data-id="${c.id}">
+    <tr style="border-bottom:1px solid var(--border-light);" data-id="${c.id}" class="main-row">
       <td class="px-2 py-2.5 text-xs text-center" style="color:var(--text-muted);">${idx + 1}</td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.indicacao||''}</span></td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
+      <td class="px-1 py-2.5 text-center">
+        <span class="expand-btn" onclick="toggleExpand(${c.id})" title="Expandir">▼</span>
+      </td>
       <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
         <select onchange="onBancoChange(${c.id},this.value)" class="text-xs bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:inherit;">
@@ -1586,6 +1637,30 @@ function renderizarTabelaAndamento() {
         </select>
       </td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
+    </tr>
+    <tr class="expanded-row hidden" data-parent="${c.id}">
+      <td colspan="13">
+        <div class="expanded-grid">
+          <div class="expanded-item">
+            <label style="cursor:pointer;" onclick="toggleFGTS(${c.id})">
+              <input type="checkbox" ${fgts?'checked':''} onchange="toggleFGTS(${c.id})" style="accent-color:#f97316;"> FGTS
+            </label>
+            <input type="text" data-id="${c.id}" data-campo="valor_fgts" class="valor-fgts-field ${fgts?'':'hidden'}" oninput="this.value=this.value.replace(/[^\\d]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_fgts||''}" placeholder="R\$ 0,00" style="color:inherit;width:130px;${fgts?'':'display:none;'}">
+          </div>
+          <div class="expanded-item">
+            <label style="cursor:pointer;" onclick="toggleIQ(${c.id})">
+              <input type="checkbox" ${iq?'checked':''} onchange="toggleIQ(${c.id})" style="accent-color:#f97316;"> IQ
+            </label>
+            <input type="text" data-id="${c.id}" data-campo="data_iq" class="data-iq-field ${iq?'':'hidden'}" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_iq||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:110px;${iq?'':'display:none;'}">
+          </div>
+          <div class="expanded-item" style="justify-content:flex-end;">
+            <button class="btn-briefing" onclick="gerarBriefing(${c.id})" title="Gerar Briefing (em breve)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              Briefing
+            </button>
+          </div>
+        </div>
+      </td>
     </tr>`;
   }).join('');
   atualizarStatsAndamento();
