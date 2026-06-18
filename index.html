@@ -1398,11 +1398,18 @@ async function atualizarCampo(id, campo, valor) {
 }
 
 async function converterCliente(id, checked) {
+  // Atualiza localmente primeiro para garantir render imediato
+  const c = clientes.find(c => c.id === id);
+  if (c) {
+    c.convertido = checked;
+    if (checked) {
+      c.mes_referencia = new Date().toISOString().slice(0,7);
+    }
+  }
+  // Depois persiste no banco
   await atualizarCampo(id, 'convertido', checked);
   if (checked) {
-    // Ao converter, define mes_referencia para o mês atual
-    const hoje = new Date().toISOString().slice(0,7);
-    await atualizarCampo(id, 'mes_referencia', hoje);
+    await atualizarCampo(id, 'mes_referencia', c.mes_referencia);
   }
   renderizarTabelaAnalises();
   renderizarTabelaAndamento();
