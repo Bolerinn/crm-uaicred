@@ -851,7 +851,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       </div>
       <div class="px-6 py-3 flex flex-wrap gap-3 text-sm" id="statsBarEmitidos"></div>
       <!-- Filter: Status -->
-      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosEmitidos"></div>
+        <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosStatusEmitidos"></div>
+      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosProdutoEmitidos"></div>
       <div class="px-6 pb-6">
         <div class="table-container">
           <table class="w-full text-sm">
@@ -1025,6 +1026,8 @@ let filtroProduto = 'todos';
 let filtroStatusAndamento = 'todos';
 let filtroProdutoAndamento = 'todos';
 let filtroBancoAndamento = 'todos';
+let filtroStatusEmitidos = 'todos';
+let filtroProdutoEmitidos = 'todos';
 let filtroEmitidos = 'todos';
 let mesSelecionado = new Date().toISOString().slice(0,7); // YYYY-MM
 let tabAtivo = 'analises';
@@ -1642,8 +1645,8 @@ function getFiltrados(sourceClientes, tab) {
     } else if (t === 'emitidos') {
       passaStatus = c.status === 'emitido';
       if (c.mes_referencia && c.mes_referencia !== mesSelecionado) passaStatus = false;
-      if (filtroEmitidos === 'banco') passaStatus = passaStatus && (c.banco || '').length > 0;
-      else if (filtroEmitidos === 'agencia') passaStatus = passaStatus && (c.agencia || '').length > 0;
+      if (filtroStatusEmitidos !== 'todos') passaStatus = passaStatus && c.status === filtroStatusEmitidos;
+      if (filtroProdutoEmitidos !== 'todos') passaStatus = passaStatus && c.produto === filtroProdutoEmitidos;
       else if (filtroEmitidos !== 'todos') passaStatus = passaStatus && (c.produto === filtroEmitidos || c.indicacao === filtroEmitidos);
     } else {
       // Aba Análises: excluir convertidos e clientes com mês de competência
@@ -1960,6 +1963,38 @@ function renderizarMesSelectorEmitidos() {
   `;
 }
 
+function filtrarStatusEmitidos(status, btn) {
+  filtroStatusEmitidos = status;
+  document.querySelectorAll('#filtrosStatusEmitidos .filter-btn-status').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarTabelaEmitidos();
+  atualizarStatsEmitidos();
+}
+
+function filtrarProdutoEmitidos(produto, btn) {
+  filtroProdutoEmitidos = produto;
+  document.querySelectorAll('#filtrosProdutoEmitidos .filter-btn-produto').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarTabelaEmitidos();
+  atualizarStatsEmitidos();
+}
+
+}
+
+  atualizarStatsEmitidos();
+  renderizarTabelaEmitidos();
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('#filtrosStatusEmitidos .filter-btn-status').forEach(b => b.classList.remove('active'));
+  filtroStatusEmitidos = status;
+function filtrarStatusEmitidos(status, btn) {
+}
+
+  atualizarStatsEmitidos();
+  renderizarTabelaEmitidos();
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('#filtrosProdutoEmitidos .filter-btn-produto').forEach(b => b.classList.remove('active'));
+  filtroProdutoEmitidos = produto;
+function filtrarProdutoEmitidos(produto, btn) {
 function filtrarEmitidos(filtro, btn) {
   filtroEmitidos = filtro;
   document.querySelectorAll('#filtrosEmitidos .filter-btn').forEach(b => b.classList.remove('active'));
