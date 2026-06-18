@@ -32,8 +32,6 @@ async function initProfile() {
     }
   }
   usuarioNome = nome; usuarioTipo = tipo; profileReady = true;
-  const el = document.getElementById('currentUser');
-  if (el) el.textContent = usuarioNome;
   const sel = document.getElementById('sidebarUser');
   if (sel) sel.textContent = usuarioNome;
   window.dispatchEvent(new CustomEvent('profile-ready', { detail: { nome, tipo } }));
@@ -625,8 +623,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style="background: linear-gradient(135deg, #f97316, #ea580c);">
         <span class="text-white text-xl font-bold" style="font-family: Georgia, serif;">RP</span>
       </div>
-      <h1 class="text-2xl font-bold" style="color:var(--text);">Rede Prime</h1>
-      <h2 class="text-lg font-semibold" style="color: #d4a853;">Assessoria RMS</h2>
+      <h1 class="text-2xl font-bold" style="color:var(--text);">Rede Prime Assessoria RMS</h1>
       <p class="mt-1 text-sm" style="color:var(--text-muted);">CRM Prime Assessoria RMS</p>
     </div>
 
@@ -1065,7 +1062,6 @@ async function entrar() {
 
   const precisaTrocar = await initProfile();
 
-  document.getElementById('currentUser').textContent = usuarioNome || data.user.email.split('@')[0];
   document.getElementById('sidebarUser').textContent = usuarioNome || data.user.email.split('@')[0];
   document.getElementById('sidebarAvatar').textContent = (usuarioNome || 'U')[0].toUpperCase();
   document.getElementById('sidebarRole').textContent = usuarioTipo === 'master' ? 'Master' : 'Usuário';
