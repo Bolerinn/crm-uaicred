@@ -1120,7 +1120,7 @@ async function entrar() {
 
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appScreen').classList.remove('hidden');
-  carregarDados();
+  await carregarDados();
   ouvirTempoReal();
   } catch(e) {
     document.getElementById('loginError').textContent = 'Erro: ' + e.message;
@@ -1198,7 +1198,7 @@ async function salvarNovaSenha() {
     document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
   }
 
-  carregarDados();
+  await carregarDados();
   ouvirTempoReal();
 }
 
@@ -1449,7 +1449,7 @@ async function restaurarCliente(id) {
   if (ultimoExcluido && ultimoExcluido.timer) clearTimeout(ultimoExcluido.timer);
   const { error } = await sbAdmin.from('clientes').update({ deleted_at: null }).eq('id', id);
   if (error) { mostrarToast('Erro ao restaurar'); return; }
-  carregarDados();
+  await carregarDados();
   mostrarToast('Processo restaurado ↩️');
 }
 
@@ -2023,7 +2023,7 @@ async function duplicarClientes(lista, novoMes) {
     count++;
   }
   mostrarToast(`📋 ${count} processos duplicados para ${novoMes}`);
-  carregarDados();
+  await carregarDados();
 }
 
 // ========== LIXEIRA ==========
@@ -2549,7 +2549,7 @@ function filtrarBancoAndamento(banco, btn) {
 
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('appScreen').classList.remove('hidden');
-    carregarDados();
+    await carregarDados();
     ouvirTempoReal();
   }
   } catch(e) {
