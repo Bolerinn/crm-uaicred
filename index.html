@@ -778,7 +778,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosStatusAndamento"></div>
 
       <!-- Filter: Produto -->
-      <div class="px-6 mb-4 flex flex-wrap items-center gap-2" id="filtrosProdutoAndamento"></div>
+      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosProdutoAndamento"></div>
+
+      <!-- Filter: Banco -->
+      <div class="px-6 mb-4 flex flex-wrap items-center gap-2" id="filtrosBancoAndamento"></div>
 
       <!-- Table -->
       <div class="px-6 pb-6">
@@ -970,6 +973,7 @@ let filtroStatus = 'todos';
 let filtroProduto = 'todos';
 let filtroStatusAndamento = 'todos';
 let filtroProdutoAndamento = 'todos';
+let filtroBancoAndamento = 'todos';
 let filtroEmitidos = 'todos';
 let mesSelecionado = new Date().toISOString().slice(0,7); // YYYY-MM
 let tabAtivo = 'analises';
@@ -1512,6 +1516,7 @@ function getFiltrados(sourceClientes, tab) {
   const t = tab || tabAtivo;
   const fs = t === 'andamento' ? filtroStatusAndamento : filtroStatus;
   const fp = t === 'andamento' ? filtroProdutoAndamento : filtroProduto;
+  const fb = t === 'andamento' ? filtroBancoAndamento : 'todos';
   return src.filter(c => {
     let passaStatus;
     if (t === 'andamento') {
@@ -1528,7 +1533,8 @@ function getFiltrados(sourceClientes, tab) {
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     }
     const passaProduto = (t === 'andamento') ? (fp === 'todos' || c.produto === fp) : true;
-    return passaStatus && passaProduto;
+    const passaBanco = (t === 'andamento' && fb !== 'todos') ? (c.banco || '') === fb : true;
+    return passaStatus && passaProduto && passaBanco;
   });
 }
 
@@ -1767,7 +1773,7 @@ async function duplicarClientes(lista, novoMes) {
 function renderizarTudo() {
   if (tabAtivo === 'andamento') {
     renderizarMesSelector();
-    renderizarFiltros();
+    renderizarFiltrosAndamento();
     renderizarTabelaAndamento();
     atualizarStatsAndamento();
   } else if (tabAtivo === 'emitidos') {
@@ -2014,6 +2020,45 @@ function renderizarFiltros() {
     <button class="filter-btn filter-btn-produto ${filtroProduto==='Construção'?'active':''}" onclick="filtrarProduto('Construção', this)">Construção</button>
   `;
   }
+}
+
+function renderizarFiltrosAndamento() {
+  // Status
+  const stContainer = document.getElementById('filtrosStatusAndamento');
+  if (stContainer) {
+    const statuses = [{ id: 'todos', label: 'Todos' }, ...STATUS_OPTS.filter(s => s.id !== 'emitido')];
+    stContainer.innerHTML = `
+      <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Status:</span>
+      ${statuses.map(s => `<button class="filter-btn filter-btn-status ${filtroStatusAndamento===s.id?'active':''}" onclick="filtrarStatus('${s.id}', this)">${s.label}</button>`).join('')}
+    `;
+  }
+  // Produto
+  const prContainer = document.getElementById('filtrosProdutoAndamento');
+  if (prContainer) {
+    prContainer.innerHTML = `
+      <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Produto:</span>
+      <button class="filter-btn filter-btn-produto ${filtroProdutoAndamento==='todos'?'active':''}" onclick="filtrarProduto('todos', this)">Todos</button>
+      ${PRODUTO_OPTS.map(p => `<button class="filter-btn filter-btn-produto ${filtroProdutoAndamento===p?'active':''}" onclick="filtrarProduto('${p}', this)">${p}</button>`).join('')}
+    `;
+  }
+  // Banco
+  const bcContainer = document.getElementById('filtrosBancoAndamento');
+  if (bcContainer) {
+    const bancos = ['Caixa','Bradesco','Itaú','Santander','Inter'];
+    bcContainer.innerHTML = `
+      <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Banco:</span>
+      <button class="filter-btn ${filtroBancoAndamento==='todos'?'active':''}" onclick="filtrarBancoAndamento('todos', this)">Todos</button>
+      ${bancos.map(b => `<button class="filter-btn ${filtroBancoAndamento===b?'active':''}" onclick="filtrarBancoAndamento('${b}', this)">${b}</button>`).join('')}
+    `;
+  }
+}
+
+function filtrarBancoAndamento(banco, btn) {
+  filtroBancoAndamento = banco;
+  document.querySelectorAll('#filtrosBancoAndamento .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarTabelaAndamento();
+  atualizarStatsAndamento();
 }
 
 // ========== SESSION RESUME ==========
