@@ -1624,7 +1624,7 @@ function getFiltrados(sourceClientes, tab) {
   return src.filter(c => {
     let passaStatus;
     if (t === 'andamento') {
-      passaStatus = c.status !== 'emitido' && (c.mes_referencia || '') === mesSelecionado;
+      passaStatus = c.status !== 'emitido' && c.follow_up !== true && (c.mes_referencia || '') === mesSelecionado;
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     } else if (t === 'emitidos') {
       passaStatus = c.status === 'emitido';
@@ -2110,7 +2110,7 @@ function exportarExcel() {
 function renderizarMetricas() {
   const container = document.getElementById('metricasContent');
   const doMes = clientes.filter(c => c.mes_referencia === mesSelecionado);
-  const total = doMes.length;
+  const total = doMes.filter(c => c.convertido !== true).length; // apenas aba 1
   const emitidos = doMes.filter(c => c.status === 'emitido').length;
   const emAndamento = doMes.filter(c => c.status !== 'emitido').length;
 
@@ -2143,7 +2143,7 @@ function renderizarMetricas() {
   // KPI cards
   html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="metrica-card text-center">
-      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Processos</div>
+      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Total de Análises</div>
       <div class="metrica-number">${total}</div>
     </div>
     <div class="metrica-card text-center">
