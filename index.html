@@ -737,6 +737,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Produto</th>
                 <th class="text-left px-3 py-3">Resultado</th>
                 <th class="text-left px-3 py-3">Obs</th>
+                <th class="text-left px-2 py-3 w-16">Follow-up</th>
                 <th class="text-left px-2 py-3 w-16">Convertido</th>
                 <th class="text-left px-2 py-3 w-10"></th>
               </tr>
@@ -1635,6 +1636,32 @@ async function reverterEmitido(id) {
   mostrarToast('↩ Processo revertido para Análises');
 }
 
+// ========== RESULTADO CYCLE ==========
+const RESULTADO_CYCLE = ['', 'aprovado', 'condicionado', 'recusado'];
+const RESULTADO_LABELS = { 'aprovado': '✅ APROVADO', 'condicionado': '⚠️ CONDICIONADO', 'recusado': '❌ RECUSADO' };
+const RESULTADO_COLORS = { 'aprovado': 'color:#059669;', 'condicionado': 'color:#d97706;', 'recusado': 'color:#dc2626;' };
+
+function getResultadoBadge(valor) {
+  if (!valor) return '<span class="text-xs text-gray-400">—</span>';
+  const style = RESULTADO_COLORS[valor] || '';
+  return `<span class="text-xs font-semibold" style="${style}">${RESULTADO_LABELS[valor] || valor}</span>`;
+}
+
+async function ciclarResultado(id) {
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  const atual = c.resultado || '';
+  const idx = RESULTADO_CYCLE.indexOf(atual);
+  const proximo = RESULTADO_CYCLE[(idx + 1) % RESULTADO_CYCLE.length];
+  c.resultado = proximo;
+  // Update DOM immediately
+  const td = document.querySelector(`#crmTable tr[data-id="${id}"] td:nth-child(11)`);
+  if (td) td.innerHTML = getResultadoBadge(proximo);
+  // Persist
+  await atualizarCampo(id, 'resultado', proximo);
+  atualizarStats();
+}
+
 // ========== BANCO MULTI / RESULTADO ==========
 function getBancosMarcados(c) {
   const bancos = [];
@@ -1676,6 +1703,52 @@ async function toggleBanco(id, banco, checked) {
 }
 
 // ========== RENDER ==========
+function atualizarStats() {
+  const container = document.getElementById('statsBar');
+  if (!container) return;
+  const filtrados = filtrarPorMes(getFiltrados(null, 'analises'));
+  const count = filtrados.length;
+  const master = isMaster();
+  
+  let html = `<div class="stat-card"><div class="stat-label">Processos</div><div class="stat-value" style="color:var(--accent);">${count}</div></div>`;
+  
+  if (master) {
+    // Contagem por banco
+    const bancos = ['Caixa','Bradesco','Itaú','Santander','Inter'];
+    const bancosCols = ['banco_caixa','banco_bradesco','banco_itau','banco_santander','banco_inter'];
+    bancos.forEach((nome, i) => {
+      const n = filtrados.filter(c => c[bancosCols[i]]).length;
+      html += `<div class="stat-card"><div class="stat-label">${nome}</div><div class="stat-value" style="color:var(--accent);">${n}</div></div>`;
+    });
+    
+    // Total financiamento
+    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt(c.valor_financiado) || 0), 0);
+    html += `<div class="stat-card"><div class="stat-label">Total Financ.</div><div class="stat-value" style="color:#059669;">R$ ${totalFinanc.toLocaleString('pt-BR')}</div></div>`;
+    
+    // Aprovações
+    const aprovados = filtrados.filter(c => c.resultado === 'aprovado').length;
+    html += `<div class="stat-card"><div class="stat-label">Aprovações</div><div class="stat-value" style="color:#059669;">${aprovados}</div></div>`;
+  }
+  
+  container.innerHTML = html;
+}
+
+function atualizarStatsAndamento() {
+  const container = document.getElementById('statsBarAndamento');
+  if (!container) return;
+  const filtrados = getFiltrados(null, 'andamento');
+  const count = filtrados.length;
+  container.innerHTML = `<div class="stat-card"><div class="stat-label">Processos</div><div class="stat-value" style="color:var(--accent);">${count}</div></div>`;
+}
+
+function atualizarStatsEmitidos() {
+  const container = document.getElementById('statsBarEmitidos');
+  if (!container) return;
+  const filtrados = getFiltrados(null, 'emitidos');
+  const count = filtrados.length;
+  container.innerHTML = `<div class="stat-card"><div class="stat-label">Emitidos</div><div class="stat-value" style="color:var(--accent);">${count}</div></div>`;
+}
+
 function renderizarMesSelector() {
   const container = document.getElementById('mesSelector');
   if (!container) return;
@@ -1813,14 +1886,12 @@ function renderizarTabelaAnalises() {
   const filtrados = filtrarPorMes(getFiltrados(null, 'analises'));
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
     atualizarStats();
     return;
   }
 
   tbody.innerHTML = filtrados.map((c, i) => {
-    const idx = clientes.indexOf(c);
-    const resultadoHtml = getResultadoHtml(c);
     return `
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
@@ -1842,8 +1913,13 @@ function renderizarTabelaAnalises() {
           ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
         </select>
       </td>
-      <td class="px-3 py-2.5" id="resultado-${c.id}">${resultadoHtml}</td>
+      <td class="px-3 py-2.5 cursor-pointer select-none" onclick="ciclarResultado(${c.id})" title="Clique para alternar: APROVADO → CONDICIONADO → RECUSADO">
+        ${getResultadoBadge(c.resultado || '')}
+      </td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
+      <td class="px-2 py-2.5 text-center">
+        <input type="checkbox" ${c.follow_up?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="Follow-up">
+      </td>
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${c.convertido?'checked':''} onchange="converterCliente(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Converter em processo ativo">
       </td>
