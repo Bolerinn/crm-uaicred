@@ -634,9 +634,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
           <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">Nome</label>
           <input id="loginEmail" type="text" class="login-input" placeholder="Seu primeiro nome" autocomplete="off">
         </div>
-        <div>
+        <div style="position:relative;">
           <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">Senha</label>
-          <input id="loginPassword" type="password" class="login-input" placeholder="••••••">
+          <input id="loginPassword" type="password" class="login-input" placeholder="••••••" style="padding-right:44px;">
+          <button type="button" onclick="toggleSenha('loginPassword', this)" style="position:absolute;right:8px;bottom:8px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);padding:4px;" title="Mostrar senha">👁️</button>
         </div>
         <button onclick="entrar()" class="w-full text-white py-2.5 rounded-xl font-medium transition shadow-lg" style="background: linear-gradient(135deg, #f97316, #ea580c);">
           Entrar
@@ -658,14 +659,16 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <p class="text-sm mt-1" style="color:var(--text-secondary);">Crie sua senha pessoal para continuar</p>
     </div>
     <div class="space-y-4">
-      <div>
+      <div style="position:relative;">
         <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">Nova Senha</label>
-        <input id="pwNew" type="password" oninput="validarPw()" class="input-fw" placeholder="Mínimo 8 caracteres">
+        <input id="pwNew" type="password" oninput="validarPw()" class="input-fw" placeholder="Mínimo 8 caracteres" style="padding-right:44px;">
+        <button type="button" onclick="toggleSenha('pwNew', this)" style="position:absolute;right:8px;bottom:8px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);padding:4px;" title="Mostrar senha">👁️</button>
         <p id="pwNewMsg" class="text-xs mt-1"></p>
       </div>
-      <div>
+      <div style="position:relative;">
         <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">Confirmar Senha</label>
-        <input id="pwConfirm" type="password" oninput="validarPw()" class="input-fw" placeholder="Repita a senha">
+        <input id="pwConfirm" type="password" oninput="validarPw()" class="input-fw" placeholder="Repita a senha" style="padding-right:44px;">
+        <button type="button" onclick="toggleSenha('pwConfirm', this)" style="position:absolute;right:8px;bottom:8px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);padding:4px;" title="Mostrar senha">👁️</button>
         <p id="pwConfirmMsg" class="text-xs mt-1"></p>
       </div>
       <p id="pwError" class="text-red-400 text-sm text-center hidden"></p>
@@ -904,6 +907,15 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
 <script>
 
 // ========== THEME ==========
+function toggleSenha(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const isPassword = input.type === 'password';
+  input.type = isPassword ? 'text' : 'password';
+  btn.textContent = isPassword ? '🙈' : '👁️';
+  btn.title = isPassword ? 'Ocultar senha' : 'Mostrar senha';
+}
+
 function initTema() {
   const saved = localStorage.getItem('tema');
   if (saved === 'dark') {
