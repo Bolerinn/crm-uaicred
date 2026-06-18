@@ -1389,8 +1389,12 @@ async function atualizarCampo(id, campo, valor) {
   if (c) { c[campo] = valor; }
   atualizarStats();
 
-  // Status change → force re-render (migra entre abas)
-  if (campo === 'status') renderizarTudo();
+  // Status change → force re-render all tabs (cross-tab migration)
+  if (campo === 'status') {
+    renderizarTabelaAnalises();
+    renderizarTabelaAndamento();
+    renderizarTabelaEmitidos();
+  }
 }
 
 async function converterCliente(id, checked) {
@@ -1510,16 +1514,17 @@ function mudarMesAnalises(delta) {
   atualizarStats();
 }
 
-function getFiltrados(sourceClientes) {
+function getFiltrados(sourceClientes, tab) {
   const src = sourceClientes || clientes;
-  const fs = tabAtivo === 'andamento' ? filtroStatusAndamento : filtroStatus;
-  const fp = tabAtivo === 'andamento' ? filtroProdutoAndamento : filtroProduto;
+  const t = tab || tabAtivo;
+  const fs = t === 'andamento' ? filtroStatusAndamento : filtroStatus;
+  const fp = t === 'andamento' ? filtroProdutoAndamento : filtroProduto;
   return src.filter(c => {
     let passaStatus;
-    if (tabAtivo === 'andamento') {
+    if (t === 'andamento') {
       passaStatus = c.status !== 'emitido' && (c.mes_referencia || '') === mesSelecionado;
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
-    } else if (tabAtivo === 'emitidos') {
+    } else if (t === 'emitidos') {
       passaStatus = c.status === 'emitido';
       if (filtroEmitidos === 'banco') passaStatus = passaStatus && (c.banco || '').length > 0;
       else if (filtroEmitidos === 'agencia') passaStatus = passaStatus && (c.agencia || '').length > 0;
@@ -1529,7 +1534,7 @@ function getFiltrados(sourceClientes) {
       passaStatus = c.convertido !== true;
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     }
-    const passaProduto = (tabAtivo === 'andamento') ? (fp === 'todos' || c.produto === fp) : true;
+    const passaProduto = (t === 'andamento') ? (fp === 'todos' || c.produto === fp) : true;
     return passaStatus && passaProduto;
   });
 }
@@ -1792,7 +1797,7 @@ function renderizarTabelas() {
 
 function renderizarTabelaAnalises() {
   const tbody = document.getElementById('tableBody');
-  const filtrados = filtrarPorMes(getFiltrados());
+  const filtrados = filtrarPorMes(getFiltrados(null, 'analises'));
 
   if (filtrados.length === 0) {
     tbody.innerHTML = '<tr><td colspan="13" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
@@ -1847,7 +1852,7 @@ function renderizarTabelaAndamento() {
     if (pid) expandedIds.push(pid);
   });
 
-  const filtrados = getFiltrados();
+  const filtrados = getFiltrados(null, 'andamento');
 
   if (filtrados.length === 0) {
     tbody.innerHTML = '<tr><td colspan="14" class="text-center py-16" style="color:var(--text-muted);">Nenhum processo em andamento.</td></tr>';
@@ -1941,7 +1946,7 @@ function renderizarTabelaAndamento() {
 
 function renderizarTabelaEmitidos() {
   const tbody = document.getElementById('tableBodyEmitidos');
-  const filtrados = getFiltrados();
+  const filtrados = getFiltrados(null, 'emitidos');
 
   if (filtrados.length === 0) {
     tbody.innerHTML = '<tr><td colspan="13" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
