@@ -695,6 +695,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
         <span class="nav-icon">📈</span>
         <span class="nav-text">MÉTRICAS</span>
       </a>
+      <a data-tab="lixeira" class="nav-master" onclick="mudarTab('lixeira')">
+        <span class="nav-icon">🗑️</span>
+        <span class="nav-text">LIXEIRA</span>
+      </a>
     </nav>
 
     <div class="sidebar-footer">
@@ -879,6 +883,34 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="px-6 pb-6" id="metricasContent"></div>
     </div>
 
+    <!-- TAB: LIXEIRA (master only) -->
+    <div id="tab-lixeira" class="tab-panel">
+      <div class="px-6 pt-6 pb-2 flex items-center justify-between">
+        <div class="section-title">
+          <span class="gold-dot"></span> Lixeira
+        </div>
+        <span class="text-xs" style="color:var(--text-muted);">Processos excluídos nos últimos 30 dias</span>
+      </div>
+      <div class="px-6 pb-6">
+        <div class="table-container">
+          <table class="w-full text-xs">
+            <thead>
+              <tr>
+                <th class="px-3 py-2 text-left">#</th>
+                <th class="px-3 py-2 text-left">Cliente</th>
+                <th class="px-3 py-2 text-left">Banco</th>
+                <th class="px-3 py-2 text-left">Produto</th>
+                <th class="px-3 py-2 text-left">Excluído em</th>
+                <th class="px-3 py-2 text-left">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyLixeira"></tbody>
+          </table>
+        </div>
+        <p id="lixeiraVazia" class="text-center py-8 hidden" style="color:var(--text-muted);">Lixeira vazia ✨</p>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -990,13 +1022,7 @@ let mesAtual = new Date().getMonth(); // 0-11
 let anoAtual = new Date().getFullYear();
 let adicionando = false;
 let ultimaEdicao = null;
-const LS_DELETED = 'crm_deleted_ids';
-let _deletedArr;
-try { _deletedArr = JSON.parse(localStorage.getItem(LS_DELETED) || '[]'); } catch(e) { _deletedArr = []; }
-const deletedIds = new Set(_deletedArr); // IDs excluídos (persiste via localStorage)
-function persistirDeletedIds() {
-  localStorage.setItem(LS_DELETED, JSON.stringify([...deletedIds]));
-}
+const deletedIds = new Set(); // mantido para compatibilidade com realtime
 
 // ========== TAB SWITCHING ==========
 function mudarTab(tab) {
@@ -1017,6 +1043,9 @@ function mudarTab(tab) {
     filtroStatus = 'em-andamento';
   } else if (tab === 'emitidos') {
     filtroStatus = 'emitido';
+  } else if (tab === 'lixeira') {
+    carregarLixeira();
+    return;
   } else {
     filtroStatus = 'todos';
   }
@@ -1323,11 +1352,18 @@ async function carregarListaUsuarios() {
 
 // ========== CRUD ==========
 async function carregarDados() {
-  const { data, error } = await sb
+  // Tenta filtrar deleted_at; se coluna não existir, fallback sem filtro
+  let { data, error } = await sb
     .from('clientes')
     .select('*')
+    .is('deleted_at', null)
     .order('id');
 
+  if (error) {
+    // Fallback: coluna deleted_at não existe ainda
+    const res = await sb.from('clientes').select('*').order('id');
+    data = res.data; error = res.error;
+  }
   if (error) { mostrarToast('Erro ao carregar dados'); return; }
   clientes = data || [];
   renderizarTudo();
@@ -1372,22 +1408,50 @@ async function adicionarCliente() {
   }
 }
 
+let ultimoExcluido = null; // para desfazer
+
 async function excluirCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
   const c = clientes.find(c => c.id === id);
+  if (!c) return;
   // Emitidos: só master pode excluir
-  if (c && c.status === 'emitido' && !isMaster()) {
+  if (c.status === 'emitido' && !isMaster()) {
     mostrarToast('Apenas o master pode excluir processos emitidos');
     return;
   }
-  // Qualquer usuário pode excluir análises e andamento → service_role (bypass RLS)
-  const { error } = await sbAdmin.from('clientes').delete().eq('id', id);
+  // Soft-delete: marca deleted_at (nunca remove do banco)
+  const { error } = await sbAdmin.from('clientes').update({ deleted_at: new Date().toISOString() }).eq('id', id);
   if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
-  deletedIds.add(id);
-  persistirDeletedIds();
+  ultimoExcluido = { id, cliente: c.cliente, timer: setTimeout(() => { ultimoExcluido = null; }, 8000) };
   clientes = clientes.filter(c => c.id !== id);
   renderizarTabelas();
-  mostrarToast('Cliente excluído 🗑️');
+  mostrarToastDesfazer(c.cliente, id);
+}
+
+async function restaurarCliente(id) {
+  if (ultimoExcluido && ultimoExcluido.timer) clearTimeout(ultimoExcluido.timer);
+  const { error }
+
+// ========== TOAST ==========
+function mostrarToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function mostrarToastDesfazer(nome, id) {
+  const t = document.getElementById('toast');
+  t.innerHTML = '🗑️ "' + nome + '" movido para lixeira &nbsp;<button onclick="restaurarCliente(' + id + ')" style="background:#f97316;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:600;">DESFAZER</button>';
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.classList.remove('show'); t.innerHTML = ''; }, 8000);
+}
+ = await sbAdmin.from('clientes').update({ deleted_at: null }).eq('id', id);
+  if (error) { mostrarToast('Erro ao restaurar'); return; }
+  carregarDados();
+  mostrarToast('Processo restaurado ↩️');
 }
 
 async function atualizarCampo(id, campo, valor) {
@@ -1544,7 +1608,6 @@ function getFiltrados(sourceClientes, tab) {
   const fp = t === 'andamento' ? filtroProdutoAndamento : filtroProduto;
   const fb = t === 'andamento' ? filtroBancoAndamento : 'todos';
   return src.filter(c => {
-    if (deletedIds.has(c.id)) return false;
     let passaStatus;
     if (t === 'andamento') {
       passaStatus = c.status !== 'emitido' && (c.mes_referencia || '') === mesSelecionado;
@@ -1927,7 +1990,58 @@ async function duplicarClientes(lista, novoMes) {
   carregarDados();
 }
 
+// ========== LIXEIRA ==========
+let clientesLixeira = [];
+
+async function carregarLixeira() {
+  const trintaDiasAtras = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+  const { data, error } = await sbAdmin
+    .from('clientes')
+    .select('*')
+    .not('deleted_at', 'is', null)
+    .gte('deleted_at', trintaDiasAtras)
+    .order('deleted_at', { ascending: false });
+
+  if (error) { mostrarToast('Erro ao carregar lixeira'); return; }
+  clientesLixeira = data || [];
+  renderizarTabelaLixeira();
+}
+
+function renderizarTabelaLixeira() {
+  const tbody = document.getElementById('tableBodyLixeira');
+  const vazia = document.getElementById('lixeiraVazia');
+  if (!clientesLixeira.length) {
+    tbody.innerHTML = '';
+    vazia.classList.remove('hidden');
+    return;
+  }
+  vazia.classList.add('hidden');
+  tbody.innerHTML = clientesLixeira.map((c, i) => {
+    const data = c.deleted_at ? new Date(c.deleted_at).toLocaleDateString('pt-BR') : '—';
+    return '<tr>' +
+      '<td class="px-3 py-2" style="color:var(--text-muted);">' + (i+1) + '</td>' +
+      '<td class="px-3 py-2 font-medium" style="color:var(--text);">' + (c.cliente || '—') + '</td>' +
+      '<td class="px-3 py-2">' + (c.banco || '—') + '</td>' +
+      '<td class="px-3 py-2">' + (c.produto || '—') + '</td>' +
+      '<td class="px-3 py-2" style="color:var(--text-muted);">' + data + '</td>' +
+      '<td class="px-3 py-2"><button onclick="restaurarDaLixeira(' + c.id + ')" style="background:#10b981;color:#fff;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:0.7rem;">↩ Restaurar</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function restaurarDaLixeira(id) {
+  const { error } = await sbAdmin.from('clientes').update({ deleted_at: null }).eq('id', id);
+  if (error) { mostrarToast('Erro ao restaurar'); return; }
+  clientesLixeira = clientesLixeira.filter(c => c.id !== id);
+  renderizarTabelaLixeira();
+  mostrarToast('Processo restaurado ↩️');
+}
+
 function renderizarTudo() {
+  if (tabAtivo === 'lixeira') {
+    carregarLixeira();
+    return;
+  }
   if (tabAtivo === 'andamento') {
     renderizarMesSelector();
     renderizarFiltrosAndamento();
@@ -1950,6 +2064,10 @@ function renderizarTudo() {
 }
 
 function renderizarTabelas() {
+  if (tabAtivo === 'lixeira') {
+    renderizarTabelaLixeira();
+    return;
+  }
   if (tabAtivo === 'andamento') {
     renderizarTabelaAndamento();
     atualizarStatsAndamento();
