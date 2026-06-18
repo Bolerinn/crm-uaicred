@@ -1452,10 +1452,6 @@ function mostrarToastDesfazer(nome, id) {
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.classList.remove('show'); t.innerHTML = ''; }, 8000);
 }
-  if (error) { mostrarToast('Erro ao restaurar'); return; }
-  carregarDados();
-  mostrarToast('Processo restaurado ↩️');
-}
 
 async function atualizarCampo(id, campo, valor) {
   ultimaEdicao = { id, campo, ts: Date.now() };
