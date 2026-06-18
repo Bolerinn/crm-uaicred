@@ -1102,6 +1102,7 @@ async function entrar() {
 
   if (usuarioTipo === 'master') {
     document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
+      document.querySelectorAll('.criado-por-col').forEach(el => el.style.display = '');
   }
 
   if (precisaTrocar) {
@@ -1186,6 +1187,7 @@ async function salvarNovaSenha() {
   // Show master nav if applicable
   if (usuarioTipo === 'master') {
     document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
+      document.querySelectorAll('.criado-por-col').forEach(el => el.style.display = '');
   }
 
   carregarDados();
@@ -1386,7 +1388,8 @@ async function adicionarCliente() {
       banco_itau: false,
       banco_santander: false,
       banco_inter: false,
-      created_by: user.user?.id
+      created_by: user.user?.id,
+      criado_por: usuarioNome || user.user?.email?.split('@')[0] || '—'
     };
     // Se estiver na aba ANDAMENTO, já insere com mes_referencia
     if (tabAtivo === 'andamento') {
@@ -2370,6 +2373,7 @@ function filtrarBancoAndamento(banco, btn) {
 
     if (usuarioTipo === 'master') {
       document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
+      document.querySelectorAll('.criado-por-col').forEach(el => el.style.display = '');
     }
 
     if (precisaTrocar) {
