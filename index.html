@@ -730,6 +730,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <!-- Stats -->
       <div class="px-6 py-3 flex flex-wrap gap-3 text-sm" id="statsBar"></div>
 
+      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosProdutoAnalises"></div>
+      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosResultadoAnalises"></div>
+      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosBancoAnalises"></div>
+
       <!-- Table -->
       <div class="px-6 pb-6">
         <div class="table-container">
@@ -851,8 +855,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       </div>
       <div class="px-6 py-3 flex flex-wrap gap-3 text-sm" id="statsBarEmitidos"></div>
       <!-- Filter: Status -->
-        <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosStatusEmitidos"></div>
       <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosProdutoEmitidos"></div>
+      <div class="px-6 mb-4 flex flex-wrap items-center gap-2" id="filtrosBancoEmitidos"></div>
       <div class="px-6 pb-6">
         <div class="table-container">
           <table class="w-full text-sm">
@@ -868,10 +872,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Valor Imóvel</th>
                 <th class="text-left px-3 py-3">Valor Financ.</th>
                 <th class="text-left px-3 py-3">Produto</th>
-                <th class="text-left px-3 py-3">Data Vistoria</th>
                 <th class="text-left px-3 py-3">Data Emissão</th>
-                <th class="text-left px-3 py-3">Status</th>
-                <th class="text-left px-3 py-3">Obs</th>
                 <th class="text-left px-3 py-3 criado-por-col" style="display:none;">Criado por</th>
                 <th class="text-left px-2 py-3 w-10"></th>
               </tr>
@@ -1023,11 +1024,13 @@ let clientes = [];
 let usuarioEmail = '';
 let filtroStatus = 'todos';
 let filtroProduto = 'todos';
+let filtroResultadoAnalises = 'todos';
+let filtroBancoAnalises = 'todos';
 let filtroStatusAndamento = 'todos';
 let filtroProdutoAndamento = 'todos';
 let filtroBancoAndamento = 'todos';
-let filtroStatusEmitidos = 'todos';
 let filtroProdutoEmitidos = 'todos';
+let filtroBancoEmitidos = 'todos';
 let filtroEmitidos = 'todos';
 let mesSelecionado = new Date().toISOString().slice(0,7); // YYYY-MM
 let tabAtivo = 'analises';
@@ -1477,7 +1480,7 @@ async function atualizarCampo(id, campo, valor) {
   ultimaEdicao = { id, campo, ts: Date.now() };
   const { error } = await sb
     .from('clientes')
-    .update({ [campo]: valor })
+    .update({ [campo]: valor, ...(campo === 'status' && valor === 'emitido' ? { emitido_por: usuarioNome || '' } : {}) })
     .eq('id', id);
 
   if (error) { mostrarToast('Erro ao salvar: ' + error.message); return; }
@@ -1576,9 +1579,28 @@ function filtrarProduto(produto, btn) {
   if (tabAtivo === 'andamento') {
     filtroProdutoAndamento = produto;
     document.querySelectorAll('#filtrosProdutoAndamento .filter-btn-produto').forEach(b => b.classList.remove('active'));
+  } else {
+    filtroProduto = produto;
+    document.querySelectorAll('#filtrosProduto .filter-btn-produto').forEach(b => b.classList.remove('active'));
   }
   if (btn) btn.classList.add('active');
   renderizarTabelas();
+}
+
+function filtrarResultadoAnalises(resultado, btn) {
+  filtroResultadoAnalises = resultado;
+  document.querySelectorAll('#filtrosResultadoAnalises .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add("active");
+  renderizarTabelaAnalises();
+  atualizarStats();
+}
+
+function filtrarBancoAnalises(banco, btn) {
+  filtroBancoAnalises = banco;
+  document.querySelectorAll('#filtrosBancoAnalises .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add("active");
+  renderizarTabelaAnalises();
+  atualizarStats();
 }
 
 
@@ -1645,12 +1667,15 @@ function getFiltrados(sourceClientes, tab) {
     } else if (t === 'emitidos') {
       passaStatus = c.status === 'emitido';
       if (c.mes_referencia && c.mes_referencia !== mesSelecionado) passaStatus = false;
-      if (filtroStatusEmitidos !== 'todos') passaStatus = passaStatus && c.status === filtroStatusEmitidos;
       if (filtroProdutoEmitidos !== 'todos') passaStatus = passaStatus && c.produto === filtroProdutoEmitidos;
+      if (filtroBancoEmitidos !== 'todos') passaStatus = passaStatus && c.banco === filtroBancoEmitidos;
       else if (filtroEmitidos !== 'todos') passaStatus = passaStatus && (c.produto === filtroEmitidos || c.indicacao === filtroEmitidos);
     } else {
       // Aba Análises: excluir convertidos e clientes com mês de competência
       passaStatus = c.convertido !== true && (c.mes_referencia || '') === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
+      if (filtroProduto !== 'todos') passaStatus = passaStatus && c.produto === filtroProduto;
+      if (filtroResultadoAnalises !== 'todos') passaStatus = passaStatus && c.resultado === filtroResultadoAnalises;
+      if (filtroBancoAnalises !== 'todos') passaStatus = passaStatus && c['resultado_' + filtroBancoAnalises.toLowerCase()] === 'aprovado';
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     }
     const passaProduto = (t === 'andamento') ? (fp === 'todos' || c.produto === fp) : true;
@@ -1963,9 +1988,9 @@ function renderizarMesSelectorEmitidos() {
   `;
 }
 
-function filtrarStatusEmitidos(status, btn) {
-  filtroStatusEmitidos = status;
-  document.querySelectorAll('#filtrosStatusEmitidos .filter-btn-status').forEach(b => b.classList.remove('active'));
+function filtrarBancoEmitidos(banco, btn) {
+  filtroBancoEmitidos = banco;
+  document.querySelectorAll('#filtrosBancoEmitidos .filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderizarTabelaEmitidos();
   atualizarStatsEmitidos();
@@ -1979,22 +2004,6 @@ function filtrarProdutoEmitidos(produto, btn) {
   atualizarStatsEmitidos();
 }
 
-}
-
-  atualizarStatsEmitidos();
-  renderizarTabelaEmitidos();
-  if (btn) btn.classList.add('active');
-  document.querySelectorAll('#filtrosStatusEmitidos .filter-btn-status').forEach(b => b.classList.remove('active'));
-  filtroStatusEmitidos = status;
-function filtrarStatusEmitidos(status, btn) {
-}
-
-  atualizarStatsEmitidos();
-  renderizarTabelaEmitidos();
-  if (btn) btn.classList.add('active');
-  document.querySelectorAll('#filtrosProdutoEmitidos .filter-btn-produto').forEach(b => b.classList.remove('active'));
-  filtroProdutoEmitidos = produto;
-function filtrarProdutoEmitidos(produto, btn) {
 function filtrarEmitidos(filtro, btn) {
   filtroEmitidos = filtro;
   document.querySelectorAll('#filtrosEmitidos .filter-btn').forEach(b => b.classList.remove('active'));
@@ -2004,18 +2013,15 @@ function filtrarEmitidos(filtro, btn) {
 }
 
 function renderizarFiltrosEmitidos() {
-  const container = document.getElementById('filtrosEmitidos');
-  if (!container) return;
-  const filtros = [
-    { id: 'todos', label: 'Todos' },
-    { id: 'banco', label: '🏦 Banco' },
-    { id: 'agencia', label: '🏢 Agência' },
-    { id: 'indicacao', label: '👤 Indicação' },
-    ...PRODUTO_OPTS.map(p => ({ id: p, label: p }))
-  ];
-  container.innerHTML = filtros.map(f => `
-    <button class="filter-btn ${filtroEmitidos===f.id?'active':''}" onclick="filtrarEmitidos('${f.id}', this)">${f.label}</button>
-  `).join('');
+  const prContainer = document.getElementById('filtrosProdutoEmitidos');
+  if (prContainer) {
+    prContainer.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Produto:</span> <button class="filter-btn filter-btn-produto ${filtroProdutoEmitidos==='todos'?'active':''}" onclick="filtrarProdutoEmitidos('todos', this)">Todos</button> ${PRODUTO_OPTS.map(p => `<button class="filter-btn filter-btn-produto ${filtroProdutoEmitidos===p?'active':''}" onclick="filtrarProdutoEmitidos('${p}', this)">${p}</button>`).join('')}`;
+  }
+  const bcContainer = document.getElementById('filtrosBancoEmitidos');
+  if (bcContainer) {
+    const bancos = ['Caixa','Bradesco','Itaú','Santander','Inter'];
+    bcContainer.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Banco:</span> <button class="filter-btn ${filtroBancoEmitidos==='todos'?'active':''}" onclick="filtrarBancoEmitidos('todos', this)">Todos</button> ${bancos.map(b => `<button class="filter-btn ${filtroBancoEmitidos===b?'active':''}" onclick="filtrarBancoEmitidos('${b}', this)">${b}</button>`).join('')}`;
+  }
 }
 
 let _dupLock = false;
@@ -2449,7 +2455,7 @@ function renderizarTabelaEmitidos() {
   const filtrados = getFiltrados(null, 'emitidos');
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
     atualizarStatsEmitidos();
     return;
   }
@@ -2469,9 +2475,7 @@ function renderizarTabelaEmitidos() {
       <td class="px-3 py-2.5 text-gray-300">${c.valor_imovel||'—'}</td>
       <td class="px-3 py-2.5 text-gray-300">${c.valor_financiado||'—'}</td>
       <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='FGTS'?'text-orange-400':'text-gray-300'}">${c.produto||'—'}</span></td>
-      <td class="px-3 py-2.5 text-gray-400 text-xs">${c.data_vistoria||'—'}</td>
-      <td class="px-3 py-2.5"><span class="status-badge st-emitido">Contrato Emitido ✨</span></td>
-      <td class="px-3 py-2.5 text-gray-500 text-xs max-w-[120px] truncate">${c.obs||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-400 text-xs">${c.emitido_por||c.criado_por||'—'}</td>
       <td class="px-2 py-2.5 text-center">
         ${master ? `<button onclick="reverterEmitido(${c.id})" class="text-xs px-2 py-1 rounded-lg border transition" style="color:var(--accent);border-color:var(--accent);background:transparent;" title="Reverter para Análises">↩</button>` : ''}
         ${master ? `<button onclick="excluirCliente(${c.id})" class="ml-1 text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>` : ''}
@@ -2511,6 +2515,25 @@ function renderizarFiltros() {
     <button class="filter-btn filter-btn-produto ${filtroProduto==='Comercial'?'active':''}" onclick="filtrarProduto('Comercial', this)">Comercial</button>
     <button class="filter-btn filter-btn-produto ${filtroProduto==='Construção'?'active':''}" onclick="filtrarProduto('Construção', this)">Construção</button>
   `;
+  }
+
+  // Aba 1: Produto
+  const prA = document.getElementById('filtrosProdutoAnalises');
+  if (prA) {
+    prA.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Produto:</span> <button class="filter-btn filter-btn-produto ${filtroProduto==='todos'?'active':''}" onclick="filtrarProduto('todos', this)">Todos</button> ${PRODUTO_OPTS.map(p => `<button class="filter-btn filter-btn-produto ${filtroProduto===p?'active':''}" onclick="filtrarProduto('${p}', this)">${p}</button>`).join('')}`;
+  }
+  // Aba 1: Resultado
+  const resA = document.getElementById('filtrosResultadoAnalises');
+  if (resA) {
+    const resultados = ['aprovado','condicionado','reprovado'];
+    resA.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Resultado:</span> <button class="filter-btn ${filtroResultadoAnalises==='todos'?'active':''}" onclick="filtrarResultadoAnalises('todos', this)">Todos</button> ${resultados.map(r => `<button class="filter-btn ${filtroResultadoAnalises===r?'active':''}" onclick="filtrarResultadoAnalises('${r}', this)">${r.charAt(0).toUpperCase()+r.slice(1)}</button>`).join('')}`;
+  }
+  // Aba 1: Banco
+  const bcA = document.getElementById('filtrosBancoAnalises');
+  if (bcA) {
+    const bancos = ['caixa','bradesco','itau','santander','inter'];
+    const nomes = ['Caixa','Bradesco','Itaú','Santander','Inter'];
+    bcA.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Banco:</span> <button class="filter-btn ${filtroBancoAnalises==='todos'?'active':''}" onclick="filtrarBancoAnalises('todos', this)">Todos</button> ${bancos.map((b,i) => `<button class="filter-btn ${filtroBancoAnalises===b?'active':''}" onclick="filtrarBancoAnalises('${b}', this)">${nomes[i]}</button>`).join('')}`;
   }
 }
 
