@@ -1703,7 +1703,7 @@ function atualizarResultadoRow(id) {
   if (!td) return;
   const c = clientes.find(c => c.id === id);
   if (!c) return;
-  td.innerHTML = getResultadoHtml(c);
+  td.innerHTML = getResultadoPerBancoHtml(c);
 }
 
 async function toggleBanco(id, banco, checked) {
