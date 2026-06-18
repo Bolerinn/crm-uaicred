@@ -7,6 +7,40 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// === profiles-init ===
+let usuarioNome  = '';
+let usuarioTipo  = 'user';
+let profileReady = false;
+
+async function initProfile() {
+  const { data: { user }, error: userError } = await sb.auth.getUser();
+  if (userError || !user) return false;
+  const email = user.email;
+  const meta = user.user_metadata || {};
+  let nome = meta.nome || email.split('@')[0].replace(/[.+]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  let tipo = meta.tipo || (email === 'contatoadouglas@gmail.com' ? 'master' : 'user');
+  let forcePw = meta.force_password_change;
+  if (!meta.nome || !meta.tipo || forcePw === undefined) {
+    const { error } = await sb.auth.updateUser({ data: { nome, tipo, force_password_change: forcePw ?? true } });
+    if (!error) {
+      const refreshed = await sb.auth.getUser();
+      const newMeta = refreshed.data?.user?.user_metadata;
+      if (newMeta) { nome = newMeta.nome || nome; tipo = newMeta.tipo || tipo; forcePw = newMeta.force_password_change; }
+    }
+  }
+  usuarioNome = nome; usuarioTipo = tipo; profileReady = true;
+  const el = document.getElementById('currentUser');
+  if (el) el.textContent = usuarioNome;
+  window.dispatchEvent(new CustomEvent('profile-ready', { detail: { nome, tipo } }));
+  return forcePw === true;
+}
+function isMaster() { return usuarioTipo === 'master'; }
+function getProfile() { return { nome: usuarioNome, tipo: usuarioTipo, ready: profileReady }; }
+window.initProfile = initProfile; window.isMaster = isMaster; window.getProfile = getProfile;
+Object.defineProperty(window, 'usuarioNome', { get() { return usuarioNome; } });
+Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
+</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -28,6 +62,75 @@
   .st-aguardando-laudo { background: #fce7f3; color: #9d174d; }
   .st-conformidade { background: #d1fae5; color: #065f46; }
   .st-em-registro { background: #dbeafe; color: #1e40af; }
+  .st-checklist-i { background: #f0fdf4; color: #166534; }
+  .st-analise-juridica { background: #fef2f2; color: #991b1b; }
+
+  .expand-btn {
+    cursor: pointer;
+    font-size: 0.65rem;
+    margin-left: 4px;
+    display: inline-block;
+    transition: transform 0.2s ease;
+    color: #1e3a5f;
+    opacity: 0.6;
+  }
+  .expand-btn:hover { opacity: 1; color: #f97316; }
+  tr.expanded .expand-btn { transform: rotate(180deg); }
+  .expanded-row td {
+    background: #f8faff;
+    border-top: 2px solid #f97316;
+    padding: 16px;
+  }
+  .expanded-row .expanded-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .expanded-row .expanded-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .expanded-row .expanded-item label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .expanded-row .expanded-item input[type="text"],
+  .expanded-row .expanded-item input[type="date"] {
+    padding: 6px 10px;
+    border: 1.5px solid #dbe5f0;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    outline: none;
+    width: 160px;
+    transition: border-color 0.2s;
+  }
+  .expanded-row .expanded-item input:focus {
+    border-color: #f97316;
+    background: #fff7ed;
+  }
+  .expanded-row .btn-briefing {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #1e3a5f, #2d5a8a);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: filter 0.2s;
+  }
+  .expanded-row .btn-briefing:hover {
+    filter: brightness(1.1);
+  }
 
   .table-container {
     overflow-x: auto;
@@ -85,6 +188,34 @@
     background: #fff7ed;
     border-radius: 4px;
   }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-box {
+    background: white; border-radius: 16px; padding: 32px;
+    max-width: 480px; width: 90%; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: slideDown 0.25s ease;
+  }
+  @keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-box h2 { color: #1e3a5f; font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+  .input-fw { width: 100%; padding: 10px 14px; border: 1.5px solid #dbe5f0; border-radius: 12px; outline: none; transition: 0.2s; }
+  .input-fw:focus { border-color: #f97316; ring: 2px solid #fed7aa; }
+  .btn-primary { background: linear-gradient(135deg, #1e3a5f, #2d5a8a); color: white; padding: 10px 24px; border-radius: 12px; font-weight: 600; transition: 0.2s; cursor: pointer; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: white; border: 1.5px solid #dbe5f0; color: #1e3a5f; padding: 10px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+  .btn-secondary:hover { border-color: #f97316; background: #fff7ed; }
+  .valido { color: #16a34a; } .invalido { color: #dc2626; }
+
 </style>
 </head>
 <body>
@@ -127,6 +258,34 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
   </div>
 </div>
 
+<!-- ========== PASSWORD CHANGE SCREEN ========== -->
+<div id="pwChangeScreen" class="hidden min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 50%, #fef7ed 100%);">
+  <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md border border-blue-100">
+    <div class="text-center mb-6">
+      <div class="inline-flex items-center justify-center w-14 h-14 logo-bg rounded-2xl mb-3">
+        <span class="text-white text-xl font-bold" style="font-family: Georgia, serif;">U</span>
+      </div>
+      <h2 class="text-xl font-bold" style="color:#1e3a5f;">Bem-vindo ao UaiCred!</h2>
+      <p class="text-gray-500 text-sm mt-1">Crie sua senha pessoal para continuar</p>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
+        <input id="pwNew" type="password" oninput="validarPw()" class="input-fw" placeholder="Mínimo 8 caracteres">
+        <p id="pwNewMsg" class="text-xs mt-1"></p>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar Senha</label>
+        <input id="pwConfirm" type="password" oninput="validarPw()" class="input-fw" placeholder="Repita a senha">
+        <p id="pwConfirmMsg" class="text-xs mt-1"></p>
+      </div>
+      <p id="pwError" class="text-red-500 text-sm text-center hidden"></p>
+      <button id="pwSaveBtn" onclick="salvarNovaSenha()" class="w-full btn-primary" disabled>Salvar e Entrar</button>
+      <button onclick="sairForcarSenha()" class="w-full text-sm text-gray-400 hover:text-gray-600 transition">Sair</button>
+    </div>
+  </div>
+</div>
+
 <!-- ========== MAIN APP ========== -->
 <div id="appScreen" class="hidden min-h-screen" style="background: #f0f4ff;">
   <header class="logo-bg text-white px-6 py-3 flex items-center justify-between shadow-md">
@@ -144,6 +303,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
         <span class="text-blue-300">Olá,</span>
         <strong id="currentUser" class="text-white"></strong>
       </span>
+      <button onclick="abrirConfiguracoes()" class="text-blue-300 hover:text-orange-300 transition" title="Configurações">
+        ⚙️
+      </button>
       <button onclick="sair()" class="text-sm text-blue-300 hover:text-orange-300 transition">Sair</button>
     </div>
   </header>
@@ -166,6 +328,14 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <span class="text-gray-400">✅ Conformidade</span>
       <span class="ml-2 font-semibold text-emerald-600" id="confCount">0</span>
     </div>
+    <div class="bg-white rounded-lg px-4 py-2 shadow-sm border border-blue-100">
+      <span class="text-gray-400">📝 Checklist I</span>
+      <span class="ml-2 font-semibold text-green-700" id="checklistCount">0</span>
+    </div>
+    <div class="bg-white rounded-lg px-4 py-2 shadow-sm border border-blue-100">
+      <span class="text-gray-400">⚖️ Análise Jurídica</span>
+      <span class="ml-2 font-semibold text-red-700" id="juridicaCount">0</span>
+    </div>
   </div>
 
   <!-- Filter: Status -->
@@ -177,6 +347,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
     <button class="filter-btn filter-btn-status" onclick="filtrarStatus('aguardando-laudo', this)">Aguardando Laudo</button>
     <button class="filter-btn filter-btn-status" onclick="filtrarStatus('conformidade', this)">Conformidade</button>
     <button class="filter-btn filter-btn-status" onclick="filtrarStatus('em-registro', this)">Em Registro</button>
+    <button class="filter-btn filter-btn-status" onclick="filtrarStatus('checklist-i', this)">Checklist I</button>
+    <button class="filter-btn filter-btn-status" onclick="filtrarStatus('analise-juridica', this)">Análise Jurídica</button>
   </div>
 
   <!-- Filter: Produto -->
@@ -197,6 +369,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
             <th class="text-left px-3 py-3">Indicação</th>
             <th class="text-left px-3 py-3">Cliente</th>
             <th class="text-left px-3 py-3">CPF</th>
+            <th class="text-left px-3 py-3">Banco</th>
             <th class="text-left px-3 py-3">Agência</th>
             <th class="text-left px-3 py-3">Valor Imóvel</th>
             <th class="text-left px-3 py-3">Valor Financ.</th>
@@ -229,6 +402,17 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
 
 <div id="toast" class="toast"></div>
 
+<!-- ========== SETTINGS MODAL ========== -->
+<div id="settingsModal" class="hidden modal-overlay" onclick="if(event.target===this)fecharConfig()">
+  <div class="modal-box">
+    <div class="flex items-center justify-between mb-4">
+      <h2>⚙️ Configurações</h2>
+      <button onclick="fecharConfig()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+    </div>
+    <div id="settingsContent"></div>
+  </div>
+</div>
+
 <script>
 // ========== SUPABASE ==========
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -240,6 +424,8 @@ const STATUS_OPTS = [
   { id: 'aguardando-laudo',label: 'Aguardando Laudo' },
   { id: 'conformidade',    label: 'Conformidade' },
   { id: 'em-registro',     label: 'Em Registro' },
+  { id: 'checklist-i',     label: 'Checklist I' },
+  { id: 'analise-juridica',label: 'Análise Jurídica' },
 ];
 const PRODUTO_OPTS = ['SBPE', 'FGTS'];
 
@@ -268,7 +454,19 @@ async function entrar() {
   }
 
   usuarioEmail = data.user.email;
-  document.getElementById('currentUser').textContent = data.user.email.split('@')[0];
+
+  // Inicializa profile e verifica se precisa trocar senha
+  const precisaTrocar = await initProfile();
+
+  document.getElementById('currentUser').textContent = usuarioNome || data.user.email.split('@')[0];
+
+  if (precisaTrocar) {
+    // Mostra tela de troca de senha obrigatória
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('pwChangeScreen').classList.remove('hidden');
+    return;
+  }
+
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appScreen').classList.remove('hidden');
   carregarDados();
@@ -278,7 +476,230 @@ async function entrar() {
 async function sair() {
   await sb.auth.signOut();
   document.getElementById('appScreen').classList.add('hidden');
+  document.getElementById('pwChangeScreen').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+// ========== PASSWORD CHANGE ==========
+function validarPw() {
+  const nova = document.getElementById('pwNew').value;
+  const conf = document.getElementById('pwConfirm').value;
+  const newMsg = document.getElementById('pwNewMsg');
+  const confMsg = document.getElementById('pwConfirmMsg');
+  const btn = document.getElementById('pwSaveBtn');
+
+  let ok = true;
+
+  if (nova.length < 8) {
+    newMsg.innerHTML = '<span class="invalido">✗ Mínimo 8 caracteres</span>';
+    ok = false;
+  } else {
+    newMsg.innerHTML = '<span class="valido">✓ Ok</span>';
+  }
+
+  if (!conf) {
+    confMsg.innerHTML = '';
+    ok = false;
+  } else if (conf !== nova) {
+    confMsg.innerHTML = '<span class="invalido">✗ Senhas não conferem</span>';
+    ok = false;
+  } else {
+    confMsg.innerHTML = '<span class="valido">✓ Ok</span>';
+  }
+
+  btn.disabled = !ok;
+}
+
+async function salvarNovaSenha() {
+  const nova = document.getElementById('pwNew').value;
+  const conf = document.getElementById('pwConfirm').value;
+  const errEl = document.getElementById('pwError');
+  const btn = document.getElementById('pwSaveBtn');
+
+  if (nova.length < 8 || nova !== conf) return;
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  errEl.classList.add('hidden');
+
+  const { error } = await sb.auth.updateUser({ password: nova });
+  if (error) {
+    errEl.textContent = error.message;
+    errEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Salvar e Entrar';
+    return;
+  }
+
+  // Marca que não precisa mais trocar senha
+  await sb.auth.updateUser({ data: { force_password_change: false } });
+  mostrarToast('Senha alterada com sucesso 🔒');
+
+  document.getElementById('pwChangeScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
+  carregarDados();
+  ouvirTempoReal();
+}
+
+async function sairForcarSenha() {
+  await sb.auth.signOut();
+  document.getElementById('pwChangeScreen').classList.add('hidden');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+// ========== SETTINGS ==========
+async function abrirConfiguracoes() {
+  const modal = document.getElementById('settingsModal');
+  const content = document.getElementById('settingsContent');
+  modal.classList.remove('hidden');
+
+  const { data: { user } } = await sb.auth.getUser();
+  const meta = user?.user_metadata || {};
+  const tipo = usuarioTipo || meta.tipo || 'user';
+  const nome = usuarioNome || meta.nome || user?.email?.split('@')[0] || '';
+
+  let html = '';
+
+  // Perfil do usuário logado
+  html += `
+    <div class="bg-blue-50 rounded-xl p-4 mb-4 border border-blue-100">
+      <div class="flex items-center justify-between mb-2">
+        <span class="font-semibold" style="color:#1e3a5f;">Meu Perfil</span>
+        <span class="text-xs px-2 py-0.5 rounded-full ${tipo === 'master' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}">${tipo === 'master' ? '👑 Master' : '👤 Usuário'}</span>
+      </div>
+      <div class="space-y-2">
+        <div>
+          <label class="text-xs text-gray-500">Nome</label>
+          <input id="settingsNome" class="input-fw text-sm" value="${nome.replace(/"/g,'&quot;')}">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">E-mail</label>
+          <p class="text-sm text-gray-700 py-2">${user?.email || ''}</p>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button onclick="salvarMeuNome()" class="btn-primary text-sm">Salvar Nome</button>
+        <button onclick="abrirAltSenha()" class="btn-secondary text-sm">Alterar Senha</button>
+      </div>
+    </div>`;
+
+  // Master: listar usuários
+  if (tipo === 'master') {
+    html += `<div class="bg-white rounded-xl border border-blue-100 overflow-hidden">
+      <div class="bg-blue-50 px-4 py-2 border-b border-blue-100">
+        <span class="font-semibold text-sm" style="color:#1e3a5f;">Usuários do CRM</span>
+      </div>
+      <div id="usersList" class="p-2 text-sm text-gray-400">Carregando...</div>
+    </div>`;
+  }
+
+  // Modal de alterar senha (oculto)
+  html += `
+    <div id="altSenhaModal" class="hidden mt-4 bg-orange-50 rounded-xl p-4 border border-orange-200">
+      <p class="font-semibold text-sm mb-3" style="color:#1e3a5f;">Alterar Senha</p>
+      <div class="space-y-2">
+        <div><input id="altPwAtual" type="password" class="input-fw text-sm" placeholder="Senha atual"></div>
+        <div><input id="altPwNova" type="password" class="input-fw text-sm" placeholder="Nova senha (mín 8 caracteres)"></div>
+        <div><input id="altPwConf" type="password" class="input-fw text-sm" placeholder="Confirmar nova senha"></div>
+      </div>
+      <p id="altPwError" class="text-red-500 text-xs mt-2 hidden"></p>
+      <div class="flex gap-2 mt-3">
+        <button onclick="alterarSenhaSettings()" class="btn-primary text-sm">Salvar</button>
+        <button onclick="fecharAltSenha()" class="btn-secondary text-sm">Cancelar</button>
+      </div>
+    </div>`;
+
+  content.innerHTML = html;
+  modal.classList.remove('hidden');
+
+  // Se master, carrega lista de usuários
+  if (tipo === 'master') {
+    carregarListaUsuarios();
+  }
+}
+
+function fecharConfig() {
+  document.getElementById('settingsModal').classList.add('hidden');
+}
+
+async function salvarMeuNome() {
+  const novoNome = document.getElementById('settingsNome').value.trim();
+  if (!novoNome) { mostrarToast('Digite um nome'); return; }
+  const { error } = await sb.auth.updateUser({ data: { nome: novoNome } });
+  if (error) { mostrarToast('Erro ao salvar'); return; }
+  usuarioNome = novoNome;
+  document.getElementById('currentUser').textContent = novoNome;
+  mostrarToast('Nome atualizado ✅');
+}
+
+async function abrirAltSenha() {
+  document.getElementById('altSenhaModal').classList.remove('hidden');
+  document.getElementById('altPwError').classList.add('hidden');
+  document.getElementById('altPwAtual').value = '';
+  document.getElementById('altPwNova').value = '';
+  document.getElementById('altPwConf').value = '';
+}
+
+function fecharAltSenha() {
+  document.getElementById('altSenhaModal').classList.add('hidden');
+}
+
+async function alterarSenhaSettings() {
+  const atual = document.getElementById('altPwAtual').value;
+  const nova = document.getElementById('altPwNova').value;
+  const conf = document.getElementById('altPwConf').value;
+  const errEl = document.getElementById('altPwError');
+
+  if (!atual || !nova || !conf) {
+    errEl.textContent = 'Preencha todos os campos';
+    errEl.classList.remove('hidden'); return;
+  }
+  if (nova.length < 8) {
+    errEl.textContent = 'Nova senha: mínimo 8 caracteres';
+    errEl.classList.remove('hidden'); return;
+  }
+  if (nova !== conf) {
+    errEl.textContent = 'Senhas não conferem';
+    errEl.classList.remove('hidden'); return;
+  }
+
+  // Primeiro reautentica
+  const email = (await sb.auth.getUser()).data?.user?.email;
+  const { error: signInError } = await sb.auth.signInWithPassword({ email, password: atual });
+  if (signInError) {
+    errEl.textContent = 'Senha atual incorreta';
+    errEl.classList.remove('hidden'); return;
+  }
+
+  const { error } = await sb.auth.updateUser({ password: nova });
+  if (error) {
+    errEl.textContent = error.message;
+    errEl.classList.remove('hidden'); return;
+  }
+
+  mostrarToast('Senha alterada com sucesso 🔒');
+  fecharAltSenha();
+}
+
+async function carregarListaUsuarios() {
+  const el = document.getElementById('usersList');
+  // Tenta buscar profiles (se não existir tabela, mostra info)
+  try {
+    const { data, error } = await sb.from('profiles').select('*').order('created_at');
+    if (error || !data) {
+      el.innerHTML = '<p class="text-gray-400 p-2">Use o metadata do Auth. Lista via admin em breve.</p>';
+      return;
+    }
+    let html = '<table class="w-full text-xs"><thead><tr class="text-left text-gray-500 uppercase"><th class="px-2 py-1">Nome</th><th class="px-2 py-1">Email</th><th class="px-2 py-1">Tipo</th></tr></thead><tbody>';
+    for (const p of data) {
+      html += `<tr class="border-t border-blue-50 hover:bg-orange-50"><td class="px-2 py-1">${p.nome}</td><td class="px-2 py-1">${p.email}</td><td class="px-2 py-1">${p.tipo === 'master' ? '👑 Master' : 'Usuário'}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<p class="text-gray-400 p-2">Tabela de perfis não disponível.</p>';
+  }
 }
 
 // ========== CRUD ==========
@@ -373,19 +794,31 @@ function renderizarTabela() {
   });
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-12 text-gray-400">Nenhum cliente encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-12 text-gray-400">Nenhum cliente encontrado.</td></tr>';
     atualizarStats();
     return;
   }
 
+  const BANCO_OPTS = ['', 'Bradesco', 'Caixa', 'Itaú', 'Santander', 'Inter'];
+
   tbody.innerHTML = filtrados.map((c, i) => {
     const idx = clientes.indexOf(c);
+    const fgtsChecked = c.fgts === true ? 'checked' : '';
+    const iqChecked = c.iq === true ? 'checked' : '';
     return `
     <tr class="border-b border-blue-50 hover:bg-orange-50/40 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-400 text-xs text-center">${idx + 1}</td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.indicacao||''}</span></td>
-      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.cliente||''}</span></td>
+      <td class="px-3 py-2.5">
+        <span contenteditable="true" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.cliente||''}</span>
+        <span class="expand-btn" onclick="toggleExpand(this)" title="Expandir">▼</span>
+      </td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cpf" class="editavel px-1 -mx-1 rounded font-mono text-xs" onblur="editarCampo(this)">${c.cpf||''}</span></td>
+      <td class="px-3 py-2.5">
+        <select onchange="atualizarCampo(${c.id},'banco',this.value)" class="text-xs border-0 bg-transparent cursor-pointer focus:ring-2 focus:ring-orange-300 rounded-lg p-1">
+          ${BANCO_OPTS.map(b => `<option value="${b}" ${b===c.banco?'selected':''}>${b||'—'}</option>`).join('')}
+        </select>
+      </td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="agencia" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.agencia||''}</span></td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.valor_imovel||''}</span></td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.valor_financiado||''}</span></td>
@@ -401,6 +834,29 @@ function renderizarTabela() {
         </select>
       </td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.obs||''}</span></td>
+    </tr>
+    <tr class="expanded-row" style="display:none;">
+      <td colspan="13">
+        <div class="expanded-grid">
+          <div class="expanded-item">
+            <label>
+              <input type="checkbox" ${fgtsChecked} onchange="toggleFgts(${c.id}, this.checked)" /> FGTS
+            </label>
+            <input type="text" id="valor_fgts_${c.id}" placeholder="R$ 0,00" value="${c.valor_fgts||''}" style="${c.fgts===true?'':'display:none;'}" onblur="atualizarCampo(${c.id},'valor_fgts',this.value)" />
+          </div>
+          <div class="expanded-item">
+            <label>
+              <input type="checkbox" ${iqChecked} onchange="toggleIq(${c.id}, this.checked)" /> IQ
+            </label>
+            <input type="text" id="data_iq_${c.id}" placeholder="dd/mm/aaaa" value="${c.data_iq||''}" style="${c.iq===true?'':'display:none;'}" onblur="atualizarCampo(${c.id},'data_iq',this.value)" />
+          </div>
+          <div class="expanded-item" style="justify-content:flex-end;">
+            <button class="btn-briefing" onclick="mostrarToast('Briefing será gerado em breve 📄')">
+              📄 Briefing
+            </button>
+          </div>
+        </div>
+      </td>
     </tr>`;
   }).join('');
   atualizarStats();
@@ -412,19 +868,45 @@ function editarCampo(el) {
   atualizarCampo(id, campo, el.textContent.trim());
 }
 
+function toggleExpand(btn) {
+  const mainRow = btn.closest('tr');
+  const expandedRow = mainRow.nextElementSibling;
+  if (expandedRow && expandedRow.classList.contains('expanded-row')) {
+    mainRow.classList.toggle('expanded');
+    expandedRow.style.display = mainRow.classList.contains('expanded') ? 'table-row' : 'none';
+  }
+}
+
+function toggleFgts(id, checked) {
+  atualizarCampo(id, 'fgts', checked);
+  const el = document.getElementById('valor_fgts_' + id);
+  if (el) el.style.display = checked ? '' : 'none';
+}
+
+function toggleIq(id, checked) {
+  atualizarCampo(id, 'iq', checked);
+  const el = document.getElementById('data_iq_' + id);
+  if (el) el.style.display = checked ? '' : 'none';
+}
+
 function atualizarStats() {
   document.getElementById('totalCount').textContent = clientes.length;
   document.getElementById('docCount').textContent = clientes.filter(c => c.status === 'aguardando-doc').length;
   document.getElementById('visCount').textContent = clientes.filter(c => c.status === 'aguardando-vis').length;
   document.getElementById('confCount').textContent = clientes.filter(c => c.status === 'conformidade').length;
+  document.getElementById('checklistCount').textContent = clientes.filter(c => c.status === 'checklist-i').length;
+  document.getElementById('juridicaCount').textContent = clientes.filter(c => c.status === 'analise-juridica').length;
 }
 
 // ========== EXPORTS ==========
 function exportarCSV() {
-  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Data Vistoria','Status','Obs'];
+  const headers = ['Indicação','Cliente','CPF','Banco','Agência','Valor Imóvel','Valor Financiado','Produto','Data Vistoria','Status','FGTS','IQ','Obs'];
   const rows = clientes.map(c => [
-    c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.data_vistoria,
-    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+    c.indicacao, c.cliente, c.cpf, c.banco, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.data_vistoria,
+    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status,
+    c.fgts ? 'Sim' : 'Não',
+    c.iq ? 'Sim' : 'Não',
+    c.obs
   ]);
   const csv = [headers.join(','), ...rows.map(r => r.map(v => '"'+(v||'')+'"').join(','))].join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -437,14 +919,17 @@ function exportarCSV() {
 }
 
 function exportarExcel() {
-  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Data Vistoria','Status','Obs'];
+  const headers = ['Indicação','Cliente','CPF','Banco','Agência','Valor Imóvel','Valor Financiado','Produto','Data Vistoria','Status','FGTS','IQ','Obs'];
   const rows = clientes.map(c => [
-    c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.data_vistoria,
-    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+    c.indicacao, c.cliente, c.cpf, c.banco, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.data_vistoria,
+    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status,
+    c.fgts ? 'Sim' : 'Não',
+    c.iq ? 'Sim' : 'Não',
+    c.obs
   ]);
   const data = [headers, ...rows];
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{ wch:22 },{ wch:26 },{ wch:16 },{ wch:22 },{ wch:16 },{ wch:16 },{ wch:10 },{ wch:16 },{ wch:22 },{ wch:30 }];
+  ws['!cols'] = [{ wch:22 },{ wch:26 },{ wch:16 },{ wch:14 },{ wch:22 },{ wch:16 },{ wch:16 },{ wch:10 },{ wch:16 },{ wch:22 },{ wch:10 },{ wch:10 },{ wch:30 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
   XLSX.writeFile(wb, 'uaicred-clientes.xlsx');
@@ -464,7 +949,17 @@ function mostrarToast(msg) {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     usuarioEmail = session.user.email;
-    document.getElementById('currentUser').textContent = session.user.email.split('@')[0];
+
+    // Inicializa profile e verifica se precisa trocar senha
+    const precisaTrocar = await initProfile();
+
+    document.getElementById('currentUser').textContent = usuarioNome || session.user.email.split('@')[0];
+
+    if (precisaTrocar) {
+      document.getElementById('pwChangeScreen').classList.remove('hidden');
+      return;
+    }
+
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('appScreen').classList.remove('hidden');
     carregarDados();
