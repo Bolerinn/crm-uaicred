@@ -1364,19 +1364,19 @@ async function carregarListaUsuarios() {
 
 // ========== CRUD ==========
 async function carregarDados() {
-  // Tenta filtrar deleted_at; se coluna não existir, fallback sem filtro
-  let { data, error } = await sbAdmin
-    .from('clientes')
-    .select('*')
-    .is('deleted_at', null)
-    .order('id');
-
-  if (error) {
-    const res = await sbAdmin.from('clientes').select('*').order('id');
-    data = res.data; error = res.error;
+  const resp = await fetch(SUPABASE_URL + '/rest/v1/clientes?select=*&deleted_at=is.null&order=id', {
+    headers: { 'apikey': SERVICE_ROLE_KEY, 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY }
+  });
+  if (resp.ok) {
+    clientes = await resp.json();
+  } else {
+    // Fallback sem filtro
+    const r2 = await fetch(SUPABASE_URL + '/rest/v1/clientes?select=*&order=id', {
+      headers: { 'apikey': SERVICE_ROLE_KEY, 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY }
+    });
+    if (r2.ok) clientes = await r2.json();
+    else { mostrarToast('Erro ao carregar dados'); return; }
   }
-  if (error) { mostrarToast('Erro ao carregar dados'); return; }
-  clientes = data || [];
   renderizarTudo();
 }
 
