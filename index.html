@@ -2109,9 +2109,10 @@ function exportarExcel() {
 
 function renderizarMetricas() {
   const container = document.getElementById('metricasContent');
-  const total = clientes.length;
-  const emitidos = clientes.filter(c => c.status === 'emitido').length;
-  const emAndamento = clientes.filter(c => c.status !== 'emitido' && c.mes_referencia).length;
+  const doMes = clientes.filter(c => c.mes_referencia === mesSelecionado);
+  const total = doMes.length;
+  const emitidos = doMes.filter(c => c.status === 'emitido').length;
+  const emAndamento = doMes.filter(c => c.status !== 'emitido').length;
 
   // Status distribution
   const distStatus = {};
