@@ -735,10 +735,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="px-6 py-3 flex flex-wrap gap-3 text-sm" id="statsBar"></div>
 
       <!-- Month Selector -->
-      <div class="flex items-center gap-4 px-6 py-2" id="mesSelector">
-        <button onclick="mudarMes(-1)" class="text-lg hover:text-orange-500 transition">◀</button>
-        <span id="mesLabel" class="font-semibold text-sm" style="color:var(--text);"></span>
-        <button onclick="mudarMes(1)" class="text-lg hover:text-orange-500 transition">▶</button>
+      <div class="flex items-center gap-4 px-6 py-2" id="mesSelectorAnalises">
+        <button onclick="mudarMesAnalises(-1)" class="text-lg hover:text-orange-500 transition">◀</button>
+        <span id="mesLabelAnalises" class="font-semibold text-sm" style="color:var(--text);"></span>
+        <button onclick="mudarMesAnalises(1)" class="text-lg hover:text-orange-500 transition">▶</button>
       </div>
 
       <!-- Table -->
@@ -1440,17 +1440,17 @@ function filtrarPorMes(clientesArr) {
   });
 }
 
-function mudarMes(delta) {
+function mudarMesAnalises(delta) {
   mesAtual += delta;
   if (mesAtual < 0) { mesAtual = 11; anoAtual--; }
   if (mesAtual > 11) { mesAtual = 0; anoAtual++; }
-  atualizarMesLabel();
+  atualizarMesLabelAnalises();
   renderizarTabelaAnalises();
   atualizarStats();
 }
 
-function atualizarMesLabel() {
-  const el = document.getElementById('mesLabel');
+function atualizarMesLabelAnalises() {
+  const el = document.getElementById('mesLabelAnalises');
   if (el) {
     el.textContent = new Date(anoAtual, mesAtual).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
   }
@@ -1669,7 +1669,7 @@ function renderizarTudo() {
   } else if (tabAtivo === 'metricas') {
     renderizarMetricas();
   } else {
-    atualizarMesLabel();
+    atualizarMesLabelAnalises();
     renderizarTabelaAnalises();
     renderizarFiltros();
     atualizarStats();
