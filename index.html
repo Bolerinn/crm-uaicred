@@ -1995,7 +1995,7 @@ async function duplicarClientes(lista, novoMes) {
     dados.created_by = userId; // garante permissão de delete
     dados.mes_referencia = novoMes;
     dados.status = dados.status || 'aguardando-doc';
-    const { error } = await sb.from('clientes').insert(dados);
+    console.log('duplicando: '+c.cliente+' -> '+novoMes); const { error } = await sb.from('clientes').insert(dados);
     if (error) { mostrarToast('Erro ao duplicar: ' + error.message); return; }
     count++;
   }
