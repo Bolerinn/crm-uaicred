@@ -750,6 +750,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Obs</th>
                 <th class="text-left px-2 py-3 w-16">Follow-up</th>
                 <th class="text-left px-2 py-3 w-16">Convertido</th>
+                <th class="text-left px-3 py-3 criado-por-col" style="display:none;">Criado por</th>
                 <th class="text-left px-2 py-3 w-10"></th>
               </tr>
             </thead>
@@ -806,7 +807,6 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Cliente</th>
                 <th class="text-left px-1 py-3 w-8"></th>
                 <th class="text-left px-3 py-3">CPF</th>
-                <th class="text-left px-3 py-3">Data</th>
                 <th class="text-left px-3 py-3">Banco</th>
                 <th class="text-left px-3 py-3">Agência</th>
                 <th class="text-left px-3 py-3">Valor Imóvel</th>
@@ -816,6 +816,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Data Emissão</th>
                 <th class="text-left px-3 py-3">Status</th>
                 <th class="text-left px-3 py-3">Obs</th>
+                <th class="text-left px-3 py-3 criado-por-col" style="display:none;">Criado por</th>
                 <th class="text-left px-2 py-3 w-10"></th>
               </tr>
             </thead>
@@ -870,6 +871,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Data Emissão</th>
                 <th class="text-left px-3 py-3">Status</th>
                 <th class="text-left px-3 py-3">Obs</th>
+                <th class="text-left px-3 py-3 criado-por-col" style="display:none;">Criado por</th>
                 <th class="text-left px-2 py-3 w-10"></th>
               </tr>
             </thead>
@@ -1388,6 +1390,7 @@ async function adicionarCliente() {
     const { data: user } = await sb.auth.getUser();
     const insertData = {
       cliente: 'Novo Cliente',
+      data: new Date().toLocaleDateString('pt-BR').slice(0,5),
       produto: 'SBPE',
       status: 'aguardando-doc',
       data_vistoria: '—',
@@ -1982,7 +1985,8 @@ async function iniciarNovaCompetencia() {
     const mesesUnicos = [...new Set(pendentes.map(c => c.mes_referencia).filter(Boolean))].sort().reverse();
     const mesOrigem = mesesUnicos[0];
     const duplicar = pendentes.filter(c => c.mes_referencia === mesOrigem);
-    await duplicarClientes(duplicar, hoje);
+    const todosFb = [...duplicar, ...followUps.filter(f => !duplicar.some(o => o.id === f.id))];
+    await duplicarClientes(todosFb.length ? todosFb : duplicar, hoje);
     return;
   }
   const todos = [...origem, ...followUps.filter(f => !origem.some(o => o.id === f.id))];
@@ -2062,11 +2066,14 @@ async function restaurarDaLixeira(id) {
 
 async function excluirPermanentemente(id) {
   if (!confirm('ATENÇÃO: Este processo será EXCLUÍDO PERMANENTEMENTE e não poderá ser recuperado. Continuar?')) return;
-  const { error } = await sbAdmin.from('clientes').delete().eq('id', id).select();
-  if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
+  const resp = await fetch(SUPABASE_URL + '/rest/v1/clientes?id=eq.' + id, {
+    method: 'DELETE',
+    headers: { 'apikey': SERVICE_ROLE_KEY, 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY }
+  });
+  if (!resp.ok) { mostrarToast('Erro ao excluir permanentemente'); return; }
   clientesLixeira = clientesLixeira.filter(c => c.id !== id);
   renderizarTabelaLixeira();
-  mostrarToast('Processo excluído permanentemente ❌');
+  mostrarToast('Processo excluído permanentemente '+String.fromCharCode(10060));
 }
 
 function renderizarTudo() {
@@ -2127,7 +2134,7 @@ function renderizarTabelaAnalises() {
       <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="editarCampoInput(this)" value="${c.indicacao||''}" style="color:inherit;width:120px;" autocomplete="off"></td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data||''}" placeholder="dd/mm" maxlength="5" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data" onfocus="if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data||''}" placeholder="dd/mm" maxlength="5" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5" style="white-space:nowrap;">
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#0061A8;"><input type="checkbox" ${c.banco_caixa?'checked':''} onchange="toggleBanco(${c.id},'caixa',this.checked)" class="w-3 h-3 accent-blue-600"> Caixa</label>
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#CC092F;"><input type="checkbox" ${c.banco_bradesco?'checked':''} onchange="toggleBanco(${c.id},'bradesco',this.checked)" class="w-3 h-3 accent-red-600"> Bradesco</label>
@@ -2151,6 +2158,7 @@ function renderizarTabelaAnalises() {
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${c.convertido?'checked':''} onchange="converterCliente(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Converter em processo ativo">
       </td>
+      <td class="px-3 py-2.5 criado-por-col" style="display:none;">${c.criado_por || '—'}</td>
       <td class="px-2 py-2.5 text-center">
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
@@ -2214,6 +2222,7 @@ function renderizarTabelaAndamento() {
         </select>
       </td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
+      <td class="px-3 py-2.5 criado-por-col" style="display:none;">${c.criado_por || '—'}</td>
       <td class="px-2 py-2.5 text-center">
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
