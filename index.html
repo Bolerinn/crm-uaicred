@@ -1430,7 +1430,11 @@ async function excluirCliente(id) {
 
 async function restaurarCliente(id) {
   if (ultimoExcluido && ultimoExcluido.timer) clearTimeout(ultimoExcluido.timer);
-  const { error }
+  const { error } = await sbAdmin.from('clientes').update({ deleted_at: null }).eq('id', id);
+  if (error) { mostrarToast('Erro ao restaurar'); return; }
+  carregarDados();
+  mostrarToast('Processo restaurado ↩️');
+}
 
 // ========== TOAST ==========
 function mostrarToast(msg) {
@@ -1448,7 +1452,6 @@ function mostrarToastDesfazer(nome, id) {
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.classList.remove('show'); t.innerHTML = ''; }, 8000);
 }
- = await sbAdmin.from('clientes').update({ deleted_at: null }).eq('id', id);
   if (error) { mostrarToast('Erro ao restaurar'); return; }
   carregarDados();
   mostrarToast('Processo restaurado ↩️');
