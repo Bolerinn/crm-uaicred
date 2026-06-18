@@ -190,30 +190,12 @@ Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
     white-space: nowrap;
     min-height: 68px;
   }
-  .sidebar-logo .logo-icon {
-    width: 32px; height: 32px; min-width: 32px;
-    background: linear-gradient(135deg, #f97316, #ea580c);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: Georgia, serif;
-    font-weight: bold; font-size: 0.8rem;
-    color: #fff;
-  }
   .sidebar-logo .logo-text {
     margin-left: 12px;
     font-weight: 700; font-size: 0.85rem;
-    color: var(--text);
-    opacity: 0; transition: opacity 0.18s ease;
+    color: #1a1a1a;
     white-space: nowrap;
   }
-  #sidebar:hover .sidebar-logo .logo-text { opacity: 1; }
-
-  .sidebar-logo .logo-sub {
-    font-size: 0.6rem; color: var(--gold);
-    opacity: 0; transition: opacity 0.18s ease;
-    white-space: nowrap;
-  }
-  #sidebar:hover .sidebar-logo .logo-sub { opacity: 1; }
 
   #sidebar nav {
     flex: 1; padding: 12px 0;
@@ -685,10 +667,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
   <!-- SIDEBAR -->
   <aside id="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-icon"><img src="logo-p.png" alt="P" class="w-6 h-6 object-contain"></div>
+      <img src="logo-p.png" alt="P" class="w-8 h-8 rounded-lg object-contain" style="min-width:32px;">
       <div>
-        <div class="logo-text">Rede Prime</div>
-        <div class="logo-sub">Assessoria RMS</div>
+        <div class="logo-text" style="color:#1a1a1a;">CRM Rede Prime RMS</div>
       </div>
     </div>
 
