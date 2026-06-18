@@ -2001,6 +2001,7 @@ async function duplicarClientes(lista, novoMes) {
   const userId = user?.id;
   for (const c of lista) {
     const { id, created_at, updated_at, ...dados } = c;
+    console.log('dup: '+c.cliente+' fu='+dados.follow_up+' cv='+dados.convertido);
     dados.created_by = userId; // garante permissão de delete
     dados.mes_referencia = novoMes;
     dados.status = dados.status || 'aguardando-doc';
