@@ -846,12 +846,15 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
 
     <!-- TAB: EMITIDOS -->
     <div id="tab-emitidos" class="tab-panel">
-      <div class="px-6 pt-6 pb-2">
+      <div class="px-6 pt-6 pb-2 flex items-center justify-between flex-wrap gap-3">
         <div class="section-title">
           <span class="gold-dot"></span> Contratos Emitidos
         </div>
+        <div id="mesSelectorEmitidos" class="flex items-center gap-2"></div>
       </div>
       <div class="px-6 py-3 flex flex-wrap gap-3 text-sm" id="statsBarEmitidos"></div>
+      <!-- Filter: Status -->
+      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosEmitidos"></div>
       <div class="px-6 pb-6">
         <div class="table-container">
           <table class="w-full text-sm">
@@ -979,6 +982,7 @@ let filtroStatus = 'todos';
 let filtroProduto = 'todos';
 let filtroStatusAndamento = 'todos';
 let filtroProdutoAndamento = 'todos';
+let filtroEmitidos = 'todos';
 let mesSelecionado = new Date().toISOString().slice(0,7); // YYYY-MM
 let tabAtivo = 'analises';
 let mesAtual = new Date().getMonth(); // 0-11
@@ -1468,6 +1472,9 @@ function getFiltrados(sourceClientes) {
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     } else if (tabAtivo === 'emitidos') {
       passaStatus = c.status === 'emitido';
+      if (filtroEmitidos === 'banco') passaStatus = passaStatus && (c.banco || '').length > 0;
+      else if (filtroEmitidos === 'agencia') passaStatus = passaStatus && (c.agencia || '').length > 0;
+      else if (filtroEmitidos !== 'todos') passaStatus = passaStatus && (c.produto === filtroEmitidos || c.indicacao === filtroEmitidos);
     } else {
       // Aba Análises: excluir convertidos
       passaStatus = c.convertido !== true;
@@ -1620,6 +1627,42 @@ function mudarMes(delta) {
   renderizarTudo();
 }
 
+function renderizarMesSelectorEmitidos() {
+  const container = document.getElementById('mesSelectorEmitidos');
+  if (!container) return;
+  const [ano, mes] = mesSelecionado.split('-');
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const nomeMes = meses[parseInt(mes)-1];
+  container.innerHTML = `
+    <button onclick="mudarMes(-1)" class="text-sm px-2 py-1 rounded-lg transition" style="color:var(--text-muted);border:1px solid var(--border);background:var(--bg-card);" title="Mês anterior">◀</button>
+    <span class="text-sm font-semibold px-2" style="color:var(--text);min-width:100px;text-align:center;">${nomeMes} ${ano}</span>
+    <button onclick="mudarMes(1)" class="text-sm px-2 py-1 rounded-lg transition" style="color:var(--text-muted);border:1px solid var(--border);background:var(--bg-card);" title="Próximo mês">▶</button>
+  `;
+}
+
+function filtrarEmitidos(filtro, btn) {
+  filtroEmitidos = filtro;
+  document.querySelectorAll('#filtrosEmitidos .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarTabelaEmitidos();
+  atualizarStatsEmitidos();
+}
+
+function renderizarFiltrosEmitidos() {
+  const container = document.getElementById('filtrosEmitidos');
+  if (!container) return;
+  const filtros = [
+    { id: 'todos', label: 'Todos' },
+    { id: 'banco', label: '🏦 Banco' },
+    { id: 'agencia', label: '🏢 Agência' },
+    { id: 'indicacao', label: '👤 Indicação' },
+    ...PRODUTO_OPTS.map(p => ({ id: p, label: p }))
+  ];
+  container.innerHTML = filtros.map(f => `
+    <button class="filter-btn ${filtroEmitidos===f.id?'active':''}" onclick="filtrarEmitidos('${f.id}', this)">${f.label}</button>
+  `).join('');
+}
+
 async function iniciarNovaCompetencia() {
   const hoje = new Date().toISOString().slice(0,7);
   if (mesSelecionado === hoje) {
@@ -1665,6 +1708,8 @@ function renderizarTudo() {
     renderizarTabelaAndamento();
     atualizarStatsAndamento();
   } else if (tabAtivo === 'emitidos') {
+    renderizarMesSelectorEmitidos();
+    renderizarFiltrosEmitidos();
     renderizarTabelaEmitidos();
     atualizarStatsEmitidos();
   } else if (tabAtivo === 'metricas') {
@@ -1831,7 +1876,7 @@ function renderizarTabelaAndamento() {
 
 function renderizarTabelaEmitidos() {
   const tbody = document.getElementById('tableBodyEmitidos');
-  const filtrados = clientes.filter(c => c.status === 'emitido');
+  const filtrados = getFiltrados();
 
   if (filtrados.length === 0) {
     tbody.innerHTML = '<tr><td colspan="13" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
@@ -2032,7 +2077,7 @@ function atualizarStatsAndamento() {
 
 function atualizarStatsEmitidos() {
   const bar = document.getElementById('statsBarEmitidos');
-  const emitidos = clientes.filter(c => c.status === 'emitido');
+  const emitidos = getFiltrados();
   const totalFin = emitidos.reduce((sum, c) => sum + (parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g,'').replace(',','.'))||0), 0);
 
   bar.innerHTML = `
