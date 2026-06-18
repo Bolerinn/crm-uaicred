@@ -1634,7 +1634,7 @@ function getFiltrados(sourceClientes, tab) {
       else if (filtroEmitidos !== 'todos') passaStatus = passaStatus && (c.produto === filtroEmitidos || c.indicacao === filtroEmitidos);
     } else {
       // Aba Análises: excluir convertidos e clientes com mês de competência
-      passaStatus = c.convertido !== true && !c.mes_referencia;
+      passaStatus = c.convertido !== true && (c.mes_referencia || '') === mesSelecionado;
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     }
     const passaProduto = (t === 'andamento') ? (fp === 'todos' || c.produto === fp) : true;
@@ -1979,9 +1979,10 @@ async function iniciarNovaCompetencia() {
   const mesAlvo = dataSeguinte.toISOString().slice(0,7);
   
   const origem = clientes.filter(c => c.mes_referencia === mesSelecionado && c.status !== 'emitido');
+  const followUps = clientes.filter(c => c.follow_up === true && c.mes_referencia === mesSelecionado && c.convertido !== true && c.status !== 'emitido');
   // Filtra clientes que ja existem no mes alvo (evita duplicatas)
   const existentesNoAlvo = clientes.filter(c => c.mes_referencia === mesAlvo).map(c => c.cliente);
-  const todos = origem.filter(c => !existentesNoAlvo.includes(c.cliente));
+  const todos = [...origem, ...followUps.filter(f => !origem.some(o => o.id === f.id))].filter(c => !existentesNoAlvo.includes(c.cliente));
   console.log('iniciarNova: origem='+origem.length+' total='+todos.length+' existentes='+existentesNoAlvo.length);
   if (todos.length === 0) {
     mostrarToast('Nenhum processo pendente para duplicar.');
