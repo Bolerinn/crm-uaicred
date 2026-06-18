@@ -1971,30 +1971,18 @@ function renderizarFiltrosEmitidos() {
 }
 
 async function iniciarNovaCompetencia() {
-  const hoje = new Date().toISOString().slice(0,7);
-  if (mesSelecionado === hoje) {
-    mostrarToast('Este já é o mês corrente.');
-    return;
-  }
+  const [ano, mes] = mesSelecionado.split('-').map(Number);
+  const dataSeguinte = new Date(ano, mes, 1);
+  const mesAlvo = dataSeguinte.toISOString().slice(0,7);
+  
   const origem = clientes.filter(c => c.mes_referencia === mesSelecionado && c.status !== 'emitido');
   const followUps = clientes.filter(c => c.follow_up === true && !c.mes_referencia && c.convertido !== true);
-  if (origem.length === 0) {
-    // Tenta usar clientes de qualquer mês que não estejam emitidos
-    const pendentes = clientes.filter(c => c.status !== 'emitido' && c.mes_referencia !== hoje);
-    if (pendentes.length === 0) {
-      mostrarToast('Nenhum processo pendente para duplicar.');
-      return;
-    }
-    // Duplica do mês mais recente
-    const mesesUnicos = [...new Set(pendentes.map(c => c.mes_referencia).filter(Boolean))].sort().reverse();
-    const mesOrigem = mesesUnicos[0];
-    const duplicar = pendentes.filter(c => c.mes_referencia === mesOrigem);
-    const todosFb = [...duplicar, ...followUps.filter(f => !duplicar.some(o => o.id === f.id))];
-    await duplicarClientes(todosFb.length ? todosFb : duplicar, hoje);
+  const todos = [...origem, ...followUps.filter(f => !origem.some(o => o.id === f.id))];
+  if (todos.length === 0) {
+    mostrarToast('Nenhum processo pendente para duplicar.');
     return;
   }
-  const todos = [...origem, ...followUps.filter(f => !origem.some(o => o.id === f.id))];
-  await duplicarClientes(todos.length ? todos : origem, hoje);
+  await duplicarClientes(todos, mesAlvo);
 }
 
 async function duplicarClientes(lista, novoMes) {
