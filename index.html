@@ -990,6 +990,7 @@ let mesAtual = new Date().getMonth(); // 0-11
 let anoAtual = new Date().getFullYear();
 let adicionando = false;
 let ultimaEdicao = null;
+const deletedIds = new Set(); // IDs excluídos (evita re-aparição por realtime/carregarDados)
 
 // ========== TAB SWITCHING ==========
 function mudarTab(tab) {
@@ -1376,6 +1377,7 @@ async function excluirCliente(id) {
   // Qualquer usuário pode excluir análises e andamento → service_role (bypass RLS)
   const { error } = await sbAdmin.from('clientes').delete().eq('id', id);
   if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
+  deletedIds.add(id);
   clientes = clientes.filter(c => c.id !== id);
   renderizarTabelas();
   mostrarToast('Cliente excluído 🗑️');
@@ -1533,6 +1535,7 @@ function getFiltrados(sourceClientes, tab) {
   const fp = t === 'andamento' ? filtroProdutoAndamento : filtroProduto;
   const fb = t === 'andamento' ? filtroBancoAndamento : 'todos';
   return src.filter(c => {
+    if (deletedIds.has(c.id)) return false;
     let passaStatus;
     if (t === 'andamento') {
       passaStatus = c.status !== 'emitido' && (c.mes_referencia || '') === mesSelecionado;
