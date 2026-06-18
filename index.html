@@ -1605,6 +1605,7 @@ function irParaMesAtualAnalises() {
   anoAtual = new Date().getFullYear();
   renderizarMesSelectorAnalises();
   renderizarTabelaAnalises();
+  mesSelecionado = String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0');
   atualizarStats();
 }
 
@@ -1650,7 +1651,7 @@ function getFiltrados(sourceClientes, tab) {
       else if (filtroEmitidos !== 'todos') passaStatus = passaStatus && (c.produto === filtroEmitidos || c.indicacao === filtroEmitidos);
     } else {
       // Aba Análises: excluir convertidos e clientes com mês de competência
-      passaStatus = c.convertido !== true && (c.mes_referencia || '') === mesSelecionado;
+      passaStatus = c.convertido !== true && (c.mes_referencia || '') === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     }
     const passaProduto = (t === 'andamento') ? (fp === 'todos' || c.produto === fp) : true;
