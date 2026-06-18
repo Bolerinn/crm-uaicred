@@ -1395,7 +1395,13 @@ async function atualizarCampo(id, campo, valor) {
 
 async function converterCliente(id, checked) {
   await atualizarCampo(id, 'convertido', checked);
+  if (checked) {
+    // Ao converter, define mes_referencia para o mês atual
+    const hoje = new Date().toISOString().slice(0,7);
+    await atualizarCampo(id, 'mes_referencia', hoje);
+  }
   renderizarTabelaAnalises();
+  renderizarTabelaAndamento();
   atualizarStats();
   if (checked) mostrarToast('Cliente convertido em processo ✅');
 }
