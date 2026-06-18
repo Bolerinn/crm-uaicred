@@ -1652,7 +1652,6 @@ function getFiltrados(sourceClientes, tab) {
     } else {
       // Aba Análises: excluir convertidos e clientes com mês de competência
       passaStatus = c.convertido !== true && (c.mes_referencia || '') === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
-    if (i === 0) console.log('filtro analises: mes='+(String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'))+' clientes.length='+src.length);
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     }
     const passaProduto = (t === 'andamento') ? (fp === 'todos' || c.produto === fp) : true;
