@@ -990,7 +990,13 @@ let mesAtual = new Date().getMonth(); // 0-11
 let anoAtual = new Date().getFullYear();
 let adicionando = false;
 let ultimaEdicao = null;
-const deletedIds = new Set(); // IDs excluídos (evita re-aparição por realtime/carregarDados)
+const LS_DELETED = 'crm_deleted_ids';
+let _deletedArr;
+try { _deletedArr = JSON.parse(localStorage.getItem(LS_DELETED) || '[]'); } catch(e) { _deletedArr = []; }
+const deletedIds = new Set(_deletedArr); // IDs excluídos (persiste via localStorage)
+function persistirDeletedIds() {
+  localStorage.setItem(LS_DELETED, JSON.stringify([...deletedIds]));
+}
 
 // ========== TAB SWITCHING ==========
 function mudarTab(tab) {
@@ -1378,6 +1384,7 @@ async function excluirCliente(id) {
   const { error } = await sbAdmin.from('clientes').delete().eq('id', id);
   if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
   deletedIds.add(id);
+  persistirDeletedIds();
   clientes = clientes.filter(c => c.id !== id);
   renderizarTabelas();
   mostrarToast('Cliente excluído 🗑️');
@@ -1444,9 +1451,11 @@ function ouvirTempoReal() {
     .channel('clientes-realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, payload => {
       if (payload.eventType === 'INSERT') {
+        if (deletedIds.has(payload.new.id)) return;
         clientes.push(payload.new);
         renderizarTudo();
       } else if (payload.eventType === 'UPDATE') {
+        if (deletedIds.has(payload.new.id)) return;
         const local = ultimaEdicao;
         if (local && local.id === payload.new.id && (Date.now() - local.ts) < 800) {
           // Edição local — atualiza cache sem re-renderizar (preserva foco)
