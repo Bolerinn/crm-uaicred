@@ -592,6 +592,7 @@ Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
   }
   [data-theme="dark"] .toggle-switch { background: #f97316; }
   [data-theme="dark"] .toggle-switch::after { transform: translateX(22px); }
+.criado-por-col { display: none; } body.master .criado-por-col { display: table-cell; }
 </style>
 </head>
 <body>
@@ -1101,6 +1102,7 @@ async function entrar() {
   document.getElementById('sidebarRole').textContent = usuarioTipo === 'master' ? 'Master' : 'Usuário';
 
   if (usuarioTipo === 'master') {
+      document.body.classList.add('master');
     document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
       document.querySelectorAll('.criado-por-col').forEach(el => el.style.display = '');
   }
@@ -1186,6 +1188,7 @@ async function salvarNovaSenha() {
 
   // Show master nav if applicable
   if (usuarioTipo === 'master') {
+      document.body.classList.add('master');
     document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
       document.querySelectorAll('.criado-por-col').forEach(el => el.style.display = '');
   }
@@ -2372,6 +2375,7 @@ function filtrarBancoAndamento(banco, btn) {
     document.getElementById('sidebarRole').textContent = usuarioTipo === 'master' ? 'Master' : 'Usuário';
 
     if (usuarioTipo === 'master') {
+      document.body.classList.add('master');
       document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
       document.querySelectorAll('.criado-por-col').forEach(el => el.style.display = '');
     }
