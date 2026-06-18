@@ -1365,15 +1365,14 @@ async function carregarListaUsuarios() {
 // ========== CRUD ==========
 async function carregarDados() {
   // Tenta filtrar deleted_at; se coluna não existir, fallback sem filtro
-  let { data, error } = await sb
+  let { data, error } = await sbAdmin
     .from('clientes')
     .select('*')
     .is('deleted_at', null)
     .order('id');
 
   if (error) {
-    // Fallback: coluna deleted_at não existe ainda
-    const res = await sb.from('clientes').select('*').order('id');
+    const res = await sbAdmin.from('clientes').select('*').order('id');
     data = res.data; error = res.error;
   }
   if (error) { mostrarToast('Erro ao carregar dados'); return; }
