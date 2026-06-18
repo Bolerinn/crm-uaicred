@@ -936,6 +936,9 @@ document.addEventListener('keydown', function(e) {
 
 // ========== SUPABASE ==========
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Admin client com service_role (bypass RLS) — usado apenas pelo master para excluir
+const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6dGlrdGN2dWVvcmxhZmlvY2RmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTcxMzk5MCwiZXhwIjoyMDk3Mjg5OTkwfQ.WG1wrbfp7RO5yIQ0MoaqFSHGh6D__W30ckCmNcGYRpU';
+const sbAdmin = supabase.createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 // ========== STATE ==========
 const STATUS_OPTS = [
@@ -1359,12 +1362,13 @@ async function adicionarCliente() {
 
 async function excluirCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
-  const { error } = await sb.from('clientes').delete().eq('id', id);
-  if (error) { mostrarToast('Erro ao excluir'); return; }
+  const client = isMaster() ? sbAdmin : sb;
+  const { error } = await client.from('clientes').delete().eq('id', id);
+  if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
   // Verificar se realmente foi deletado (RLS pode bloquear sem dar erro)
   const { data: check } = await sb.from('clientes').select('id').eq('id', id).maybeSingle();
   if (check) {
-    mostrarToast('Erro ao excluir (sem permissão)');
+    mostrarToast('Erro ao excluir (sem permissão — registro criado por outro usuário)');
     return;
   }
   clientes = clientes.filter(c => c.id !== id);
