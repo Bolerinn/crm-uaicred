@@ -901,6 +901,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="px-3 py-2 text-left">Banco</th>
                 <th class="px-3 py-2 text-left">Produto</th>
                 <th class="px-3 py-2 text-left">Etapa</th>
+                <th class="px-3 py-2 text-left">Analista</th>
                 <th class="px-3 py-2 text-left">Excluído em</th>
                 <th class="px-3 py-2 text-left">Ações</th>
               </tr>
@@ -1421,7 +1422,8 @@ async function excluirCliente(id) {
     return;
   }
   // Soft-delete: marca deleted_at (nunca remove do banco)
-  const { error } = await sbAdmin.from('clientes').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  const analista = usuarioNome || (await sb.auth.getUser()).data?.user?.email?.split('@')[0] || '—';
+  const { error } = await sbAdmin.from('clientes').update({ deleted_at: new Date().toISOString(), deleted_by: analista }).eq('id', id);
   if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
   ultimoExcluido = { id, cliente: c.cliente, timer: setTimeout(() => { ultimoExcluido = null; }, 8000) };
   clientes = clientes.filter(c => c.id !== id);
@@ -2026,6 +2028,7 @@ function renderizarTabelaLixeira() {
       '<td class="px-3 py-2">' + (c.banco || '—') + '</td>' +
       '<td class="px-3 py-2">' + (c.produto || '—') + '</td>' +
       '<td class="px-3 py-2"><span style="color:' + etapaCor + ';font-weight:600;font-size:0.7rem;">' + etapa + '</span></td>' +
+      '<td class="px-3 py-2">' + (c.deleted_by || '—') + '</td>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + data + '</td>' +
       '<td class="px-3 py-2">' +
         '<button onclick="restaurarDaLixeira(' + c.id + ')" style="background:#10b981;color:#fff;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:0.7rem;">↩ Restaurar</button> ' +
