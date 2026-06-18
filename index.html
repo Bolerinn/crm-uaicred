@@ -746,6 +746,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-2 py-3 w-10">#</th>
                 <th class="text-left px-3 py-3">Indicação</th>
                 <th class="text-left px-3 py-3">Cliente</th>
+                <th class="text-left px-2 py-3 w-16">Convertido</th>
                 <th class="text-left px-3 py-3">CPF</th>
                 <th class="text-left px-3 py-3">Banco</th>
                 <th class="text-left px-3 py-3">Agência</th>
@@ -1330,6 +1331,13 @@ async function atualizarCampo(id, campo, valor) {
   atualizarStats();
 }
 
+async function converterCliente(id, checked) {
+  await atualizarCampo(id, 'convertido', checked);
+  renderizarTabelaAnalises();
+  atualizarStats();
+  if (checked) mostrarToast('Cliente convertido em processo ✅');
+}
+
 function onBancoChange(id, novoBanco) {
   const c = clientes.find(c => c.id === id);
   if (!c) return;
@@ -1398,10 +1406,10 @@ function getFiltrados(sourceClientes) {
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     } else if (tabAtivo === 'emitidos') {
       passaStatus = c.status === 'emitido';
-    } else if (fs === 'todos') {
-      passaStatus = true;
     } else {
-      passaStatus = c.status === fs;
+      // Aba Análises: excluir convertidos
+      passaStatus = c.convertido !== true;
+      if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     }
     const passaProduto = fp === 'todos' || c.produto === fp;
     return passaStatus && passaProduto;
@@ -1555,7 +1563,7 @@ function renderizarTabelaAnalises() {
   const filtrados = getFiltrados();
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
     atualizarStats();
     return;
   }
@@ -1568,6 +1576,9 @@ function renderizarTabelaAnalises() {
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${idx + 1}</td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.indicacao||''}</span></td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
+      <td class="px-2 py-2.5 text-center">
+        <input type="checkbox" ${c.convertido?'checked':''} onchange="converterCliente(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Converter em processo ativo">
+      </td>
       <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5" style="white-space:nowrap;">
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#0061A8;"><input type="checkbox" ${c.banco_caixa?'checked':''} onchange="toggleBanco(${c.id},'caixa',this.checked)" class="w-3 h-3 accent-blue-600"> Caixa</label>
