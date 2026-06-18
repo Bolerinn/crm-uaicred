@@ -592,7 +592,7 @@ Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
   }
   [data-theme="dark"] .toggle-switch { background: #f97316; }
   [data-theme="dark"] .toggle-switch::after { transform: translateX(22px); }
-.criado-por-col { display: none; } body.master .criado-por-col { display: table-cell; }
+.criado-por-col { display: none; } body.master .criado-por-col { display: table-cell !important; }
 </style>
 </head>
 <body>
@@ -1111,7 +1111,6 @@ async function entrar() {
   if (usuarioTipo === 'master') {
       document.body.classList.add('master');
     document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
-      document.querySelectorAll('.criado-por-col').forEach(el => el.style.display = '');
   }
 
   if (precisaTrocar) {
@@ -1197,7 +1196,6 @@ async function salvarNovaSenha() {
   if (usuarioTipo === 'master') {
       document.body.classList.add('master');
     document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
-      document.querySelectorAll('.criado-por-col').forEach(el => el.style.display = '');
   }
 
   carregarDados();
@@ -2295,7 +2293,7 @@ function renderizarTabelaAnalises() {
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${c.convertido?'checked':''} onchange="converterCliente(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Converter em processo ativo">
       </td>
-      <td class="px-3 py-2.5 criado-por-col" style="display:none;">${c.criado_por || '—'}</td>
+      <td class="px-3 py-2.5 criado-por-col">${c.criado_por || '—'}</td>
       <td class="px-2 py-2.5 text-center">
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
@@ -2359,7 +2357,7 @@ function renderizarTabelaAndamento() {
         </select>
       </td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
-      <td class="px-3 py-2.5 criado-por-col" style="display:none;">${c.criado_por || '—'}</td>
+      <td class="px-3 py-2.5 criado-por-col">${c.criado_por || '—'}</td>
       <td class="px-2 py-2.5 text-center">
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
@@ -2529,7 +2527,6 @@ function filtrarBancoAndamento(banco, btn) {
     if (usuarioTipo === 'master') {
       document.body.classList.add('master');
       document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
-      document.querySelectorAll('.criado-por-col').forEach(el => el.style.display = '');
     }
 
     if (precisaTrocar) {
