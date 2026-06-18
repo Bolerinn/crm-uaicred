@@ -1581,7 +1581,7 @@ function filtrarProduto(produto, btn) {
     document.querySelectorAll('#filtrosProdutoAndamento .filter-btn-produto').forEach(b => b.classList.remove('active'));
   } else {
     filtroProduto = produto;
-    document.querySelectorAll('#filtrosProduto .filter-btn-produto').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#filtrosProdutoAnalises .filter-btn-produto').forEach(b => b.classList.remove('active'));
   }
   if (btn) btn.classList.add('active');
   renderizarTabelas();
