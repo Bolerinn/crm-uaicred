@@ -1386,18 +1386,21 @@ function filtrarProduto(produto, btn) {
 
 function getFiltrados(sourceClientes) {
   const src = sourceClientes || clientes;
+  const fs = tabAtivo === 'andamento' ? filtroStatusAndamento : filtroStatus;
+  const fp = tabAtivo === 'andamento' ? filtroProdutoAndamento : filtroProduto;
   return src.filter(c => {
     let passaStatus;
     if (tabAtivo === 'andamento') {
       passaStatus = c.status !== 'emitido';
+      if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     } else if (tabAtivo === 'emitidos') {
       passaStatus = c.status === 'emitido';
-    } else if (filtroStatus === 'todos') {
+    } else if (fs === 'todos') {
       passaStatus = true;
     } else {
-      passaStatus = c.status === filtroStatus;
+      passaStatus = c.status === fs;
     }
-    const passaProduto = filtroProduto === 'todos' || c.produto === filtroProduto;
+    const passaProduto = fp === 'todos' || c.produto === fp;
     return passaStatus && passaProduto;
   });
 }
@@ -1514,30 +1517,45 @@ function renderizarTabelaAnalises() {
 
 function renderizarTabelaAndamento() {
   const tbody = document.getElementById('tableBodyAndamento');
-  const filtrados = clientes.filter(c => c.status !== 'emitido');
+  const filtrados = getFiltrados();
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-16 text-gray-600">Nenhum processo em andamento.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-16" style="color:var(--text-muted);">Nenhum processo em andamento.</td></tr>';
     atualizarStatsAndamento();
     return;
   }
 
   tbody.innerHTML = filtrados.map((c, i) => {
     const idx = clientes.indexOf(c);
+    const banco = c.banco || '';
+    const { opts: statusOpts, validStatus } = getStatusOpts(banco, c.status || '');
     return `
-    <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
-      <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${idx + 1}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.indicacao||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-200 font-medium">${c.cliente||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-400 font-mono text-xs">${c.cpf||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.banco||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.agencia||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.valor_imovel||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.valor_financiado||'—'}</td>
-      <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='FGTS'?'text-orange-400':'text-gray-300'}">${c.produto||'—'}</span></td>
-      <td class="px-3 py-2.5 text-gray-400 text-xs">${c.data_vistoria||'—'}</td>
-      <td class="px-3 py-2.5"><span class="status-badge st-${c.status||'aguardando-doc'}">${(STATUS_OPTS.find(s=>s.id===c.status)||{}).label||c.status||'—'}</span></td>
-      <td class="px-3 py-2.5 text-gray-500 text-xs max-w-[120px] truncate">${c.obs||'—'}</td>
+    <tr style="border-bottom:1px solid var(--border-light);" data-id="${c.id}">
+      <td class="px-2 py-2.5 text-xs text-center" style="color:var(--text-muted);">${idx + 1}</td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.indicacao||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5">
+        <select onchange="onBancoChange(${c.id},this.value)" class="text-xs bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:inherit;">
+          <option value="" ${!c.banco?'selected':''}>—</option>
+          ${['Bradesco','Caixa','Itaú','Santander','Inter'].map(b => `<option value="${b}" ${c.banco===b?'selected':''}>${b}</option>`).join('')}
+        </select>
+      </td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^\\d]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_imovel||''}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^\\d]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_financiado||''}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5">
+        <select onchange="atualizarCampo(${c.id},'produto',this.value)" class="text-xs font-semibold bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text-secondary);">
+          ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_vistoria" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_vistoria||''}" maxlength="10" style="color:inherit;width:90px;"></td>
+      <td class="px-3 py-2.5">
+        <select onchange="atualizarCampo(${c.id},'status',this.value)" data-id="${c.id}" class="status-select text-xs bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text-secondary);">
+          ${statusOpts.map(s => getStatusLabel(s)).map((label,i) => `<option value="${statusOpts[i]}" ${statusOpts[i]===c.status?'selected':''}>${label}</option>`).join('')}
+        </select>
+      </td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
     </tr>`;
   }).join('');
   atualizarStatsAndamento();
