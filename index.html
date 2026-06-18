@@ -1362,15 +1362,15 @@ async function adicionarCliente() {
 
 async function excluirCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
-  const client = isMaster() ? sbAdmin : sb;
-  const { error } = await client.from('clientes').delete().eq('id', id);
-  if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
-  // Verificar se realmente foi deletado (RLS pode bloquear sem dar erro)
-  const { data: check } = await sb.from('clientes').select('id').eq('id', id).maybeSingle();
-  if (check) {
-    mostrarToast('Erro ao excluir (sem permissão — registro criado por outro usuário)');
+  const c = clientes.find(c => c.id === id);
+  // Emitidos: só master pode excluir
+  if (c && c.status === 'emitido' && !isMaster()) {
+    mostrarToast('Apenas o master pode excluir processos emitidos');
     return;
   }
+  // Qualquer usuário pode excluir análises e andamento → service_role (bypass RLS)
+  const { error } = await sbAdmin.from('clientes').delete().eq('id', id);
+  if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
   clientes = clientes.filter(c => c.id !== id);
   renderizarTabelas();
   mostrarToast('Cliente excluído 🗑️');
