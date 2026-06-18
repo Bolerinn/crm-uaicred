@@ -1843,7 +1843,7 @@ async function toggleBanco(id, banco, checked) {
 function atualizarStats() {
   const container = document.getElementById('statsBar');
   if (!container) return;
-  const filtrados = filtrarPorMes(getFiltrados(null, 'analises'));
+  const filtrados = getFiltrados(null, 'analises');
   const count = filtrados.length;
   const master = isMaster();
   
@@ -2267,7 +2267,7 @@ function renderizarTabelas() {
 
 function renderizarTabelaAnalises() {
   const tbody = document.getElementById('tableBody');
-  const filtrados = filtrarPorMes(getFiltrados(null, 'analises'));
+  const filtrados = getFiltrados(null, 'analises');
 
   if (filtrados.length === 0) {
     tbody.innerHTML = '<tr><td colspan="14" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
