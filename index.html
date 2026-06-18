@@ -1636,10 +1636,10 @@ async function reverterEmitido(id) {
   mostrarToast('↩ Processo revertido para Análises');
 }
 
-// ========== RESULTADO CYCLE ==========
-const RESULTADO_CYCLE = ['', 'aprovado', 'condicionado', 'recusado'];
-const RESULTADO_LABELS = { 'aprovado': '✅ APROVADO', 'condicionado': '⚠️ CONDICIONADO', 'recusado': '❌ RECUSADO' };
-const RESULTADO_COLORS = { 'aprovado': 'color:#059669;', 'condicionado': 'color:#d97706;', 'recusado': 'color:#dc2626;' };
+// ========== RESULTADO CYCLE (per bank) ==========
+const RESULTADO_CYCLE = ['', 'aprovado', 'condicionado', 'reprovado'];
+const RESULTADO_LABELS = { 'aprovado': '✅ APROVADO', 'condicionado': '⚠️ CONDICIONADO', 'reprovado': '❌ REPROVADO' };
+const RESULTADO_COLORS = { 'aprovado': 'color:#059669;', 'condicionado': 'color:#d97706;', 'reprovado': 'color:#dc2626;' };
 
 function getResultadoBadge(valor) {
   if (!valor) return '<span class="text-xs text-gray-400">—</span>';
@@ -1647,18 +1647,33 @@ function getResultadoBadge(valor) {
   return `<span class="text-xs font-semibold" style="${style}">${RESULTADO_LABELS[valor] || valor}</span>`;
 }
 
-async function ciclarResultado(id) {
+function getResultadoPerBancoHtml(c) {
+  const bancos = getBancosMarcados(c);
+  if (bancos.length === 0) return '<span class="text-xs text-gray-400">—</span>';
+  const labels = {caixa:'Caixa',bradesco:'Bradesco',itau:'Itaú',santander:'Santander',inter:'Inter'};
+  return bancos.map(b => {
+    const campo = 'resultado_' + b;
+    const valor = c[campo] || '';
+    return `<div class="flex items-center gap-1 mb-1 cursor-pointer select-none" onclick="ciclarResultadoBanco(${c.id},'${b}')" title="Clique para alternar">
+      <span class="text-xs font-medium" style="min-width:70px;">${labels[b]}:</span>
+      ${getResultadoBadge(valor)}
+    </div>`;
+  }).join('');
+}
+
+async function ciclarResultadoBanco(id, banco) {
   const c = clientes.find(c => c.id === id);
   if (!c) return;
-  const atual = c.resultado || '';
+  const campo = 'resultado_' + banco;
+  const atual = c[campo] || '';
   const idx = RESULTADO_CYCLE.indexOf(atual);
   const proximo = RESULTADO_CYCLE[(idx + 1) % RESULTADO_CYCLE.length];
-  c.resultado = proximo;
+  c[campo] = proximo;
   // Update DOM immediately
-  const td = document.querySelector(`#crmTable tr[data-id="${id}"] td:nth-child(11)`);
-  if (td) td.innerHTML = getResultadoBadge(proximo);
+  const td = document.getElementById('resultado-' + id);
+  if (td) td.innerHTML = getResultadoPerBancoHtml(c);
   // Persist
-  await atualizarCampo(id, 'resultado', proximo);
+  await atualizarCampo(id, campo, proximo);
   atualizarStats();
 }
 
@@ -1722,11 +1737,12 @@ function atualizarStats() {
     });
     
     // Total financiamento
-    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt(c.valor_financiado) || 0), 0);
+    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt((c.valor_financiado || '').replace(/\D/g, '')) || 0), 0);
     html += `<div class="stat-card"><div class="stat-label">Total Financ.</div><div class="stat-value" style="color:#059669;">R$ ${totalFinanc.toLocaleString('pt-BR')}</div></div>`;
     
-    // Aprovações
-    const aprovados = filtrados.filter(c => c.resultado === 'aprovado').length;
+    // Aprovações (pelo menos um banco aprovado)
+    const resultadoCols = ['resultado_caixa','resultado_bradesco','resultado_itau','resultado_santander','resultado_inter'];
+    const aprovados = filtrados.filter(c => resultadoCols.some(col => c[col] === 'aprovado')).length;
     html += `<div class="stat-card"><div class="stat-label">Aprovações</div><div class="stat-value" style="color:#059669;">${aprovados}</div></div>`;
   }
   
@@ -1913,9 +1929,7 @@ function renderizarTabelaAnalises() {
           ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
         </select>
       </td>
-      <td class="px-3 py-2.5 cursor-pointer select-none" onclick="ciclarResultado(${c.id})" title="Clique para alternar: APROVADO → CONDICIONADO → RECUSADO">
-        ${getResultadoBadge(c.resultado || '')}
-      </td>
+      <td class="px-3 py-2.5" id="resultado-${c.id}">${getResultadoPerBancoHtml(c)}</td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${c.follow_up?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="Follow-up">
