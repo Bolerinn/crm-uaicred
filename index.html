@@ -1972,7 +1972,10 @@ function renderizarFiltrosEmitidos() {
   `).join('');
 }
 
+let _dupLock = false;
 async function iniciarNovaCompetencia() {
+  if (_dupLock) return;
+  _dupLock = true;
   console.log('>>> CLICOU <<<');
   const [ano, mes] = mesSelecionado.split('-').map(Number);
   const dataSeguinte = new Date(ano, mes, 1);
@@ -1989,6 +1992,7 @@ async function iniciarNovaCompetencia() {
     return;
   }
   await duplicarClientes(todos, mesAlvo);
+  _dupLock = false;
 }
 
 async function duplicarClientes(lista, novoMes) {
