@@ -750,6 +750,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Indicação</th>
                 <th class="text-left px-3 py-3">Cliente</th>
                 <th class="text-left px-3 py-3">CPF</th>
+                <th class="text-left px-3 py-3">Banco</th>
                 <th class="text-left px-3 py-3">Agência</th>
                 <th class="text-left px-3 py-3">Valor Imóvel</th>
                 <th class="text-left px-3 py-3">Valor Financ.</th>
@@ -807,6 +808,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Indicação</th>
                 <th class="text-left px-3 py-3">Cliente</th>
                 <th class="text-left px-3 py-3">CPF</th>
+                <th class="text-left px-3 py-3">Banco</th>
                 <th class="text-left px-3 py-3">Agência</th>
                 <th class="text-left px-3 py-3">Valor Imóvel</th>
                 <th class="text-left px-3 py-3">Valor Financ.</th>
@@ -922,6 +924,15 @@ function toggleTema() {
 
 // Init on load
 initTema();
+
+// Bloquear Enter nos contenteditable
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.target.hasAttribute('contenteditable')) {
+    e.preventDefault();
+    e.target.blur();
+  }
+});
+
 // ========== SUPABASE ==========
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -1316,6 +1327,20 @@ async function atualizarCampo(id, campo, valor) {
   atualizarStats();
 }
 
+function onBancoChange(id, novoBanco) {
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  atualizarCampo(id, 'banco', novoBanco);
+  const { opts, validStatus } = getStatusOpts(novoBanco, c.status || '');
+  if (validStatus !== (c.status || '')) {
+    atualizarCampo(id, 'status', validStatus);
+  }
+  const statusSelect = document.querySelector(`select.status-select[data-id="${id}"]`);
+  if (statusSelect) {
+    statusSelect.innerHTML = opts.map(s => `<option value="${s}" ${s===validStatus?'selected':''}>${getStatusLabel(s)}</option>`).join('');
+  }
+}
+
 // ========== REALTIME ==========
 function ouvirTempoReal() {
   sb
@@ -1445,7 +1470,7 @@ function renderizarTabelaAnalises() {
   const filtrados = getFiltrados();
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
     atualizarStats();
     return;
   }
@@ -1453,15 +1478,23 @@ function renderizarTabelaAnalises() {
   tbody.innerHTML = filtrados.map((c, i) => {
     const idx = clientes.indexOf(c);
     const st = STATUS_OPTS.find(s => s.id === c.status);
+    const banco = c.banco || '';
+    const { opts: statusOpts, validStatus } = getStatusOpts(banco, c.status || '');
     return `
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${idx + 1}</td>
-      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.indicacao||''}</span></td>
-      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="capitalizarCliente(this);editarCampo(this)">${c.cliente||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.indicacao||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
       <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5">
+        <select onchange="onBancoChange(${c.id},this.value)" class="text-xs bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:inherit;">
+          <option value="" ${!c.banco?'selected':''}>—</option>
+          ${['Bradesco','Caixa','Itaú','Santander','Inter'].map(b => `<option value="${b}" ${c.banco===b?'selected':''}>${b}</option>`).join('')}
+        </select>
+      </td>
       <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
-      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^\d]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_imovel||''}" style="color:inherit;width:110px;"></td>
-      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^\d]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_financiado||''}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^\\d]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_imovel||''}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^\\d]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_financiado||''}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
         <select onchange="atualizarCampo(${c.id},'produto',this.value)" class="text-xs font-semibold bg-transparent cursor-pointer text-gray-300 rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500">
           ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
@@ -1469,11 +1502,11 @@ function renderizarTabelaAnalises() {
       </td>
       <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_vistoria" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_vistoria||''}" maxlength="10" style="color:inherit;width:90px;"></td>
       <td class="px-3 py-2.5">
-        <select onchange="atualizarCampo(${c.id},'status',this.value)" class="text-xs bg-transparent cursor-pointer text-gray-300 rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500">
-          ${STATUS_OPTS.map(s => `<option value="${s.id}" ${s.id===c.status?'selected':''}>${s.label}</option>`).join('')}
+        <select onchange="atualizarCampo(${c.id},'status',this.value)" data-id="${c.id}" class="status-select text-xs bg-transparent cursor-pointer text-gray-300 rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500">
+          ${statusOpts.map(s => getStatusLabel(s)).map((label,i) => `<option value="${statusOpts[i]}" ${statusOpts[i]===c.status?'selected':''}>${label}</option>`).join('')}
         </select>
       </td>
-      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)">${c.obs||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
     </tr>`;
   }).join('');
   atualizarStats();
@@ -1484,7 +1517,7 @@ function renderizarTabelaAndamento() {
   const filtrados = clientes.filter(c => c.status !== 'emitido');
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-16 text-gray-600">Nenhum processo em andamento.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-16 text-gray-600">Nenhum processo em andamento.</td></tr>';
     atualizarStatsAndamento();
     return;
   }
@@ -1497,6 +1530,7 @@ function renderizarTabelaAndamento() {
       <td class="px-3 py-2.5 text-gray-300">${c.indicacao||'—'}</td>
       <td class="px-3 py-2.5 text-gray-200 font-medium">${c.cliente||'—'}</td>
       <td class="px-3 py-2.5 text-gray-400 font-mono text-xs">${c.cpf||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-300">${c.banco||'—'}</td>
       <td class="px-3 py-2.5 text-gray-300">${c.agencia||'—'}</td>
       <td class="px-3 py-2.5 text-gray-300">${c.valor_imovel||'—'}</td>
       <td class="px-3 py-2.5 text-gray-300">${c.valor_financiado||'—'}</td>
@@ -1514,7 +1548,7 @@ function renderizarTabelaEmitidos() {
   const filtrados = clientes.filter(c => c.status === 'emitido');
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
     atualizarStatsEmitidos();
     return;
   }
@@ -1527,6 +1561,7 @@ function renderizarTabelaEmitidos() {
       <td class="px-3 py-2.5 text-gray-300">${c.indicacao||'—'}</td>
       <td class="px-3 py-2.5 text-gray-200 font-medium">${c.cliente||'—'}</td>
       <td class="px-3 py-2.5 text-gray-400 font-mono text-xs">${c.cpf||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-300">${c.banco||'—'}</td>
       <td class="px-3 py-2.5 text-gray-300">${c.agencia||'—'}</td>
       <td class="px-3 py-2.5 text-gray-300">${c.valor_imovel||'—'}</td>
       <td class="px-3 py-2.5 text-gray-300">${c.valor_financiado||'—'}</td>
