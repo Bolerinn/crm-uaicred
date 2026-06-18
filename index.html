@@ -2127,9 +2127,9 @@ function exportarExcel() {
 function renderizarMetricas() {
   const container = document.getElementById('metricasContent');
   const doMes = clientes.filter(c => c.mes_referencia === mesSelecionado);
-  const total = doMes.filter(c => c.convertido !== true).length; // apenas aba 1
+  const total = doMes.filter(c => c.convertido !== true).length;
+  const emAndamento = doMes.filter(c => c.convertido === true && c.status !== 'emitido').length;
   const emitidos = doMes.filter(c => c.status === 'emitido').length;
-  const emAndamento = doMes.filter(c => c.status !== 'emitido').length;
 
   // Status distribution
   const distStatus = {};
