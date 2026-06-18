@@ -787,10 +787,20 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
           <span class="gold-dot"></span> Processos em Andamento
         </div>
       </div>
+
+      <!-- Stats -->
       <div class="px-6 py-3 flex flex-wrap gap-3 text-sm" id="statsBarAndamento"></div>
+
+      <!-- Filter: Status -->
+      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosStatusAndamento"></div>
+
+      <!-- Filter: Produto -->
+      <div class="px-6 mb-4 flex flex-wrap items-center gap-2" id="filtrosProdutoAndamento"></div>
+
+      <!-- Table -->
       <div class="px-6 pb-6">
         <div class="table-container">
-          <table class="w-full text-sm">
+          <table class="w-full text-sm" id="crmTableAndamento">
             <thead>
               <tr>
                 <th class="text-left px-2 py-3 w-10">#</th>
@@ -808,6 +818,21 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
             </thead>
             <tbody id="tableBodyAndamento"></tbody>
           </table>
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-3">
+          <button onclick="adicionarCliente()" class="inline-flex items-center gap-2 btn-primary text-sm px-5 py-2.5 rounded-xl shadow-lg shadow-orange-900/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Novo Processo
+          </button>
+          <button onclick="exportarExcel()" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm text-white" style="background:#059669;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Exportar Planilha
+          </button>
+          <button onclick="exportarCSV()" class="inline-flex items-center gap-2 btn-secondary px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Exportar CSV
+          </button>
         </div>
       </div>
     </div>
@@ -829,6 +854,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Indicação</th>
                 <th class="text-left px-3 py-3">Cliente</th>
                 <th class="text-left px-3 py-3">CPF</th>
+                <th class="text-left px-3 py-3">Banco</th>
                 <th class="text-left px-3 py-3">Agência</th>
                 <th class="text-left px-3 py-3">Valor Imóvel</th>
                 <th class="text-left px-3 py-3">Valor Financ.</th>
@@ -911,11 +937,30 @@ const STATUS_OPTS = [
   { id: 'emitido',         label: 'Emitido' },
 ];
 const PRODUTO_OPTS = ['SBPE', 'FGTS', 'FGTS a vista', 'HomeEquity', 'Terreno', 'Comercial', 'Construção'];
+const BANCO_OPTS = ['','Caixa','Bradesco','Itaú','Santander','Inter'];
+const STATUS_POR_BANCO = {
+  '':           ['aguardando-doc','aguardando-vis','em-registro'],
+  'Caixa':      ['aguardando-doc','aguardando-vis','aguardando-laudo','conformidade','em-registro'],
+  'Bradesco':   ['aguardando-doc','checklist-i','aguardando-vis','checklist-ii','em-registro'],
+  'Itaú':       ['aguardando-doc','aguardando-vis','analise-juridica','em-registro'],
+  'Santander':  ['aguardando-doc','aguardando-vis','analise-juridica','em-registro'],
+  'Inter':      ['aguardando-doc','aguardando-vis','analise-juridica','em-registro'],
+};
+function getStatusOpts(banco, currentStatus) {
+  const opts = STATUS_POR_BANCO[banco] || STATUS_POR_BANCO[''];
+  const validStatus = opts.includes(currentStatus) ? currentStatus : opts[0];
+  return { opts, validStatus };
+}
+function getStatusLabel(statusId) {
+  return (STATUS_OPTS.find(s => s.id === statusId) || {}).label || statusId || '—';
+}
 
 let clientes = [];
 let usuarioEmail = '';
 let filtroStatus = 'todos';
 let filtroProduto = 'todos';
+let filtroStatusAndamento = 'todos';
+let filtroProdutoAndamento = 'todos';
 let tabAtivo = 'analises';
 
 // ========== TAB SWITCHING ==========
@@ -1291,15 +1336,25 @@ function ouvirTempoReal() {
 
 // ========== FILTERS ==========
 function filtrarStatus(status, btn) {
-  filtroStatus = status;
-  document.querySelectorAll('.filter-btn-status').forEach(b => b.classList.remove('active'));
+  if (tabAtivo === 'andamento') {
+    filtroStatusAndamento = status;
+    document.querySelectorAll('#filtrosStatusAndamento .filter-btn-status').forEach(b => b.classList.remove('active'));
+  } else {
+    filtroStatus = status;
+    document.querySelectorAll('#filtrosStatus .filter-btn-status').forEach(b => b.classList.remove('active'));
+  }
   if (btn) btn.classList.add('active');
   renderizarTabelas();
 }
 
 function filtrarProduto(produto, btn) {
-  filtroProduto = produto;
-  document.querySelectorAll('.filter-btn-produto').forEach(b => b.classList.remove('active'));
+  if (tabAtivo === 'andamento') {
+    filtroProdutoAndamento = produto;
+    document.querySelectorAll('#filtrosProdutoAndamento .filter-btn-produto').forEach(b => b.classList.remove('active'));
+  } else {
+    filtroProduto = produto;
+    document.querySelectorAll('#filtrosProduto .filter-btn-produto').forEach(b => b.classList.remove('active'));
+  }
   if (btn) btn.classList.add('active');
   renderizarTabelas();
 }
@@ -1359,6 +1414,7 @@ function editarCampoInput(el) {
 // ========== RENDER ==========
 function renderizarTudo() {
   if (tabAtivo === 'andamento') {
+    renderizarFiltros();
     renderizarTabelaAndamento();
     atualizarStatsAndamento();
   } else if (tabAtivo === 'emitidos') {
@@ -1376,6 +1432,7 @@ function renderizarTudo() {
 function renderizarTabelas() {
   if (tabAtivo === 'andamento') {
     renderizarTabelaAndamento();
+    atualizarStatsAndamento();
   } else if (tabAtivo === 'emitidos') {
     renderizarTabelaEmitidos();
   } else {
