@@ -1033,6 +1033,7 @@ const NOME_PARA_EMAIL = {
 };
 
 async function entrar() {
+  try {
   const nomeDigitado = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const errorEl = document.getElementById('loginError');
@@ -1050,6 +1051,9 @@ async function entrar() {
     return;
   }
 
+  errorEl.textContent = 'Entrando...';
+  errorEl.classList.remove('hidden');
+
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error) {
     errorEl.textContent = error.message;
@@ -1066,7 +1070,6 @@ async function entrar() {
   document.getElementById('sidebarAvatar').textContent = (usuarioNome || 'U')[0].toUpperCase();
   document.getElementById('sidebarRole').textContent = usuarioTipo === 'master' ? 'Master' : 'Usuário';
 
-  // Show master-only nav items
   if (usuarioTipo === 'master') {
     document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
   }
@@ -1080,6 +1083,10 @@ async function entrar() {
   document.getElementById('appScreen').classList.remove('hidden');
   carregarDados();
   ouvirTempoReal();
+  } catch(e) {
+    document.getElementById('loginError').textContent = 'Erro: ' + e.message;
+    document.getElementById('loginError').classList.remove('hidden');
+  }
 }
 
 async function sair() {
