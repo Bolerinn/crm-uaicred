@@ -1651,8 +1651,14 @@ function atualizarResultadoRow(id) {
 }
 
 async function toggleBanco(id, banco, checked) {
-  await atualizarCampo(id, 'banco_' + banco, checked);
+  // Atualiza local e DOM imediatamente (antes do DB)
+  const c = clientes.find(c => c.id === id);
+  if (c) {
+    c['banco_' + banco] = checked;
+  }
   atualizarResultadoRow(id);
+  // Depois persiste no banco
+  await atualizarCampo(id, 'banco_' + banco, checked);
 }
 
 // ========== RENDER ==========
