@@ -2054,7 +2054,7 @@ async function restaurarDaLixeira(id) {
 
 async function excluirPermanentemente(id) {
   if (!confirm('ATENÇÃO: Este processo será EXCLUÍDO PERMANENTEMENTE e não poderá ser recuperado. Continuar?')) return;
-  const { error } = await sbAdmin.from('clientes').delete().eq('id', id);
+  const { error } = await sbAdmin.from('clientes').delete().eq('id', id).select();
   if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
   clientesLixeira = clientesLixeira.filter(c => c.id !== id);
   renderizarTabelaLixeira();
