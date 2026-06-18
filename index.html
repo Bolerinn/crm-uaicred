@@ -631,8 +631,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
     <div id="loginForm">
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">E-mail</label>
-          <input id="loginEmail" type="email" class="login-input" placeholder="seu@email.com">
+          <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">Nome</label>
+          <input id="loginEmail" type="text" class="login-input" placeholder="Seu primeiro nome" autocomplete="off">
         </div>
         <div>
           <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary);">Senha</label>
@@ -1011,13 +1011,27 @@ function mudarTab(tab) {
 }
 
 // ========== AUTH ==========
+const NOME_PARA_EMAIL = {
+  'douglas': 'contatoadouglas@gmail.com',
+  'luana': 'salvador+luana@primeassessoria.net',
+  'fernanda': 'salvador+fernanda@primeassessoria.net',
+  'marjore': 'salvador+marjore@primeassessoria.net',
+};
+
 async function entrar() {
-  const email = document.getElementById('loginEmail').value.trim();
+  const nomeDigitado = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const errorEl = document.getElementById('loginError');
 
-  if (!email || !password) {
-    errorEl.textContent = 'Preencha e-mail e senha.';
+  if (!nomeDigitado || !password) {
+    errorEl.textContent = 'Preencha nome e senha.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  const email = NOME_PARA_EMAIL[nomeDigitado.toLowerCase()];
+  if (!email) {
+    errorEl.textContent = 'Nome não encontrado.';
     errorEl.classList.remove('hidden');
     return;
   }
@@ -1870,6 +1884,14 @@ function renderizarTabelaAndamento() {
               <input type="checkbox" ${iq?'checked':''} onchange="toggleIQ(${c.id})" style="accent-color:#f97316;"> IQ
             </label>
             <input type="text" data-id="${c.id}" data-campo="data_iq" class="data-iq-field ${iq?'':'hidden'}" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_iq||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:110px;${iq?'':'display:none;'}">
+          </div>
+          <div class="expanded-item">
+            <label>Matrícula</label>
+            <input type="text" data-id="${c.id}" data-campo="matricula" class="editavel px-1 rounded bg-transparent border-0" onblur="editarCampoInput(this)" value="${c.matricula||''}" style="color:inherit;width:140px;">
+          </div>
+          <div class="expanded-item">
+            <label>Data Matrícula</label>
+            <input type="text" data-id="${c.id}" data-campo="data_matricula" class="editavel px-1 rounded bg-transparent border-0" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_matricula||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:110px;">
           </div>
           <div class="expanded-item" style="justify-content:flex-end;">
             <button class="btn-briefing" onclick="gerarBriefing(${c.id})" title="Gerar Briefing (em breve)">
