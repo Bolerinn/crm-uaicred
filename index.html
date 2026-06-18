@@ -1608,6 +1608,20 @@ function irParaMesAtualAnalises() {
   atualizarStats();
 }
 
+async function iniciarNovaCompetenciaAnalises() {
+  if (_dupLock) return;
+  _dupLock = true;
+  const [ano, mes] = mesSelecionado.split('-').map(Number);
+  const dataSeguinte = new Date(ano, mes, 1);
+  const mesAlvo = dataSeguinte.toISOString().slice(0,7);
+  const followUps = clientes.filter(c => c.follow_up === true && c.mes_referencia === mesSelecionado && c.convertido !== true && c.status !== 'emitido');
+  const existentesNoAlvo = clientes.filter(c => c.mes_referencia === mesAlvo).map(c => c.cliente);
+  const todos = followUps.filter(c => !existentesNoAlvo.includes(c.cliente));
+  if (todos.length === 0) { mostrarToast('Nenhum follow-up para duplicar.'); _dupLock = false; return; }
+  await duplicarClientes(todos, mesAlvo);
+  _dupLock = false;
+}
+
 function mudarMesAnalises(delta) {
   mesAtual += delta;
   if (mesAtual < 0) { mesAtual = 11; anoAtual--; }
