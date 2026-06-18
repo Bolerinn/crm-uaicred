@@ -1369,12 +1369,13 @@ async function carregarDados() {
   });
   if (resp.ok) {
     clientes = await resp.json();
+    console.log('carregarDados: '+clientes.length+' registros');
   } else {
     // Fallback sem filtro
     const r2 = await fetch(SUPABASE_URL + '/rest/v1/clientes?select=*&order=id', {
       headers: { 'apikey': SERVICE_ROLE_KEY, 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY }
     });
-    if (r2.ok) clientes = await r2.json();
+    if (r2.ok) { clientes = await r2.json(); console.log('carregarDados FALLBACK: '+clientes.length+' registros'); }
     else { mostrarToast('Erro ao carregar dados'); return; }
   }
   renderizarTudo();
@@ -1651,6 +1652,7 @@ function getFiltrados(sourceClientes, tab) {
     } else {
       // Aba Análises: excluir convertidos e clientes com mês de competência
       passaStatus = c.convertido !== true && (c.mes_referencia || '') === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
+    if (i === 0) console.log('filtro analises: mes='+(String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'))+' clientes.length='+src.length);
       if (fs !== 'todos') passaStatus = passaStatus && c.status === fs;
     }
     const passaProduto = (t === 'andamento') ? (fp === 'todos' || c.produto === fp) : true;
