@@ -1525,8 +1525,10 @@ function onBancoChange(id, novoBanco) {
 }
 
 // ========== REALTIME ==========
+let _rtChannel = null;
 function ouvirTempoReal() {
-  sb
+  if (_rtChannel) return;
+  _rtChannel = sb
     .channel('clientes-realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, payload => {
       if (payload.eventType === 'INSERT') {
