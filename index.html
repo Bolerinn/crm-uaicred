@@ -1322,20 +1322,25 @@ async function adicionarCliente() {
   adicionando = true;
   try {
     const { data: user } = await sb.auth.getUser();
+    const insertData = {
+      cliente: 'Novo Cliente',
+      produto: 'SBPE',
+      status: 'aguardando-doc',
+      data_vistoria: '—',
+      banco_caixa: false,
+      banco_bradesco: false,
+      banco_itau: false,
+      banco_santander: false,
+      banco_inter: false,
+      created_by: user.user?.id
+    };
+    // Se estiver na aba ANDAMENTO, já insere com mes_referencia
+    if (tabAtivo === 'andamento') {
+      insertData.mes_referencia = mesSelecionado;
+    }
     const { data, error } = await sb
       .from('clientes')
-      .insert({
-        cliente: 'Novo Cliente',
-        produto: 'SBPE',
-        status: 'aguardando-doc',
-        data_vistoria: '—',
-        banco_caixa: false,
-        banco_bradesco: false,
-        banco_itau: false,
-        banco_santander: false,
-        banco_inter: false,
-        created_by: user.user?.id
-      })
+      .insert(insertData)
       .select()
       .single();
 
