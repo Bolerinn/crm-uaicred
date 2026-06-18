@@ -1978,6 +1978,7 @@ async function iniciarNovaCompetencia() {
   const origem = clientes.filter(c => c.mes_referencia === mesSelecionado && c.status !== 'emitido');
   const followUps = clientes.filter(c => c.follow_up === true && !c.mes_referencia && c.convertido !== true);
   const todos = [...origem, ...followUps.filter(f => !origem.some(o => o.id === f.id))];
+  console.log('iniciarNova: origem='+origem.length+' followUps='+followUps.length+' total='+todos.length);
   if (todos.length === 0) {
     mostrarToast('Nenhum processo pendente para duplicar.');
     return;
