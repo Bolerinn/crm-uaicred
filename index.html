@@ -331,6 +331,8 @@ Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
   .st-aguardando-laudo { background: rgba(236,72,153,0.12); color: #be185d; }
   .st-conformidade { background: rgba(16,185,129,0.12); color: #065f46; }
   .st-em-registro { background: rgba(184,134,11,0.15); color: #92400e; }
+  .st-checklist-ii { background: rgba(52,211,153,0.12); color: #065f46; }
+  .st-emitido { background: rgba(212,168,83,0.15); color: #b8860b; }
   .st-checklist-i { background: rgba(34,197,94,0.12); color: #166534; }
   .st-analise-juridica { background: rgba(239,68,68,0.12); color: #991b1b; }
 
@@ -732,9 +734,6 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <!-- Stats -->
       <div class="px-6 py-3 flex flex-wrap gap-3 text-sm" id="statsBar"></div>
 
-      <!-- Filter: Status -->
-      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosStatus"></div>
-
       <!-- Filter: Produto -->
       <div class="px-6 mb-4 flex flex-wrap items-center gap-2" id="filtrosProduto"></div>
 
@@ -753,8 +752,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Valor Imóvel</th>
                 <th class="text-left px-3 py-3">Valor Financ.</th>
                 <th class="text-left px-3 py-3">Produto</th>
-                <th class="text-left px-3 py-3">Data Vistoria</th>
-                <th class="text-left px-3 py-3">Status</th>
+                <th class="text-left px-3 py-3">Resultado</th>
                 <th class="text-left px-3 py-3">Obs</th>
               </tr>
             </thead>
@@ -942,18 +940,19 @@ const STATUS_OPTS = [
   { id: 'conformidade',    label: 'Conformidade' },
   { id: 'em-registro',     label: 'Em Registro' },
   { id: 'checklist-i',     label: 'Checklist I' },
+  { id: 'checklist-ii',    label: 'Checklist II' },
   { id: 'analise-juridica',label: 'Análise Jurídica' },
-  { id: 'emitido',         label: 'Emitido' },
+  { id: 'emitido',         label: 'Contrato Emitido' },
 ];
 const PRODUTO_OPTS = ['SBPE', 'FGTS', 'FGTS a vista', 'HomeEquity', 'Terreno', 'Comercial', 'Construção'];
 const BANCO_OPTS = ['','Caixa','Bradesco','Itaú','Santander','Inter'];
 const STATUS_POR_BANCO = {
-  '':           ['aguardando-doc','aguardando-vis','em-registro'],
-  'Caixa':      ['aguardando-doc','aguardando-vis','aguardando-laudo','conformidade','em-registro'],
-  'Bradesco':   ['aguardando-doc','checklist-i','aguardando-vis','checklist-ii','em-registro'],
-  'Itaú':       ['aguardando-doc','aguardando-vis','analise-juridica','em-registro'],
-  'Santander':  ['aguardando-doc','aguardando-vis','analise-juridica','em-registro'],
-  'Inter':      ['aguardando-doc','aguardando-vis','analise-juridica','em-registro'],
+  '':           ['aguardando-doc','aguardando-vis','emitido'],
+  'Caixa':      ['aguardando-doc','aguardando-vis','aguardando-laudo','conformidade','emitido'],
+  'Bradesco':   ['aguardando-doc','checklist-i','aguardando-vis','checklist-ii','emitido'],
+  'Itaú':       ['aguardando-doc','aguardando-vis','analise-juridica','emitido'],
+  'Santander':  ['aguardando-doc','aguardando-vis','analise-juridica','emitido'],
+  'Inter':      ['aguardando-doc','aguardando-vis','analise-juridica','emitido'],
 };
 function getStatusOpts(banco, currentStatus) {
   const opts = STATUS_POR_BANCO[banco] || STATUS_POR_BANCO[''];
@@ -1471,16 +1470,14 @@ function renderizarTabelaAnalises() {
   const filtrados = getFiltrados();
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-16 text-gray-600">Nenhum processo encontrado.</td></tr>';
     atualizarStats();
     return;
   }
 
   tbody.innerHTML = filtrados.map((c, i) => {
     const idx = clientes.indexOf(c);
-    const st = STATUS_OPTS.find(s => s.id === c.status);
-    const banco = c.banco || '';
-    const { opts: statusOpts, validStatus } = getStatusOpts(banco, c.status || '');
+    const resultadoHtml = getResultadoHtml(c);
     return `
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${idx + 1}</td>
@@ -1488,10 +1485,13 @@ function renderizarTabelaAnalises() {
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
       <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
-        <select onchange="onBancoChange(${c.id},this.value)" class="text-xs bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:inherit;">
-          <option value="" ${!c.banco?'selected':''}>—</option>
-          ${['Bradesco','Caixa','Itaú','Santander','Inter'].map(b => `<option value="${b}" ${c.banco===b?'selected':''}>${b}</option>`).join('')}
-        </select>
+        <div class="flex flex-col gap-0.5 text-xs" style="color:inherit;white-space:nowrap;">
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ${c.banco_caixa?'checked':''} onchange="toggleBanco(${c.id},'caixa',this.checked)" class="accent-orange-500"> Caixa</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ${c.banco_bradesco?'checked':''} onchange="toggleBanco(${c.id},'bradesco',this.checked)" class="accent-orange-500"> Bradesco</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ${c.banco_itau?'checked':''} onchange="toggleBanco(${c.id},'itau',this.checked)" class="accent-orange-500"> Itaú</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ${c.banco_santander?'checked':''} onchange="toggleBanco(${c.id},'santander',this.checked)" class="accent-orange-500"> Santander</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ${c.banco_inter?'checked':''} onchange="toggleBanco(${c.id},'inter',this.checked)" class="accent-orange-500"> Inter</label>
+        </div>
       </td>
       <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^\\d]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_imovel||''}" style="color:inherit;width:110px;"></td>
@@ -1501,12 +1501,7 @@ function renderizarTabelaAnalises() {
           ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
         </select>
       </td>
-      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_vistoria" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_vistoria||''}" maxlength="10" style="color:inherit;width:90px;"></td>
-      <td class="px-3 py-2.5">
-        <select onchange="atualizarCampo(${c.id},'status',this.value)" data-id="${c.id}" class="status-select text-xs bg-transparent cursor-pointer text-gray-300 rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500">
-          ${statusOpts.map(s => getStatusLabel(s)).map((label,i) => `<option value="${statusOpts[i]}" ${statusOpts[i]===c.status?'selected':''}>${label}</option>`).join('')}
-        </select>
-      </td>
+      <td class="px-3 py-2.5" id="resultado-${c.id}">${resultadoHtml}</td>
       <td class="px-3 py-2.5"><span contenteditable="true" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
     </tr>`;
   }).join('');
@@ -1583,7 +1578,7 @@ function renderizarTabelaEmitidos() {
       <td class="px-3 py-2.5 text-gray-300">${c.valor_financiado||'—'}</td>
       <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='FGTS'?'text-orange-400':'text-gray-300'}">${c.produto||'—'}</span></td>
       <td class="px-3 py-2.5 text-gray-400 text-xs">${c.data_vistoria||'—'}</td>
-      <td class="px-3 py-2.5"><span class="status-badge st-emitido">Emitido ✨</span></td>
+      <td class="px-3 py-2.5"><span class="status-badge st-emitido">Contrato Emitido ✨</span></td>
       <td class="px-3 py-2.5 text-gray-500 text-xs max-w-[120px] truncate">${c.obs||'—'}</td>
     </tr>`;
   }).join('');
@@ -1727,24 +1722,12 @@ function atualizarStats() {
   const statsBar = document.getElementById('statsBar');
   if (!statsBar) return;
 
-  const statusCounts = {};
-  STATUS_OPTS.forEach(s => { statusCounts[s.id] = clientes.filter(c => c.status === s.id).length; });
-
-  const cards = [
-    { label: 'Total', value: clientes.length, color: '#fff' },
-    { label: '📋 Aguard. Doc', value: statusCounts['aguardando-doc']||0, color: '#fbbf24' },
-    { label: '🔍 Aguard. Vistoria', value: statusCounts['aguardando-vis']||0, color: '#818cf8' },
-    { label: '✅ Conformidade', value: statusCounts['conformidade']||0, color: '#34d399' },
-    { label: '📝 Checklist I', value: statusCounts['checklist-i']||0, color: '#4ade80' },
-    { label: '⚖️ Análise Jurídica', value: statusCounts['analise-juridica']||0, color: '#f87171' },
-  ];
-
-  statsBar.innerHTML = cards.map(c => `
+  statsBar.innerHTML = `
     <div class="stat-card">
-      <span class="stat-label">${c.label}</span>
-      <span class="stat-value" style="color:${c.color};">${c.value}</span>
+      <span class="stat-label">Total</span>
+      <span class="stat-value" style="color:#fff;">${clientes.length}</span>
     </div>
-  `).join('');
+  `;
 }
 
 function atualizarStatsAndamento() {
@@ -1777,10 +1760,12 @@ function atualizarStatsEmitidos() {
 
 // ========== EXPORTS ==========
 function exportarCSV() {
-  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Data Vistoria','Status','Obs'];
+  const headers = ['Indicação','Cliente','CPF','Banco Caixa','Banco Bradesco','Banco Itaú','Banco Santander','Banco Inter','Resultado Caixa','Resultado Bradesco','Resultado Itaú','Resultado Santander','Resultado Inter','Agência','Valor Imóvel','Valor Financiado','Produto','Obs'];
   const rows = clientes.map(c => [
-    c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.data_vistoria,
-    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+    c.indicacao, c.cliente, c.cpf,
+    c.banco_caixa ? 'Sim' : 'Não', c.banco_bradesco ? 'Sim' : 'Não', c.banco_itau ? 'Sim' : 'Não', c.banco_santander ? 'Sim' : 'Não', c.banco_inter ? 'Sim' : 'Não',
+    c.resultado_caixa, c.resultado_bradesco, c.resultado_itau, c.resultado_santander, c.resultado_inter,
+    c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.obs
   ]);
   const csv = [headers.join(','), ...rows.map(r => r.map(v => '"'+(v||'')+'"').join(','))].join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -1793,14 +1778,16 @@ function exportarCSV() {
 }
 
 function exportarExcel() {
-  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Data Vistoria','Status','Obs'];
+  const headers = ['Indicação','Cliente','CPF','Banco Caixa','Banco Bradesco','Banco Itaú','Banco Santander','Banco Inter','Resultado Caixa','Resultado Bradesco','Resultado Itaú','Resultado Santander','Resultado Inter','Agência','Valor Imóvel','Valor Financiado','Produto','Obs'];
   const rows = clientes.map(c => [
-    c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.data_vistoria,
-    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+    c.indicacao, c.cliente, c.cpf,
+    c.banco_caixa ? 'Sim' : 'Não', c.banco_bradesco ? 'Sim' : 'Não', c.banco_itau ? 'Sim' : 'Não', c.banco_santander ? 'Sim' : 'Não', c.banco_inter ? 'Sim' : 'Não',
+    c.resultado_caixa, c.resultado_bradesco, c.resultado_itau, c.resultado_santander, c.resultado_inter,
+    c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.obs
   ]);
   const data = [headers, ...rows];
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{ wch:22 },{ wch:26 },{ wch:16 },{ wch:22 },{ wch:16 },{ wch:16 },{ wch:10 },{ wch:16 },{ wch:22 },{ wch:30 }];
+  ws['!cols'] = [{ wch:22 },{ wch:26 },{ wch:16 },{ wch:12 },{ wch:14 },{ wch:12 },{ wch:14 },{ wch:12 },{ wch:14 },{ wch:14 },{ wch:14 },{ wch:14 },{ wch:14 },{ wch:22 },{ wch:16 },{ wch:16 },{ wch:10 },{ wch:30 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Processos');
   XLSX.writeFile(wb, 'rede-prime-processos.xlsx');
