@@ -1868,7 +1868,7 @@ function getAlertasIQ() {
     if (!c.iq) return false;
     const dataIQ = parseDataBR(c.data_iq);
     if (!dataIQ) return false;
-    return diasAte(dataIQ) <= 3 && diasAte(dataIQ) >= 0;
+    return diasAte(dataIQ) <= 3;
   });
 }
 
@@ -1909,14 +1909,13 @@ function renderizarDashboard() {
   const renderCliente = (c, cor) => {
     const banco = c.banco || '—';
     const status = (STATUS_OPTS.find(s => s.id === c.status) || {}).label || c.status || '—';
-    const diasCriado = c.created_at ? diasDesde(new Date(c.created_at)) : '?';
+    const diasInicio = c.data_vistoria ? diasDesde(parseDataBR(c.data_vistoria)) : '?';
     return `<div class="flex items-center justify-between p-2 rounded-lg text-xs" style="background:var(--bg-body);">
       <div>
         <span class="font-medium" style="color:var(--text);">${c.cliente || 'Sem nome'}</span>
         <span class="ml-2" style="color:var(--text-muted);">${banco}</span>
         <span class="ml-2 px-1.5 py-0.5 rounded text-xs font-medium" style="background:${cor}18;color:${cor};">${status}</span>
       </div>
-      <span style="color:var(--text-muted);">${diasCriado}d</span>
     </div>`;
   };
 
@@ -1943,20 +1942,22 @@ function renderizarDashboard() {
         <span class="ml-2" style="color:var(--text-muted);">${banco}</span>
         <span class="ml-2" style="color:var(--text-muted);">Matrícula: ${c.data_matricula || '—'}</span>
       </div>
-      <span style="color:${cor};font-weight:600;">${dias}d (limite: ${limite}d)</span>
+      <span style="color:${cor};font-weight:600;">${dias}d</span>
     </div>`;
   };
 
   const renderIQ = (c, cor) => {
     const banco = c.banco || '—';
     const dias = diasAte(parseDataBR(c.data_iq));
+    const diasAbs = Math.abs(dias);
+    const label = dias <= 0 ? `${diasAbs}d de atraso` : dias === 1 ? '1d restante' : `${dias}d restantes`;
     return `<div class="flex items-center justify-between p-2 rounded-lg text-xs" style="background:var(--bg-body);border-left:3px solid ${cor};">
       <div>
         <span class="font-medium" style="color:var(--text);">${c.cliente || 'Sem nome'}</span>
         <span class="ml-2" style="color:var(--text-muted);">${banco}</span>
         <span class="ml-2" style="color:var(--text-muted);">IQ: ${c.data_iq || '—'}</span>
       </div>
-      <span style="color:${cor};font-weight:600;">${dias <= 0 ? 'HOJE' : dias + 'd restantes'}</span>
+      <span style="color:${cor};font-weight:600;">${label}</span>
     </div>`;
   };
 
@@ -1969,7 +1970,7 @@ function renderizarDashboard() {
       ${cardAlerta('Prazo Excedido (+30d)', '#f97316', '⏰', prazoExcedido, renderCliente)}
       ${cardAlerta('Urgência', '#dc2626', '🔴', urgentes, renderUrgente)}
       ${cardAlerta('Matrícula Vencendo', '#d97706', '📋', matriculas, renderMatricula)}
-      ${cardAlerta('Prazo IQ Vencendo', '#7c3aed', '🧠', iqs, renderIQ)}
+      ${cardAlerta('Vencimento IQ', '#7c3aed', '🧠', iqs, renderIQ)}
     </div>
   `;
 }
