@@ -913,6 +913,33 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
 
 
 
+
+    <!-- MODAL: Editar Parceiro -->
+    <div id="modalEditarParceiro" class="modal-overlay hidden" onclick="if(event.target===this)fecharModalEditarParceiro()">
+      <div class="modal-box" style="max-width:420px;" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-sm">Editar Parceiro</h3>
+          <button onclick="fecharModalEditarParceiro()" class="text-lg" style="color:var(--text-muted);">&times;</button>
+        </div>
+        <input type="hidden" id="editParceiroNomeOriginal">
+        <div class="mb-3">
+          <label class="text-xs mb-1 block" style="color:var(--text-muted);">Tipo</label>
+          <select id="editParceiroTipo" class="w-full px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);">
+            <option value="Corretor">Corretor</option>
+            <option value="Gerente">Gerente</option>
+            <option value="Imobiliária">Imobiliária</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="text-xs mb-1 block" style="color:var(--text-muted);">Nome completo</label>
+          <input type="text" id="editParceiroNome" class="w-full px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);">
+        </div>
+        <p class="text-xs mb-3" style="color:var(--text-muted);">Processos já vinculados manterão o nome original.</p>
+        <button onclick="salvarEdicaoParceiro()" class="w-full py-2.5 rounded-xl text-sm font-medium text-white" style="background:var(--accent);">Salvar</button>
+      </div>
+    </div>
+
     <!-- MODAL: Lista de Parceiros -->
     <div id="modalParceiros" class="modal-overlay hidden" onclick="if(event.target===this)fecharModalParceiros()">
       <div class="modal-box" style="max-width:500px;" onclick="event.stopPropagation()">
@@ -1895,7 +1922,7 @@ function sincronizarIndicacoes() {
   let changed = false;
   doBanco.forEach(nome => {
     if (!nomesSalvos.has(nome)) {
-      salvas.push({ nome, tipo: 'Outro', adicionado_em: new Date().toISOString() });
+      salvas.push({ nome, tipo: 'Outro', adicionado_em: new Date().toISOString(), _legado: true });
       changed = true;
     }
   });
@@ -1928,7 +1955,10 @@ function abrirModalParceiros() {
           <span class="text-sm font-medium">${i.nome}</span>
           <span class="text-xs" style="color:var(--text-muted);">${i.tipo}</span>
         </div>
-        ${isMaster() ? `<button onclick="removerParceiro('${i.nome.replace(/'/g,"\'")}')" class="text-xs px-2 py-1 rounded transition" style="background:transparent;color:var(--text-muted);border:none;cursor:pointer;" title="Remover">🗑️</button>` : ''}
+        ${isMaster() ? `<div class="flex items-center gap-1">
+          <button onclick="editarParceiro('${i.nome.replace(/'/g,"\'")}', '${i.tipo}')" class="text-xs px-2 py-1 rounded transition" style="background:transparent;color:var(--text-muted);border:none;cursor:pointer;" title="Editar">🖊️</button>
+          <button onclick="removerParceiro('${i.nome.replace(/'/g,"\'")}')" class="text-xs px-2 py-1 rounded transition" style="background:transparent;color:var(--text-muted);border:none;cursor:pointer;" title="Remover">🗑️</button>
+        </div>` : ''}
       </div>`;
     }).join('');
   }
@@ -1939,14 +1969,70 @@ function fecharModalParceiros() {
   document.getElementById('modalParceiros').classList.add('hidden');
 }
 
+function editarParceiro(nome, tipo) {
+  document.getElementById('editParceiroNomeOriginal').value = nome;
+  document.getElementById('editParceiroNome').value = nome;
+  document.getElementById('editParceiroTipo').value = tipo || 'Outro';
+  document.getElementById('modalEditarParceiro').classList.remove('hidden');
+}
+
+function fecharModalEditarParceiro() {
+  document.getElementById('modalEditarParceiro').classList.add('hidden');
+}
+
+function salvarEdicaoParceiro() {
+  const nomeOriginal = document.getElementById('editParceiroNomeOriginal').value;
+  const novoNome = document.getElementById('editParceiroNome').value.trim();
+  const novoTipo = document.getElementById('editParceiroTipo').value;
+  if (!novoNome) { mostrarToast('Preencha o nome'); return; }
+  
+  const lista = carregarIndicacoes();
+  const idx = lista.findIndex(i => i.nome === nomeOriginal);
+  if (idx < 0) { mostrarToast('Parceiro não encontrado'); return; }
+  
+  // Check duplicate only if name actually changed
+  if (novoNome.toLowerCase() !== nomeOriginal.toLowerCase() &&
+      lista.some(i => i.nome.toLowerCase() === novoNome.toLowerCase())) {
+    mostrarToast('⚠️ Já existe um parceiro com esse nome');
+    return;
+  }
+  
+  // Count how many processes use this partner
+  const emUso = clientes.filter(c => (c.indicacao || '').trim() === nomeOriginal).length;
+  
+  if (novoNome !== nomeOriginal) {
+    // Name changed: update partner entry, old processes keep original name
+    lista[idx].nome = novoNome;
+    lista[idx].tipo = novoTipo;
+    // Keep old name available by adding an alias if processes reference it
+    if (emUso > 0 && !lista.some(i => i.nome === nomeOriginal)) {
+      lista.push({ nome: nomeOriginal, tipo: novoTipo, adicionado_em: new Date().toISOString(), _legado: true });
+    }
+  } else {
+    lista[idx].tipo = novoTipo;
+  }
+  
+  salvarIndicacoes(lista);
+  popularDatalistIndicacoes();
+  fecharModalEditarParceiro();
+  abrirModalParceiros(); // refresh
+  mostrarToast('✅ Parceiro atualizado' + (emUso > 0 ? ` (${emUso} processos mantêm o nome original)` : ''));
+}
+
 function removerParceiro(nome) {
-  if (!confirm('Remover "' + nome + '" da lista de parceiros?')) return;
+  // Check if in use
+  const emUso = clientes.filter(c => (c.indicacao || '').trim() === nome).length;
+  const msg = emUso > 0
+    ? `"${nome}" está vinculado a ${emUso} processo(s). Remover da lista de parceiros? (os processos manterão o nome)`
+    : `Remover "${nome}" da lista de parceiros?`;
+  
+  if (!confirm(msg)) return;
   const lista = carregarIndicacoes();
   const novaLista = lista.filter(i => i.nome !== nome);
   salvarIndicacoes(novaLista);
   popularDatalistIndicacoes();
-  abrirModalParceiros(); // refresh modal
-  mostrarToast('🗑️ Parceiro removido: ' + nome);
+  abrirModalParceiros();
+  mostrarToast('🗑️ Parceiro removido da lista' + (emUso > 0 ? ` (${emUso} processos mantêm o nome)` : ''));
 }
 
 function abrirModalIndicacao() {
