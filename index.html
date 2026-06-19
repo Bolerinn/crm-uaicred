@@ -820,7 +820,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-left px-3 py-3">Valor Imóvel</th>
                 <th class="text-left px-3 py-3">Valor Financ.</th>
                 <th class="text-left px-3 py-3">Produto</th>
-                <th class="text-left px-3 py-3">Data Vistoria</th>
+                <th class="text-left px-3 py-3">Início</th>
                 <th class="text-left px-3 py-3">Data Emissão</th>
                 <th class="text-left px-3 py-3">Status</th>
                 <th class="text-left px-3 py-3">Obs</th>
@@ -1833,9 +1833,10 @@ function getAlertasPrazoExcedido() {
   return clientes.filter(c => {
     if (c.status === 'emitido') return false;
     if (c.convertido !== true) return false;
-    if (!c.created_at) return false;
-    const criado = new Date(c.created_at);
-    return diasDesde(criado) > 30;
+    if (!c.data_vistoria || c.data_vistoria === '—') return false;
+    const inicio = parseDataBR(c.data_vistoria);
+    if (!inicio) return false;
+    return diasDesde(inicio) > 30;
   });
 }
 
@@ -2326,7 +2327,7 @@ async function excluirPermanentemente(id) {
 
 
 function exportarCSV() {
-  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Data Vistoria','Status','Obs'];
+  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Início','Status','Obs'];
   const rows = clientes.map(c => [
     c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.banco, c.data_vistoria,
     STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
@@ -2342,7 +2343,7 @@ function exportarCSV() {
 }
 
 function exportarExcel() {
-  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Data Vistoria','Status','Obs'];
+  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Início','Status','Obs'];
   const rows = clientes.map(c => [
     c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.banco, c.data_vistoria,
     STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
