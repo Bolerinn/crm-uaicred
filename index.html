@@ -680,7 +680,11 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
     </div>
 
     <nav>
-      <a data-tab="analises" class="active" onclick="mudarTab('analises')">
+      <a data-tab="dashboard" class="active" onclick="mudarTab('dashboard')">
+        <span class="nav-icon">⚠️</span>
+        <span class="nav-text">DASHBOARD</span>
+      </a>
+      <a data-tab="analises" onclick="mudarTab('analises')">
         <span class="nav-icon">📊</span>
         <span class="nav-text">ANÁLISES</span>
       </a>
@@ -691,10 +695,6 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <a data-tab="emitidos" onclick="mudarTab('emitidos')">
         <span class="nav-icon">✅</span>
         <span class="nav-text">EMITIDOS</span>
-      </a>
-      <a data-tab="dashboard" onclick="mudarTab('dashboard')">
-        <span class="nav-icon">⚠️</span>
-        <span class="nav-text">DASHBOARD</span>
       </a>
       <a data-tab="metricas" class="nav-master" onclick="mudarTab('metricas')">
         <span class="nav-icon">📈</span>
@@ -1047,7 +1047,7 @@ let filtroProdutoEmitidos = 'todos';
 let filtroBancoEmitidos = 'todos';
 let filtroEmitidos = 'todos';
 let mesSelecionado = new Date().toISOString().slice(0,7); // YYYY-MM
-let tabAtivo = 'analises';
+let tabAtivo = 'dashboard';
 let mesAtual = new Date().getMonth(); // 0-11
 let anoAtual = new Date().getFullYear();
 let adicionando = false;
@@ -1966,7 +1966,7 @@ function renderizarDashboard() {
     </div>
     <div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(380px,1fr));">
       ${cardAlerta('Prazo Excedido (+30d)', '#f97316', '⏰', prazoExcedido, renderCliente)}
-      ${cardAlerta('Urgência (Master)', '#dc2626', '🔴', urgentes, renderUrgente)}
+      ${cardAlerta('Urgência', '#dc2626', '🔴', urgentes, renderUrgente)}
       ${cardAlerta('Matrícula Vencendo', '#d97706', '📋', matriculas, renderMatricula)}
       ${cardAlerta('Prazo IQ Vencendo', '#7c3aed', '🧠', iqs, renderIQ)}
     </div>
@@ -2634,7 +2634,7 @@ function renderizarTabelaAndamento() {
             <label>Data Matrícula</label>
             <input type="text" data-id="${c.id}" data-campo="data_matricula" class="editavel px-1 rounded bg-transparent border-0" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_matricula||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:110px;">
           </div>
-          <div class="expanded-item" id="urgente-item-${c.id}" style="${isMaster()?'':'display:none;'}">
+          <div class="expanded-item" id="urgente-item-${c.id}">
             <label style="cursor:pointer;" onclick="toggleUrgente(${c.id})">
               <input type="checkbox" ${c.urgente?'checked':''} onchange="toggleUrgente(${c.id})" style="accent-color:#dc2626;"> 🔴 Urgente
             </label>
