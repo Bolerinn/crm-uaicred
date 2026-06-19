@@ -692,6 +692,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
         <span class="nav-icon">✅</span>
         <span class="nav-text">EMITIDOS</span>
       </a>
+      <a data-tab="dashboard" onclick="mudarTab('dashboard')">
+        <span class="nav-icon">⚠️</span>
+        <span class="nav-text">DASHBOARD</span>
+      </a>
       <a data-tab="metricas" class="nav-master" onclick="mudarTab('metricas')">
         <span class="nav-icon">📈</span>
         <span class="nav-text">MÉTRICAS</span>
@@ -893,6 +897,16 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="px-6 pb-6" id="metricasContent"></div>
     </div>
 
+    <!-- TAB: DASHBOARD -->
+    <div id="tab-dashboard" class="tab-panel">
+      <div class="px-6 pt-6 pb-2">
+        <div class="section-title">
+          <span class="gold-dot"></span> Dashboard — Alertas
+        </div>
+      </div>
+      <div class="px-6 pb-6" id="dashboardContent"></div>
+    </div>
+
     <!-- TAB: LIXEIRA (master only) -->
     <div id="tab-lixeira" class="tab-panel">
       <div class="px-6 pt-6 pb-2 flex items-center justify-between">
@@ -1061,6 +1075,9 @@ function mudarTab(tab) {
     filtroStatus = 'emitido';
   } else if (tab === 'lixeira') {
     carregarLixeira();
+    return;
+  } else if (tab === 'dashboard') {
+    renderizarDashboard();
     return;
   } else {
     filtroStatus = 'todos';
@@ -1776,6 +1793,186 @@ function gerarBriefing(id) {
   mostrarToast('📄 Briefing em desenvolvimento — em breve disponível');
 }
 
+// ========== URGENTE ==========
+async function toggleUrgente(id) {
+  if (!isMaster()) return;
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  const novo = !c.urgente;
+  c.urgente = novo;
+  await atualizarCampo(id, 'urgente', novo);
+  mostrarToast(novo ? '🔴 Marcado como urgente' : '⚪ Urgência removida');
+  if (tabAtivo === 'dashboard') renderizarDashboard();
+}
+
+// ========== DASHBOARD ==========
+function parseDataBR(str) {
+  if (!str || str === '—') return null;
+  const parts = str.split('/');
+  if (parts.length !== 3) return null;
+  const d = parseInt(parts[0]), m = parseInt(parts[1]) - 1, a = parseInt(parts[2]);
+  if (isNaN(d) || isNaN(m) || isNaN(a)) return null;
+  return new Date(a, m, d);
+}
+
+function diasDesde(data) {
+  if (!data) return Infinity;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const diff = hoje - data;
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function diasAte(data) {
+  if (!data) return Infinity;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const diff = data - hoje;
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function getAlertasPrazoExcedido() {
+  return clientes.filter(c => {
+    if (c.status === 'emitido') return false;
+    if (c.convertido !== true) return false;
+    if (!c.created_at) return false;
+    const criado = new Date(c.created_at);
+    return diasDesde(criado) > 30;
+  });
+}
+
+function getAlertasUrgentes() {
+  return clientes.filter(c => {
+    if (c.status === 'emitido') return false;
+    if (c.convertido !== true) return false;
+    return c.urgente === true;
+  });
+}
+
+function getAlertasMatricula() {
+  return clientes.filter(c => {
+    if (c.status === 'emitido') return false;
+    if (c.convertido !== true) return false;
+    const dataMat = parseDataBR(c.data_matricula);
+    if (!dataMat) return false;
+    const dias = diasDesde(dataMat);
+    const banco = (c.banco || '').toLowerCase();
+    if (banco === 'itau' || banco === 'itaú') return dias > 13;
+    return dias > 23;
+  });
+}
+
+function getAlertasIQ() {
+  return clientes.filter(c => {
+    if (c.status === 'emitido') return false;
+    if (c.convertido !== true) return false;
+    if (!c.iq) return false;
+    const dataIQ = parseDataBR(c.data_iq);
+    if (!dataIQ) return false;
+    return diasAte(dataIQ) <= 3 && diasAte(dataIQ) >= 0;
+  });
+}
+
+function cardAlerta(titulo, cor, icone, items, renderItem) {
+  if (items.length === 0) {
+    return `<div class="p-5 rounded-2xl border shadow-sm" style="background:var(--bg-card);border-color:var(--border);">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-lg">${icone}</span>
+        <h3 class="font-semibold text-sm" style="color:${cor};">${titulo}</h3>
+        <span class="ml-auto text-xs px-2 py-0.5 rounded-full font-medium" style="background:${cor}18;color:${cor};">0</span>
+      </div>
+      <p class="text-xs" style="color:var(--text-muted);">Nenhum alerta no momento ✅</p>
+    </div>`;
+  }
+  return `<div class="p-5 rounded-2xl border shadow-sm" style="background:var(--bg-card);border-color:${cor}40;">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-lg">${icone}</span>
+      <h3 class="font-semibold text-sm" style="color:${cor};">${titulo}</h3>
+      <span class="ml-auto text-xs px-2 py-0.5 rounded-full font-bold" style="background:${cor};color:#fff;">${items.length}</span>
+    </div>
+    <div class="space-y-2">
+      ${items.map(c => renderItem(c, cor)).join('')}
+    </div>
+  </div>`;
+}
+
+function renderizarDashboard() {
+  const container = document.getElementById('dashboardContent');
+  if (!container) return;
+
+  const prazoExcedido = getAlertasPrazoExcedido();
+  const urgentes = getAlertasUrgentes();
+  const matriculas = getAlertasMatricula();
+  const iqs = getAlertasIQ();
+
+  const total = prazoExcedido.length + urgentes.length + matriculas.length + iqs.length;
+
+  const renderCliente = (c, cor) => {
+    const banco = c.banco || '—';
+    const status = (STATUS_OPTS.find(s => s.id === c.status) || {}).label || c.status || '—';
+    const diasCriado = c.created_at ? diasDesde(new Date(c.created_at)) : '?';
+    return `<div class="flex items-center justify-between p-2 rounded-lg text-xs" style="background:var(--bg-body);">
+      <div>
+        <span class="font-medium" style="color:var(--text);">${c.cliente || 'Sem nome'}</span>
+        <span class="ml-2" style="color:var(--text-muted);">${banco}</span>
+        <span class="ml-2 px-1.5 py-0.5 rounded text-xs font-medium" style="background:${cor}18;color:${cor};">${status}</span>
+      </div>
+      <span style="color:var(--text-muted);">${diasCriado}d</span>
+    </div>`;
+  };
+
+  const renderUrgente = (c, cor) => {
+    const banco = c.banco || '—';
+    const status = (STATUS_OPTS.find(s => s.id === c.status) || {}).label || c.status || '—';
+    return `<div class="flex items-center justify-between p-2 rounded-lg text-xs" style="background:var(--bg-body);border-left:3px solid ${cor};">
+      <div>
+        <span class="font-medium" style="color:var(--text);">${c.cliente || 'Sem nome'}</span>
+        <span class="ml-2" style="color:var(--text-muted);">${banco}</span>
+        <span class="ml-2 px-1.5 py-0.5 rounded text-xs font-medium" style="background:${cor}18;color:${cor};">${status}</span>
+      </div>
+      <span style="color:${cor};font-weight:600;">🔴 URGENTE</span>
+    </div>`;
+  };
+
+  const renderMatricula = (c, cor) => {
+    const banco = c.banco || '—';
+    const dias = diasDesde(parseDataBR(c.data_matricula));
+    const limite = (banco || '').toLowerCase() === 'itau' || (banco || '').toLowerCase() === 'itaú' ? 13 : 23;
+    return `<div class="flex items-center justify-between p-2 rounded-lg text-xs" style="background:var(--bg-body);border-left:3px solid ${cor};">
+      <div>
+        <span class="font-medium" style="color:var(--text);">${c.cliente || 'Sem nome'}</span>
+        <span class="ml-2" style="color:var(--text-muted);">${banco}</span>
+        <span class="ml-2" style="color:var(--text-muted);">Matrícula: ${c.data_matricula || '—'}</span>
+      </div>
+      <span style="color:${cor};font-weight:600;">${dias}d (limite: ${limite}d)</span>
+    </div>`;
+  };
+
+  const renderIQ = (c, cor) => {
+    const banco = c.banco || '—';
+    const dias = diasAte(parseDataBR(c.data_iq));
+    return `<div class="flex items-center justify-between p-2 rounded-lg text-xs" style="background:var(--bg-body);border-left:3px solid ${cor};">
+      <div>
+        <span class="font-medium" style="color:var(--text);">${c.cliente || 'Sem nome'}</span>
+        <span class="ml-2" style="color:var(--text-muted);">${banco}</span>
+        <span class="ml-2" style="color:var(--text-muted);">IQ: ${c.data_iq || '—'}</span>
+      </div>
+      <span style="color:${cor};font-weight:600;">${dias <= 0 ? 'HOJE' : dias + 'd restantes'}</span>
+    </div>`;
+  };
+
+  container.innerHTML = `
+    <div class="mb-4 flex items-center gap-3">
+      <div class="text-sm font-semibold" style="color:var(--text);">Total de alertas: <span style="color:${total > 0 ? '#dc2626' : '#059669'};">${total}</span></div>
+      <button onclick="renderizarDashboard()" class="text-xs px-3 py-1 rounded-lg border transition" style="border-color:var(--border);color:var(--text-secondary);background:var(--bg-card);">🔄 Atualizar</button>
+    </div>
+    <div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(380px,1fr));">
+      ${cardAlerta('Prazo Excedido (+30d)', '#f97316', '⏰', prazoExcedido, renderCliente)}
+      ${cardAlerta('Urgência (Master)', '#dc2626', '🔴', urgentes, renderUrgente)}
+      ${cardAlerta('Matrícula Vencendo', '#d97706', '📋', matriculas, renderMatricula)}
+      ${cardAlerta('Prazo IQ Vencendo', '#7c3aed', '🧠', iqs, renderIQ)}
+    </div>
+  `;
+}
+
 async function reverterEmitido(id) {
   if (!isMaster()) { mostrarToast('Apenas Master pode reverter'); return; }
   await atualizarCampo(id, 'status', 'aguardando-doc');
@@ -2264,6 +2461,10 @@ function renderizarTudo() {
     carregarLixeira();
     return;
   }
+  if (tabAtivo === 'dashboard') {
+    renderizarDashboard();
+    return;
+  }
   if (tabAtivo === 'andamento') {
     renderizarMesSelector();
     renderizarFiltrosAndamento();
@@ -2288,6 +2489,10 @@ function renderizarTudo() {
 function renderizarTabelas() {
   if (tabAtivo === 'lixeira') {
     renderizarTabelaLixeira();
+    return;
+  }
+  if (tabAtivo === 'dashboard') {
+    renderizarDashboard();
     return;
   }
   if (tabAtivo === 'andamento') {
@@ -2428,6 +2633,11 @@ function renderizarTabelaAndamento() {
           <div class="expanded-item">
             <label>Data Matrícula</label>
             <input type="text" data-id="${c.id}" data-campo="data_matricula" class="editavel px-1 rounded bg-transparent border-0" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_matricula||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:110px;">
+          </div>
+          <div class="expanded-item" id="urgente-item-${c.id}" style="${isMaster()?'':'display:none;'}">
+            <label style="cursor:pointer;" onclick="toggleUrgente(${c.id})">
+              <input type="checkbox" ${c.urgente?'checked':''} onchange="toggleUrgente(${c.id})" style="accent-color:#dc2626;"> 🔴 Urgente
+            </label>
           </div>
           <div class="expanded-item" style="justify-content:flex-end;">
             <button class="btn-briefing" onclick="gerarBriefing(${c.id})" title="Gerar Briefing (em breve)">
