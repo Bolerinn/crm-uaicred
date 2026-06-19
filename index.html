@@ -725,19 +725,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
     <!-- TAB: ANÁLISES -->
     <div id="tab-analises" class="tab-panel">
       <div class="px-6 pt-6 pb-2 flex items-center justify-between flex-wrap gap-3">
-        <div class="flex items-center gap-4 flex-wrap">
-          <div class="section-title">
-            <span class="gold-dot"></span> Análise de Processos
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Indicações:</span>
-            <button onclick="abrirModalIndicacao()" class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold transition shadow-lg" style="background:var(--accent);color:#fff;border:none;cursor:pointer;" title="Adicionar Parceiro">
-              <span style="font-size:1.2rem;">+</span> Novo Parceiro
-            </button>
-            <button onclick="toggleListaParceiros()" class="px-3 py-2 rounded-xl text-xs font-medium transition" style="background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);cursor:pointer;">
-              📋 Ver parceiros
-            </button>
-          </div>
+        <div class="section-title">
+          <span class="gold-dot"></span> Análise de Processos
         </div>
         <div id="mesSelectorAnalises" class="flex items-center gap-2"></div>
       </div>
@@ -749,11 +738,17 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosResultadoAnalises"></div>
       <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosBancoAnalises"></div>
 
-      <!-- Partner list -->
-      <div id="listaParceiros" class="px-6 mb-2 hidden">
-        <div class="flex flex-wrap items-center gap-2 p-3 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border);">
-          <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--accent);">Parceiros:</span>
-          <div id="parceirosChips" class="flex flex-wrap gap-1.5"></div>
+      <!-- Parceiros: barra direita entre Resultado e Banco -->
+      <div class="px-6 mb-2 flex items-center justify-between gap-2">
+        <div></div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Indicações:</span>
+          <button onclick="abrirModalIndicacao()" class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold transition shadow-lg" style="background:var(--accent);color:#fff;border:none;cursor:pointer;" title="Adicionar Parceiro">
+            <span style="font-size:1.2rem;">+</span> Novo Parceiro
+          </button>
+          <button onclick="abrirModalParceiros()" class="px-3 py-2 rounded-xl text-xs font-medium transition" style="background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);cursor:pointer;">
+            📋 Ver parceiros
+          </button>
         </div>
       </div>
 
@@ -916,6 +911,21 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="px-6 pb-6" id="metricasContent"></div>
     </div>
 
+
+
+    <!-- MODAL: Lista de Parceiros -->
+    <div id="modalParceiros" class="modal-overlay hidden" onclick="if(event.target===this)fecharModalParceiros()">
+      <div class="modal-box" style="max-width:500px;" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-sm">Parceiros Cadastrados</h3>
+          <button onclick="fecharModalParceiros()" class="text-lg" style="color:var(--text-muted);">&times;</button>
+        </div>
+        <div id="modalParceirosLista" class="max-h-80 overflow-y-auto space-y-2"></div>
+        <div class="mt-3 pt-3 border-t text-xs text-center" style="border-color:var(--border);color:var(--text-muted);">
+          Clique em + Novo Parceiro para adicionar
+        </div>
+      </div>
+    </div>
 
     <!-- MODAL: Adicionar Indicação -->
     <div id="modalIndicacao" class="modal-overlay hidden" onclick="if(event.target===this)fecharModalIndicacao()">
@@ -1898,36 +1908,45 @@ function popularDatalistIndicacoes() {
   const dl = document.getElementById('indicacaoSuggestions');
   if (!dl) return;
   dl.innerHTML = lista.map(i => `<option value="${i.nome.replace(/"/g,'&quot;')}">${i.tipo || ''}</option>`).join('');
-  // Also refresh chips if visible
-  if (document.getElementById('parceirosChips')) {
-    renderizarChipsParceiros();
-  }
+
 }
 
 
-function toggleListaParceiros() {
-  const panel = document.getElementById('listaParceiros');
-  if (!panel) return;
-  const isHidden = panel.classList.contains('hidden');
-  if (isHidden) {
-    renderizarChipsParceiros();
-  }
-  panel.classList.toggle('hidden');
-}
-
-function renderizarChipsParceiros() {
-  const container = document.getElementById('parceirosChips');
-  if (!container) return;
-  const lista = sincronizarIndicacoes();
-  container.innerHTML = lista.map(i => {
-    const tipoEmoji = i.tipo === 'Corretor' ? '🏠' : i.tipo === 'Gerente' ? '💼' : i.tipo === 'Imobiliária' ? '🏢' : '👤';
-    return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style="background:var(--bg-body);color:var(--text);border:1px solid var(--border);">
-      ${tipoEmoji} ${i.nome}
-    </span>`;
-  }).join('');
+function abrirModalParceiros() {
+  const modal = document.getElementById('modalParceiros');
+  const container = document.getElementById('modalParceirosLista');
+  if (!modal || !container) return;
+  const lista = carregarIndicacoes();
   if (lista.length === 0) {
-    container.innerHTML = '<span class="text-xs" style="color:var(--text-muted);">Nenhum parceiro cadastrado</span>';
+    container.innerHTML = '<div class="text-xs text-center py-8" style="color:var(--text-muted);">Nenhum parceiro cadastrado</div>';
+  } else {
+    container.innerHTML = lista.map(i => {
+      const tipoEmoji = i.tipo === 'Corretor' ? '🏠' : i.tipo === 'Gerente' ? '💼' : i.tipo === 'Imobiliária' ? '🏢' : '👤';
+      return `<div class="flex items-center justify-between py-2 px-3 rounded-lg" style="background:var(--bg-body);">
+        <div class="flex items-center gap-2">
+          <span>${tipoEmoji}</span>
+          <span class="text-sm font-medium">${i.nome}</span>
+          <span class="text-xs" style="color:var(--text-muted);">${i.tipo}</span>
+        </div>
+        ${isMaster() ? `<button onclick="removerParceiro('${i.nome.replace(/'/g,"\'")}')" class="text-xs px-2 py-1 rounded transition" style="background:transparent;color:var(--text-muted);border:none;cursor:pointer;" title="Remover">🗑️</button>` : ''}
+      </div>`;
+    }).join('');
   }
+  modal.classList.remove('hidden');
+}
+
+function fecharModalParceiros() {
+  document.getElementById('modalParceiros').classList.add('hidden');
+}
+
+function removerParceiro(nome) {
+  if (!confirm('Remover "' + nome + '" da lista de parceiros?')) return;
+  const lista = carregarIndicacoes();
+  const novaLista = lista.filter(i => i.nome !== nome);
+  salvarIndicacoes(novaLista);
+  popularDatalistIndicacoes();
+  abrirModalParceiros(); // refresh modal
+  mostrarToast('🗑️ Parceiro removido: ' + nome);
 }
 
 function abrirModalIndicacao() {
