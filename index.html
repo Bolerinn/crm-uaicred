@@ -725,8 +725,19 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
     <!-- TAB: ANÁLISES -->
     <div id="tab-analises" class="tab-panel">
       <div class="px-6 pt-6 pb-2 flex items-center justify-between flex-wrap gap-3">
-        <div class="section-title">
-          <span class="gold-dot"></span> Análise de Processos
+        <div class="flex items-center gap-4 flex-wrap">
+          <div class="section-title">
+            <span class="gold-dot"></span> Análise de Processos
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Indicações:</span>
+            <button onclick="abrirModalIndicacao()" class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold transition shadow-lg" style="background:var(--accent);color:#fff;border:none;cursor:pointer;" title="Adicionar Parceiro">
+              <span style="font-size:1.2rem;">+</span> Novo Parceiro
+            </button>
+            <button onclick="toggleListaParceiros()" class="px-3 py-2 rounded-xl text-xs font-medium transition" style="background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);cursor:pointer;">
+              📋 Ver parceiros
+            </button>
+          </div>
         </div>
         <div id="mesSelectorAnalises" class="flex items-center gap-2"></div>
       </div>
@@ -738,9 +749,12 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosResultadoAnalises"></div>
       <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosBancoAnalises"></div>
 
-      <div class="px-6 mb-2 flex items-center gap-2 justify-end">
-        <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Indicações:</span>
-        <button onclick="abrirModalIndicacao()" class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition" style="background:var(--accent);color:#fff;border:none;cursor:pointer;" title="Adicionar Indicação">+</button>
+      <!-- Partner list -->
+      <div id="listaParceiros" class="px-6 mb-2 hidden">
+        <div class="flex flex-wrap items-center gap-2 p-3 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border);">
+          <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--accent);">Parceiros:</span>
+          <div id="parceirosChips" class="flex flex-wrap gap-1.5"></div>
+        </div>
       </div>
 
       <!-- Table -->
@@ -1438,6 +1452,14 @@ async function carregarDados() {
     if (r2.ok) { clientes = await r2.json(); console.log('carregarDados FALLBACK: '+clientes.length+' registros'); }
     else { mostrarToast('Erro ao carregar dados'); return; }
   }
+
+// Save old value on focus for indicação validation
+document.addEventListener('focusin', function(e) {
+  if (e.target.dataset && e.target.dataset.campo === 'indicacao') {
+    e.target.dataset.oldValue = e.target.value;
+  }
+});
+
   popularDatalistIndicacoes();
   renderizarTudo();
 }
@@ -1876,6 +1898,36 @@ function popularDatalistIndicacoes() {
   const dl = document.getElementById('indicacaoSuggestions');
   if (!dl) return;
   dl.innerHTML = lista.map(i => `<option value="${i.nome.replace(/"/g,'&quot;')}">${i.tipo || ''}</option>`).join('');
+  // Also refresh chips if visible
+  if (document.getElementById('parceirosChips')) {
+    renderizarChipsParceiros();
+  }
+}
+
+
+function toggleListaParceiros() {
+  const panel = document.getElementById('listaParceiros');
+  if (!panel) return;
+  const isHidden = panel.classList.contains('hidden');
+  if (isHidden) {
+    renderizarChipsParceiros();
+  }
+  panel.classList.toggle('hidden');
+}
+
+function renderizarChipsParceiros() {
+  const container = document.getElementById('parceirosChips');
+  if (!container) return;
+  const lista = sincronizarIndicacoes();
+  container.innerHTML = lista.map(i => {
+    const tipoEmoji = i.tipo === 'Corretor' ? '🏠' : i.tipo === 'Gerente' ? '💼' : i.tipo === 'Imobiliária' ? '🏢' : '👤';
+    return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style="background:var(--bg-body);color:var(--text);border:1px solid var(--border);">
+      ${tipoEmoji} ${i.nome}
+    </span>`;
+  }).join('');
+  if (lista.length === 0) {
+    container.innerHTML = '<span class="text-xs" style="color:var(--text-muted);">Nenhum parceiro cadastrado</span>';
+  }
 }
 
 function abrirModalIndicacao() {
@@ -1889,6 +1941,28 @@ function fecharModalIndicacao() {
   document.getElementById('indSobrenome').value = '';
 }
 
+
+function validarIndicacaoInput(el) {
+  const valor = el.value.trim();
+  if (!valor) { editarCampoInput(el); return; }
+  const lista = carregarIndicacoes();
+  const nomes = lista.map(i => i.nome.toLowerCase());
+  if (!nomes.includes(valor.toLowerCase())) {
+    // Check if it exists in the DB with different case
+    const match = lista.find(i => i.nome.toLowerCase() === valor.toLowerCase());
+    if (match) {
+      el.value = match.nome; // Use correct case
+      editarCampoInput(el);
+    } else {
+      mostrarToast('⚠️ Indicação não cadastrada. Use o botão + para adicionar.');
+      el.value = el.dataset.oldValue || '';
+      el.focus();
+    }
+  } else {
+    editarCampoInput(el);
+  }
+}
+
 function adicionarIndicacao() {
   const tipo = document.getElementById('indTipo').value;
   const nome = document.getElementById('indNome').value.trim();
@@ -1899,7 +1973,8 @@ function adicionarIndicacao() {
   const lista = carregarIndicacoes();
   // Evitar duplicata
   if (lista.some(i => i.nome.toLowerCase() === nomeCompleto.toLowerCase())) {
-    mostrarToast('Indicação já existe');
+    const existente = lista.find(i => i.nome.toLowerCase() === nomeCompleto.toLowerCase());
+    mostrarToast('⚠️ Parceiro já cadastrado: ' + existente.nome + ' (' + (existente.tipo || 'Outro') + ')');
     return;
   }
   lista.push({ nome: nomeCompleto, tipo, adicionado_em: new Date().toISOString() });
@@ -2875,7 +2950,7 @@ function renderizarTabelaAnalises() {
     return `
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
-      <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="editarCampoInput(this)" value="${c.indicacao||''}" style="color:inherit;width:120px;" autocomplete="off"></td>
+      <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${c.indicacao||''}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data" onfocus="if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data||''}" placeholder="dd/mm" maxlength="5" style="color:inherit;width:70px;"></td>
@@ -2938,7 +3013,7 @@ function renderizarTabelaAndamento() {
     return `
     <tr style="border-bottom:1px solid var(--border-light);" data-id="${c.id}" class="main-row">
       <td class="px-2 py-2.5 text-xs text-center" style="color:var(--text-muted);">${i + 1}</td>
-      <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="editarCampoInput(this)" value="${c.indicacao||''}" style="color:inherit;width:120px;" autocomplete="off"></td>
+      <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${c.indicacao||''}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
       <td class="px-1 py-2.5 text-center">
         <span class="expand-btn" onclick="toggleExpand(${c.id})" title="Expandir">▼</span>
