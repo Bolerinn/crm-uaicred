@@ -743,8 +743,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
           <button onclick="abrirModalIndicacao()" class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold transition shadow-lg" style="background:var(--accent);color:#fff;border:none;cursor:pointer;" title="Adicionar Parceiro">
             <span style="font-size:1.2rem;">+</span> Novo Parceiro
           </button>
-          <button onclick="abrirModalParceiros()" class="px-3 py-2 rounded-xl text-xs font-medium transition" style="background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);cursor:pointer;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Ver parceiros
+          <button onclick="abrirModalParceiros()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition" style="background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>Ver parceiros
           </button>
         </div>
       </div>
@@ -2846,7 +2846,7 @@ function renderizarMetricas() {
     <span class="mx-2" style="color:var(--border);">|</span>
     <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Empresa:</span>
     ${['todas','caixa','privados'].map(e => {
-      const labels = { 'todas':'Todas', 'caixa':'🏦 Caixa', 'privados':'💼 Privados' };
+      const labels = { 'todas':'Todas', 'caixa':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 18h6v4H9z"/></svg> Caixa', 'privados':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> Privados' };
       const ativo = metricaEmpresa === e;
       return `<button onclick="metricaSetEmpresa('${e}')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition"
         style="${ativo ? 'background:var(--accent);color:#fff;border:1px solid var(--accent);' : 'background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);'}">${labels[e]}</button>`;
@@ -2884,7 +2884,7 @@ function renderizarMetricas() {
   // -- CAIXA vs Privados --
   html += `<div class="grid grid-cols-2 gap-4 mb-4">
     <div class="metrica-card" style="border-left:4px solid #1e40af;">
-      <div class="text-xs uppercase tracking-wider mb-3" style="color:#1e40af;font-weight:700;">🏦 Caixa</div>
+      <div class="text-xs uppercase tracking-wider mb-3" style="color:#1e40af;font-weight:700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 18h6v4H9z"/></svg> Caixa</div>
       <div class="grid grid-cols-4 gap-2 text-center">
         <div><div class="text-lg font-bold">${caixaAnalises}</div><div class="text-xs" style="color:var(--text-muted);">análises</div></div>
         <div><div class="text-lg font-bold">${caixaAndamento}</div><div class="text-xs" style="color:var(--text-muted);">andamento</div></div>
@@ -2893,7 +2893,7 @@ function renderizarMetricas() {
       </div>
     </div>
     <div class="metrica-card" style="border-left:4px solid #7c3aed;">
-      <div class="text-xs uppercase tracking-wider mb-3" style="color:#7c3aed;font-weight:700;">💼 Privados</div>
+      <div class="text-xs uppercase tracking-wider mb-3" style="color:#7c3aed;font-weight:700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> Privados</div>
       <div class="grid grid-cols-4 gap-2 text-center">
         <div><div class="text-lg font-bold">${privAnalises}</div><div class="text-xs" style="color:var(--text-muted);">análises</div></div>
         <div><div class="text-lg font-bold">${privAndamento}</div><div class="text-xs" style="color:var(--text-muted);">andamento</div></div>
