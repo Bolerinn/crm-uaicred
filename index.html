@@ -891,7 +891,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
     <div id="tab-metricas" class="tab-panel">
       <div class="px-6 pt-6 pb-2">
         <div class="section-title">
-          <span class="gold-dot"></span> Métricas & Indicadores
+          <span class="gold-dot"></span> Métricas
         </div>
       </div>
       <div class="px-6 pb-6" id="metricasContent"></div>
@@ -2359,103 +2359,362 @@ function exportarExcel() {
 }
 
 
+let metricaPeriodo = 'este-mes'; // este-mes | mes-passado | 12-meses | personalizado
+let metricaEmpresa = 'todas';    // todas | caixa | privados
+let metricaDataInicio = '';
+let metricaDataFim = '';
+
+function metricaFiltrarPorPeriodo(lista) {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth(); // 0-based
+
+  if (metricaPeriodo === 'este-mes') {
+    const ref = `${ano}-${String(mes+1).padStart(2,'0')}`;
+    return lista.filter(c => c.mes_referencia === ref);
+  }
+  if (metricaPeriodo === 'mes-passado') {
+    const mAnt = mes === 0 ? 12 : mes;
+    const aAnt = mes === 0 ? ano-1 : ano;
+    const ref = `${aAnt}-${String(mAnt).padStart(2,'0')}`;
+    return lista.filter(c => c.mes_referencia === ref);
+  }
+  if (metricaPeriodo === '12-meses') {
+    const limite = `${ano-1}-${String(mes+1).padStart(2,'0')}`;
+    return lista.filter(c => (c.mes_referencia || '') >= limite);
+  }
+  if (metricaPeriodo === 'personalizado' && metricaDataInicio && metricaDataFim) {
+    const ini = parseDataBR(metricaDataInicio);
+    const fim = parseDataBR(metricaDataFim);
+    if (!ini || !fim) return lista;
+    return lista.filter(c => {
+      const d = parseDataBR(c.data_vistoria) || (c.created_at ? new Date(c.created_at) : null);
+      return d && d >= ini && d <= fim;
+    });
+  }
+  return lista;
+}
+
+function metricaFiltrarPorEmpresa(lista) {
+  if (metricaEmpresa === 'caixa') {
+    return lista.filter(c => (c.banco || '').toLowerCase() === 'caixa');
+  }
+  if (metricaEmpresa === 'privados') {
+    const privados = ['bradesco', 'itaú', 'itau', 'santander', 'inter'];
+    return lista.filter(c => privados.includes((c.banco || '').toLowerCase()));
+  }
+  return lista;
+}
+
+function formatarMoeda(v) {
+  if (v >= 1e6) return 'R$ ' + (v/1e6).toFixed(1).replace('.', ',') + 'M';
+  if (v >= 1e3) return 'R$ ' + (v/1e3).toFixed(0).replace('.', ',') + 'k';
+  return 'R$ ' + v.toFixed(0);
+}
+
 function renderizarMetricas() {
   const container = document.getElementById('metricasContent');
+  if (!container) return;
+
+  // Aplicar filtros
+  const filtrados = metricaFiltrarPorEmpresa(metricaFiltrarPorPeriodo(clientes));
+  const todos = metricaFiltrarPorPeriodo(clientes); // sem filtro de empresa (pra comparação)
+
   const doMes = clientes.filter(c => c.mes_referencia === mesSelecionado);
   const total = doMes.filter(c => c.convertido !== true).length;
   const emAndamento = doMes.filter(c => c.convertido === true && c.status !== 'emitido').length;
   const emitidos = doMes.filter(c => c.status === 'emitido').length;
 
-  // Status distribution
-  const distStatus = {};
-  STATUS_OPTS.forEach(s => { distStatus[s.id] = clientes.filter(c => c.status === s.id).length; });
+  // ---- Dados baseados nos filtros ----
+  const analises = filtrados.filter(c => c.convertido !== true).length;
+  const andamento = filtrados.filter(c => c.convertido === true && c.status !== 'emitido').length;
+  const emit = filtrados.filter(c => c.status === 'emitido').length;
+  const totalFinanciado = filtrados
+    .filter(c => c.status === 'emitido')
+    .reduce((sum, c) => {
+      const v = parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g, '').replace(',','.')) || 0;
+      return sum + v;
+    }, 0);
+  const conversao = analises + andamento + emit > 0 ? (emit / (analises + andamento + emit) * 100) : 0;
 
-  // Product distribution
-  const sbpe = clientes.filter(c => c.produto === 'SBPE').length;
-  const fgts = clientes.filter(c => c.produto === 'FGTS').length;
-
-  // Top indicators
-  const indicadores = {};
-  clientes.forEach(c => {
-    const ind = c.indicacao || 'Sem indicação';
-    indicadores[ind] = (indicadores[ind] || 0) + 1;
+  // CAIXA vs Privados
+  const caixa = filtrados.filter(c => (c.banco||'').toLowerCase() === 'caixa');
+  const privados = filtrados.filter(c => {
+    const b = (c.banco||'').toLowerCase();
+    return ['bradesco','itaú','itau','santander','inter'].includes(b);
   });
-  const topIndicadores = Object.entries(indicadores).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const caixaAnalises = caixa.filter(c => c.convertido !== true).length;
+  const caixaAndamento = caixa.filter(c => c.convertido === true && c.status !== 'emitido').length;
+  const caixaEmitidos = caixa.filter(c => c.status === 'emitido').length;
+  const caixaFin = caixa.filter(c => c.status === 'emitido')
+    .reduce((s,c) => s + (parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g,'').replace(',','.'))||0), 0);
+  const privAnalises = privados.filter(c => c.convertido !== true).length;
+  const privAndamento = privados.filter(c => c.convertido === true && c.status !== 'emitido').length;
+  const privEmitidos = privados.filter(c => c.status === 'emitido').length;
+  const privFin = privados.filter(c => c.status === 'emitido')
+    .reduce((s,c) => s + (parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g,'').replace(',','.'))||0), 0);
 
-  // Total valor financiado
-  const totalFinanciado = clientes.reduce((sum, c) => {
-    const v = parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g, '').replace(',','.')) || 0;
-    return sum + v;
-  }, 0);
+  // Produtos
+  const produtos = {};
+  ['SBPE','FGTS','Carta de Crédito'].forEach(p => {
+    produtos[p] = filtrados.filter(c => c.produto === p).length;
+  });
+  produtos['Outros'] = filtrados.filter(c => !['SBPE','FGTS','Carta de Crédito'].includes(c.produto||'')).length;
+  const totalProd = Object.values(produtos).reduce((a,b)=>a+b,0) || 1;
+  const coresProduto = { 'SBPE':'#f97316', 'FGTS':'#1e40af', 'Carta de Crédito':'#7c3aed', 'Outros':'#059669' };
+  let pieGrad = '';
+  let acum = 0;
+  Object.entries(produtos).forEach(([nome, qtd]) => {
+    const pct = (qtd / totalProd * 100);
+    if (pct > 0) {
+      pieGrad += `${coresProduto[nome]} ${acum}% ${acum+pct}%, `;
+      acum += pct;
+    }
+  });
+  pieGrad = pieGrad.replace(/, $/, '');
 
-  const maxStatus = Math.max(1, ...Object.values(distStatus));
+  // Status distribution + bottleneck (tempo)
+  const statusCounts = {};
+  const statusDias = {};
+  const andamentoProcs = filtrados.filter(c => c.convertido === true && c.status !== 'emitido');
+  STATUS_OPTS.forEach(s => {
+    const procs = andamentoProcs.filter(c => c.status === s.id);
+    statusCounts[s.id] = procs.length;
+    if (procs.length > 0) {
+      const diasTotal = procs.reduce((sum, c) => {
+        const d = parseDataBR(c.data_vistoria);
+        return sum + (d ? diasDesde(d) : 0);
+      }, 0);
+      statusDias[s.id] = Math.round(diasTotal / procs.length);
+    } else {
+      statusDias[s.id] = 0;
+    }
+  });
+  const maxCount = Math.max(1, ...Object.values(statusCounts));
+  // Gargalo = status com mais dias médios (e pelo menos 1 processo)
+  let gargaloStatus = null;
+  let gargaloDias = 0;
+  Object.entries(statusDias).forEach(([sid, dias]) => {
+    if (statusCounts[sid] > 0 && dias > gargaloDias) {
+      gargaloDias = dias;
+      gargaloStatus = sid;
+    }
+  });
 
+  // Top indicações
+  const indicadores = {};
+  filtrados.forEach(c => {
+    const ind = (c.indicacao || 'Sem indicação').trim();
+    if (ind) indicadores[ind] = (indicadores[ind] || 0) + 1;
+  });
+  const topInd = Object.entries(indicadores).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const maxInd = topInd.length > 0 ? topInd[0][1] : 1;
+
+  // Emitidos em diferentes períodos
+  const mesAtual = new Date().getMonth();
+  const anoAtual = new Date().getFullYear();
+  const refAtual = `${anoAtual}-${String(mesAtual+1).padStart(2,'0')}`;
+  const mAnt = mesAtual === 0 ? 12 : mesAtual;
+  const aAnt = mesAtual === 0 ? anoAtual-1 : anoAtual;
+  const refAnterior = `${aAnt}-${String(mAnt).padStart(2,'0')}`;
+  const emitidosMes = filtrados.filter(c => c.status === 'emitido' && c.mes_referencia === refAtual).length;
+  const finMes = filtrados.filter(c => c.status === 'emitido' && c.mes_referencia === refAtual)
+    .reduce((s,c) => s + (parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g,'').replace(',','.'))||0), 0);
+  const emitidosMesAnt = filtrados.filter(c => c.status === 'emitido' && c.mes_referencia === refAnterior).length;
+  const finMesAnt = filtrados.filter(c => c.status === 'emitido' && c.mes_referencia === refAnterior)
+    .reduce((s,c) => s + (parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g,'').replace(',','.'))||0), 0);
+  const emitidos12m = filtrados.filter(c => c.status === 'emitido').length;
+  const fin12m = filtrados.filter(c => c.status === 'emitido')
+    .reduce((s,c) => s + (parseFloat(String(c.valor_financiado||'').replace(/[^\d,.-]/g,'').replace(',','.'))||0), 0);
+
+  // Helpers para badge de periodo
+  const periodoLabel = metricaPeriodo === 'este-mes' ? 'Este mês' :
+    metricaPeriodo === 'mes-passado' ? 'Mês passado' :
+    metricaPeriodo === '12-meses' ? 'Últimos 12 meses' : 'Personalizado';
+
+  // ===== HTML =====
   let html = '';
 
-  // KPI cards
-  html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-    <div class="metrica-card text-center">
-      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Total de Análises</div>
-      <div class="metrica-number">${total}</div>
-    </div>
-    <div class="metrica-card text-center">
-      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Em Andamento</div>
-      <div class="metrica-number" style="color:#60a5fa;">${emAndamento}</div>
-    </div>
-    <div class="metrica-card text-center">
-      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Emitidos</div>
-      <div class="metrica-number" style="color:#d4a853;">${emitidos}</div>
-    </div>
-    <div class="metrica-card text-center">
-      <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Financiado</div>
-      <div class="metrica-number" style="font-size:1.4rem;color:#34d399;">R$ ${totalFinanciado.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
-    </div>
-  </div>`;
-
-  // Status distribution bars
-  html += `<div class="metrica-card mb-4">
-    <div class="text-gray-400 text-xs uppercase tracking-wider mb-4">Distribuição por Status</div>
-    ${STATUS_OPTS.map(s => {
-      const count = distStatus[s.id] || 0;
-      const pct = maxStatus > 0 ? (count/maxStatus*100) : 0;
-      const barColor = s.id === 'em-registro' ? '#d4a853' : '#f97316';
-      return `<div class="flex items-center gap-3 mb-3">
-        <span class="text-xs text-gray-500 w-36 truncate">${s.label}</span>
-        <div class="flex-1 metrica-bar">
-          <div class="metrica-bar-fill" style="width:${pct}%;background:${barColor};"></div>
-        </div>
-        <span class="text-xs text-gray-400 w-8 text-right font-mono">${count}</span>
-      </div>`;
+  // -- Filters bar --
+  html += `<div class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border);">
+    <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Período:</span>
+    ${['este-mes','mes-passado','12-meses','personalizado'].map(p => {
+      const labels = { 'este-mes':'Este mês', 'mes-passado':'Mês passado', '12-meses':'12 meses', 'personalizado':'Período' };
+      const ativo = metricaPeriodo === p;
+      return `<button onclick="metricaSetPeriodo('${p}')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition"
+        style="${ativo ? 'background:var(--accent);color:#fff;border:1px solid var(--accent);' : 'background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);'}">${labels[p]}</button>`;
+    }).join('')}
+    ${metricaPeriodo === 'personalizado' ? `
+      <input type="text" id="metricaDataInicio" placeholder="dd/mm/aaaa" value="${metricaDataInicio}" onchange="metricaDataInicio=this.value;renderizarMetricas()" class="px-2 py-1 rounded text-xs border" style="width:100px;border-color:var(--border);background:var(--bg-input);color:var(--text);">
+      <span class="text-xs" style="color:var(--text-muted);">até</span>
+      <input type="text" id="metricaDataFim" placeholder="dd/mm/aaaa" value="${metricaDataFim}" onchange="metricaDataFim=this.value;renderizarMetricas()" class="px-2 py-1 rounded text-xs border" style="width:100px;border-color:var(--border);background:var(--bg-input);color:var(--text);">
+    ` : ''}
+    <span class="mx-2" style="color:var(--border);">|</span>
+    <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Empresa:</span>
+    ${['todas','caixa','privados'].map(e => {
+      const labels = { 'todas':'Todas', 'caixa':'🏦 Caixa', 'privados':'💼 Privados' };
+      const ativo = metricaEmpresa === e;
+      return `<button onclick="metricaSetEmpresa('${e}')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition"
+        style="${ativo ? 'background:var(--accent);color:#fff;border:1px solid var(--accent);' : 'background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);'}">${labels[e]}</button>`;
     }).join('')}
   </div>`;
 
-  // Product + top indicators
-  html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="metrica-card">
-      <div class="text-gray-400 text-xs uppercase tracking-wider mb-4">Por Produto</div>
-      <div class="flex items-center gap-3 mb-3">
-        <span class="text-xs text-gray-500 w-16">SBPE</span>
-        <div class="flex-1 metrica-bar"><div class="metrica-bar-fill" style="width:${total>0?(sbpe/total*100):0}%;background:#f97316;"></div></div>
-        <span class="text-xs text-gray-400 w-8 text-right font-mono">${sbpe}</span>
-      </div>
-      <div class="flex items-center gap-3 mb-3">
-        <span class="text-xs text-gray-500 w-16">FGTS</span>
-        <div class="flex-1 metrica-bar"><div class="metrica-bar-fill" style="width:${total>0?(fgts/total*100):0}%;background:#d4a853;"></div></div>
-        <span class="text-xs text-gray-400 w-8 text-right font-mono">${fgts}</span>
+  // -- KPI row --
+  html += `<div class="grid grid-cols-5 gap-3 mb-4">
+    <div class="metrica-card text-center">
+      <div class="text-xs uppercase tracking-wider mb-1" style="color:var(--text-muted);">Análises</div>
+      <div class="metrica-number">${analises}</div>
+      <div class="text-xs mt-1" style="color:var(--text-muted);">${periodoLabel.toLowerCase()}</div>
+    </div>
+    <div class="metrica-card text-center">
+      <div class="text-xs uppercase tracking-wider mb-1" style="color:var(--text-muted);">Em Andamento</div>
+      <div class="metrica-number" style="color:#f97316;">${andamento}</div>
+      <div class="text-xs mt-1" style="color:var(--text-muted);">${STATUS_OPTS.filter(s => statusCounts[s.id] > 0).length} status</div>
+    </div>
+    <div class="metrica-card text-center">
+      <div class="text-xs uppercase tracking-wider mb-1" style="color:var(--text-muted);">Emitidos</div>
+      <div class="metrica-number" style="color:#059669;">${emit}</div>
+      <div class="text-xs mt-1" style="color:var(--text-muted);">${formatarMoeda(totalFinanciado)}</div>
+    </div>
+    <div class="metrica-card text-center">
+      <div class="text-xs uppercase tracking-wider mb-1" style="color:var(--text-muted);">Total Financiado</div>
+      <div class="metrica-number" style="font-size:1.3rem;color:#1e40af;">${formatarMoeda(totalFinanciado)}</div>
+    </div>
+    <div class="metrica-card text-center">
+      <div class="text-xs uppercase tracking-wider mb-1" style="color:var(--text-muted);">Conversão</div>
+      <div class="metrica-number" style="color:#7c3aed;">${conversao.toFixed(1)}%</div>
+      <div class="text-xs mt-1" style="color:var(--text-muted);">análise → emitido</div>
+    </div>
+  </div>`;
+
+  // -- CAIXA vs Privados --
+  html += `<div class="grid grid-cols-2 gap-4 mb-4">
+    <div class="metrica-card" style="border-left:4px solid #1e40af;">
+      <div class="text-xs uppercase tracking-wider mb-3" style="color:#1e40af;font-weight:700;">🏦 Caixa</div>
+      <div class="grid grid-cols-4 gap-2 text-center">
+        <div><div class="text-lg font-bold">${caixaAnalises}</div><div class="text-xs" style="color:var(--text-muted);">análises</div></div>
+        <div><div class="text-lg font-bold">${caixaAndamento}</div><div class="text-xs" style="color:var(--text-muted);">andamento</div></div>
+        <div><div class="text-lg font-bold">${caixaEmitidos}</div><div class="text-xs" style="color:var(--text-muted);">emitidos</div></div>
+        <div><div class="text-lg font-bold">${formatarMoeda(caixaFin)}</div><div class="text-xs" style="color:var(--text-muted);">financiado</div></div>
       </div>
     </div>
+    <div class="metrica-card" style="border-left:4px solid #7c3aed;">
+      <div class="text-xs uppercase tracking-wider mb-3" style="color:#7c3aed;font-weight:700;">💼 Privados</div>
+      <div class="grid grid-cols-4 gap-2 text-center">
+        <div><div class="text-lg font-bold">${privAnalises}</div><div class="text-xs" style="color:var(--text-muted);">análises</div></div>
+        <div><div class="text-lg font-bold">${privAndamento}</div><div class="text-xs" style="color:var(--text-muted);">andamento</div></div>
+        <div><div class="text-lg font-bold">${privEmitidos}</div><div class="text-xs" style="color:var(--text-muted);">emitidos</div></div>
+        <div><div class="text-lg font-bold">${formatarMoeda(privFin)}</div><div class="text-xs" style="color:var(--text-muted);">financiado</div></div>
+      </div>
+    </div>
+  </div>`;
+
+  // -- Charts row --
+  html += `<div class="grid gap-4 mb-4" style="grid-template-columns:1fr 1fr 1fr;">
+    <!-- Produto Pie -->
     <div class="metrica-card">
-      <div class="text-gray-400 text-xs uppercase tracking-wider mb-4">Top Indicações</div>
-      ${topIndicadores.length === 0 ? '<p class="text-gray-600 text-sm">Sem dados</p>' : topIndicadores.map(([nome, qtd], i) => `
-        <div class="flex items-center justify-between py-1.5 border-b border-[#1f1f1f] last:border-0">
-          <span class="text-sm text-gray-300">${i+1}. ${nome}</span>
-          <span class="text-xs font-mono font-semibold" style="color:#f97316;">${qtd}</span>
+      <div class="text-xs uppercase tracking-wider mb-3" style="color:var(--text-muted);">Análises por Produto</div>
+      <div class="flex items-center gap-4">
+        <div style="width:100px;height:100px;border-radius:50%;background:conic-gradient(${pieGrad || '#eee 0% 100%'});flex-shrink:0;"></div>
+        <div class="text-xs space-y-1">
+          ${Object.entries(produtos).map(([n,q]) => `<div>• ${n}: <b>${q}</b></div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Status + Gargalo -->
+    <div class="metrica-card">
+      <div class="text-xs uppercase tracking-wider mb-3" style="color:var(--text-muted);">Andamento por Status</div>
+      ${STATUS_OPTS.filter(s => statusCounts[s.id] > 0).map(s => {
+        const pct = maxCount > 0 ? (statusCounts[s.id]/maxCount*100) : 0;
+        return `<div class="flex items-center gap-2 mb-2">
+          <span class="text-xs truncate" style="width:90px;color:var(--text-secondary);">${s.label}</span>
+          <div class="flex-1" style="height:6px;border-radius:3px;background:var(--metrica-bar-bg);">
+            <div style="width:${pct}%;height:100%;border-radius:3px;background:var(--accent);"></div>
+          </div>
+          <span class="text-xs font-mono" style="color:var(--text-muted);">${statusCounts[s.id]}</span>
+        </div>`;
+      }).join('')}
+      ${andamento === 0 ? '<div class="text-xs" style="color:var(--text-muted);">Sem processos em andamento</div>' : ''}
+      ${gargaloStatus ? `
+        <div class="mt-3 pt-2 border-t text-xs" style="border-color:var(--border);">
+          ⚠️ Gargalo: <b style="color:#dc2626;">${(STATUS_OPTS.find(s=>s.id===gargaloStatus)||{}).label||gargaloStatus}</b> — média de <b style="color:#dc2626;">${gargaloDias}d</b>
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- Top Indicações -->
+    <div class="metrica-card">
+      <div class="text-xs uppercase tracking-wider mb-3" style="color:var(--text-muted);">Top Indicações</div>
+      ${topInd.length === 0 ? '<div class="text-xs" style="color:var(--text-muted);">Sem dados</div>' :
+        topInd.map(([nome, qtd], i) => `
+        <div class="flex items-center justify-between py-1" style="border-bottom:1px solid var(--border-light);">
+          <span class="text-xs" style="color:var(--text-secondary);">${i+1}. ${nome}</span>
+          <span class="text-xs font-bold" style="color:var(--accent);">${qtd}</span>
         </div>
       `).join('')}
     </div>
   </div>`;
 
+  // -- Emitidos & Financiamento --
+  html += `<div class="metrica-card mb-4">
+    <div class="text-xs uppercase tracking-wider mb-3" style="color:var(--text-muted);">✅ Emitidos & Financiamento</div>
+    <div class="grid grid-cols-4 gap-3">
+      <div class="text-center p-3 rounded-xl" style="background:#f0fdf4;">
+        <div class="text-xs" style="color:var(--text-muted);">Este mês</div>
+        <div class="text-xl font-bold" style="color:#059669;">${emitidosMes}</div>
+        <div class="text-xs" style="color:var(--text-muted);">${formatarMoeda(finMes)}</div>
+      </div>
+      <div class="text-center p-3 rounded-xl" style="background:#fefce8;">
+        <div class="text-xs" style="color:var(--text-muted);">Mês passado</div>
+        <div class="text-xl font-bold" style="color:#d97706;">${emitidosMesAnt}</div>
+        <div class="text-xs" style="color:var(--text-muted);">${formatarMoeda(finMesAnt)}</div>
+      </div>
+      <div class="text-center p-3 rounded-xl" style="background:#eff6ff;">
+        <div class="text-xs" style="color:var(--text-muted);">12 meses</div>
+        <div class="text-xl font-bold" style="color:#1e40af;">${emitidos12m}</div>
+        <div class="text-xs" style="color:var(--text-muted);">${formatarMoeda(fin12m)}</div>
+      </div>
+      <div class="text-center p-3 rounded-xl" style="background:#faf5ff;">
+        <div class="text-xs" style="color:var(--text-muted);">Personalizado</div>
+        <div class="text-xl font-bold" style="color:#7c3aed;">${emit}</div>
+        <div class="text-xs" style="color:var(--text-muted);">${formatarMoeda(totalFinanciado)}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // -- Sugestão Indicação --
+  html += `<div class="metrica-card" style="border:2px dashed var(--accent);background:var(--bg-body);">
+    <div class="text-xs uppercase tracking-wider mb-2" style="color:var(--accent);">💡 Sugestão: Lista Fechada de Indicações</div>
+    <div class="flex gap-4 items-end flex-wrap">
+      <div>
+        <div class="text-xs mb-1" style="color:var(--text-muted);">Campo atual</div>
+        <input type="text" disabled class="px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);" value="Texto livre">
+      </div>
+      <span style="color:var(--text-muted);">→</span>
+      <div>
+        <div class="text-xs mb-1" style="color:var(--accent);">Proposta</div>
+        <select class="px-3 py-2 rounded-lg border text-sm" style="border-color:var(--accent);background:var(--bg-input);color:var(--text);min-width:180px;">
+          <option>Selecione...</option>
+          ${topInd.map(([nome]) => `<option>${nome}</option>`).join('')}
+          <option disabled>—</option>
+          <option>+ Adicionar novo...</option>
+        </select>
+      </div>
+      <span class="text-xs" style="color:var(--text-muted);">Gerenciável em ⚙️ Configurações</span>
+    </div>
+  </div>`;
+
   container.innerHTML = html;
+}
+
+function metricaSetPeriodo(p) {
+  metricaPeriodo = p;
+  renderizarMetricas();
+}
+function metricaSetEmpresa(e) {
+  metricaEmpresa = e;
+  renderizarMetricas();
 }
 
 function renderizarTudo() {
