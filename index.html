@@ -2634,7 +2634,7 @@ function renderizarTabelaAndamento() {
             <label>Data Matrícula</label>
             <input type="text" data-id="${c.id}" data-campo="data_matricula" class="editavel px-1 rounded bg-transparent border-0" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_matricula||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:110px;">
           </div>
-          <div class="expanded-item" id="urgente-item-${c.id}">
+          <div class="expanded-item" id="urgente-item-${c.id}" style="${isMaster()?'':'display:none;'}">
             <label style="cursor:pointer;" onclick="toggleUrgente(${c.id})">
               <input type="checkbox" ${c.urgente?'checked':''} onchange="toggleUrgente(${c.id})" style="accent-color:#dc2626;"> 🔴 Urgente
             </label>
