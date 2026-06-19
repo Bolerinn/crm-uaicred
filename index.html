@@ -738,6 +738,11 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosResultadoAnalises"></div>
       <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosBancoAnalises"></div>
 
+      <div class="px-6 mb-2 flex items-center gap-2">
+        <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Indicações:</span>
+        <button onclick="abrirModalIndicacao()" class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition" style="background:var(--accent);color:#fff;border:none;cursor:pointer;" title="Adicionar Indicação">+</button>
+      </div>
+
       <!-- Table -->
       <div class="px-6 pb-6">
         <div class="table-container">
@@ -896,6 +901,38 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       </div>
       <div class="px-6 pb-6" id="metricasContent"></div>
     </div>
+
+
+    <!-- MODAL: Adicionar Indicação -->
+    <div id="modalIndicacao" class="modal-overlay hidden" onclick="if(event.target===this)fecharModalIndicacao()">
+      <div class="modal-box" style="max-width:420px;" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-sm">Nova Indicação</h3>
+          <button onclick="fecharModalIndicacao()" class="text-lg" style="color:var(--text-muted);">&times;</button>
+        </div>
+        <div class="mb-3">
+          <label class="text-xs mb-1 block" style="color:var(--text-muted);">Tipo</label>
+          <select id="indTipo" class="w-full px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);">
+            <option value="Corretor">Corretor</option>
+            <option value="Gerente">Gerente</option>
+            <option value="Imobiliária">Imobiliária</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="text-xs mb-1 block" style="color:var(--text-muted);">Nome</label>
+          <input type="text" id="indNome" placeholder="Nome" class="w-full px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);">
+        </div>
+        <div class="mb-4">
+          <label class="text-xs mb-1 block" style="color:var(--text-muted);">Sobrenome</label>
+          <input type="text" id="indSobrenome" placeholder="Sobrenome" class="w-full px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);">
+        </div>
+        <button onclick="adicionarIndicacao()" class="w-full py-2.5 rounded-xl text-sm font-medium text-white" style="background:var(--accent);">Adicionar</button>
+      </div>
+    </div>
+
+    <!-- Datalist for indicação autocomplete -->
+    <datalist id="indicacaoSuggestions"></datalist>
 
     <!-- TAB: DASHBOARD -->
     <div id="tab-dashboard" class="tab-panel active">
@@ -1401,6 +1438,7 @@ async function carregarDados() {
     if (r2.ok) { clientes = await r2.json(); console.log('carregarDados FALLBACK: '+clientes.length+' registros'); }
     else { mostrarToast('Erro ao carregar dados'); return; }
   }
+  popularDatalistIndicacoes();
   renderizarTudo();
 }
 
@@ -1794,6 +1832,83 @@ function gerarBriefing(id) {
 }
 
 // ========== URGENTE ==========
+
+// ========== INDICAÇÕES (autocomplete) ==========
+const INDICACOES_KEY = 'crm_indicacoes';
+
+function carregarIndicacoes() {
+  try {
+    const saved = localStorage.getItem(INDICACOES_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch(e) { return []; }
+}
+
+function salvarIndicacoes(lista) {
+  localStorage.setItem(INDICACOES_KEY, JSON.stringify(lista));
+}
+
+function extrairIndicacoesDoBanco() {
+  const nomes = new Set();
+  clientes.forEach(c => {
+    const ind = (c.indicacao || '').trim();
+    if (ind && ind !== 'Sem indicação') nomes.add(ind);
+  });
+  return Array.from(nomes);
+}
+
+function sincronizarIndicacoes() {
+  const salvas = carregarIndicacoes();
+  const doBanco = extrairIndicacoesDoBanco();
+  const nomesSalvos = new Set(salvas.map(i => i.nome));
+  let changed = false;
+  doBanco.forEach(nome => {
+    if (!nomesSalvos.has(nome)) {
+      salvas.push({ nome, tipo: 'Outro', adicionado_em: new Date().toISOString() });
+      changed = true;
+    }
+  });
+  if (changed) salvarIndicacoes(salvas);
+  return salvas;
+}
+
+function popularDatalistIndicacoes() {
+  const lista = sincronizarIndicacoes();
+  const dl = document.getElementById('indicacaoSuggestions');
+  if (!dl) return;
+  dl.innerHTML = lista.map(i => `<option value="${i.nome.replace(/"/g,'&quot;')}">${i.tipo || ''}</option>`).join('');
+}
+
+function abrirModalIndicacao() {
+  document.getElementById('modalIndicacao').classList.remove('hidden');
+  document.getElementById('indNome').focus();
+}
+
+function fecharModalIndicacao() {
+  document.getElementById('modalIndicacao').classList.add('hidden');
+  document.getElementById('indNome').value = '';
+  document.getElementById('indSobrenome').value = '';
+}
+
+function adicionarIndicacao() {
+  const tipo = document.getElementById('indTipo').value;
+  const nome = document.getElementById('indNome').value.trim();
+  const sobrenome = document.getElementById('indSobrenome').value.trim();
+  if (!nome) { mostrarToast('Preencha o nome'); return; }
+  const nomeCompleto = sobrenome ? `${nome} ${sobrenome}` : nome;
+  
+  const lista = carregarIndicacoes();
+  // Evitar duplicata
+  if (lista.some(i => i.nome.toLowerCase() === nomeCompleto.toLowerCase())) {
+    mostrarToast('Indicação já existe');
+    return;
+  }
+  lista.push({ nome: nomeCompleto, tipo, adicionado_em: new Date().toISOString() });
+  salvarIndicacoes(lista);
+  popularDatalistIndicacoes();
+  fecharModalIndicacao();
+  mostrarToast('✅ Indicação adicionada: ' + nomeCompleto);
+}
+
 async function toggleUrgente(id) {
   if (!isMaster()) return;
   const c = clientes.find(c => c.id === id);
