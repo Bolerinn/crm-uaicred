@@ -2798,27 +2798,7 @@ function renderizarMetricas() {
     </div>
   </div>`;
 
-  // -- Sugestão Indicação --
-  html += `<div class="metrica-card" style="border:2px dashed var(--accent);background:var(--bg-body);">
-    <div class="text-xs uppercase tracking-wider mb-2" style="color:var(--accent);">💡 Sugestão: Lista Fechada de Indicações</div>
-    <div class="flex gap-4 items-end flex-wrap">
-      <div>
-        <div class="text-xs mb-1" style="color:var(--text-muted);">Campo atual</div>
-        <input type="text" disabled class="px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);" value="Texto livre">
-      </div>
-      <span style="color:var(--text-muted);">→</span>
-      <div>
-        <div class="text-xs mb-1" style="color:var(--accent);">Proposta</div>
-        <select class="px-3 py-2 rounded-lg border text-sm" style="border-color:var(--accent);background:var(--bg-input);color:var(--text);min-width:180px;">
-          <option>Selecione...</option>
-          ${topInd.map(([nome]) => `<option>${nome}</option>`).join('')}
-          <option disabled>—</option>
-          <option>+ Adicionar novo...</option>
-        </select>
-      </div>
-      <span class="text-xs" style="color:var(--text-muted);">Gerenciável em ⚙️ Configurações</span>
-    </div>
-  </div>`;
+
 
   container.innerHTML = html;
 }
