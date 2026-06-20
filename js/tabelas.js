@@ -597,10 +597,6 @@ function renderizarTabelaLixeira() {
 // ==================================================================
 // METRICS
 // ==================================================================
-let metricaPeriodo = 'este-mes'; // este-mes | mes-passado | 12-meses | personalizado
-let metricaEmpresa = 'todas';    // todas | caixa | privados
-let metricaDataInicio = '';
-let metricaDataFim = '';
 
 function metricaFiltrarPorPeriodo(lista) {
   const hoje = new Date();
