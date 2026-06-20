@@ -8,6 +8,40 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="css/styles.css">
+<script>
+let usuarioNome  = '';
+let usuarioTipo  = 'user';
+let profileReady = false;
+
+async function initProfile() {
+  const { data: { user }, error: userError } = await sb.auth.getUser();
+  if (userError || !user) return false;
+  const email = user.email;
+  const meta = user.user_metadata || {};
+  let nome = meta.nome || email.split('@')[0].replace(/[.+]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  let tipo = meta.tipo || (email === 'contatoadouglas@gmail.com' ? 'master' : 'user');
+  let forcePw = meta.force_password_change;
+  if (email === 'contatoadouglas@gmail.com') forcePw = false;
+  if (!meta.nome || !meta.tipo || forcePw === undefined) {
+    const { error } = await sb.auth.updateUser({ data: { nome, tipo, force_password_change: forcePw ?? true } });
+    if (!error) {
+      const refreshed = await sb.auth.getUser();
+      const newMeta = refreshed.data?.user?.user_metadata;
+      if (newMeta) { nome = newMeta.nome || nome; tipo = newMeta.tipo || tipo; forcePw = newMeta.force_password_change; }
+    }
+  }
+  usuarioNome = nome; usuarioTipo = tipo; profileReady = true;
+  const sel = document.getElementById('sidebarUser');
+  if (sel) sel.textContent = usuarioNome;
+  window.dispatchEvent(new CustomEvent('profile-ready', { detail: { nome, tipo } }));
+  return forcePw === true;
+}
+function isMaster() { return usuarioTipo === 'master'; }
+function getProfile() { return { nome: usuarioNome, tipo: usuarioTipo, ready: profileReady }; }
+window.initProfile = initProfile; window.isMaster = isMaster; window.getProfile = getProfile;
+Object.defineProperty(window, 'usuarioNome', { get() { return usuarioNome; } });
+Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
+</script>
 </head>
 <body>
 

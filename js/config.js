@@ -8,39 +8,7 @@ const SERVICE_ROLE_KEY = 'eyJhbG...YRpU';
 const sbAdmin = supabase.createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 // === profiles-init ===
-let usuarioNome  = '';
-let usuarioTipo  = 'user';
-let profileReady = false;
-
-async function initProfile() {
-  const { data: { user }, error: userError } = await sb.auth.getUser();
-  if (userError || !user) return false;
-  const email = user.email;
-  const meta = user.user_metadata || {};
-  let nome = meta.nome || email.split('@')[0].replace(/[.+]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  let tipo = meta.tipo || (email === 'contatoadouglas@gmail.com' ? 'master' : 'user');
-  let forcePw = meta.force_password_change;
-  // Master nunca é forçado; usuários sim
-  if (email === 'contatoadouglas@gmail.com') forcePw = false;
-  if (!meta.nome || !meta.tipo || forcePw === undefined) {
-    const { error } = await sb.auth.updateUser({ data: { nome, tipo, force_password_change: forcePw ?? true } });
-    if (!error) {
-      const refreshed = await sb.auth.getUser();
-      const newMeta = refreshed.data?.user?.user_metadata;
-      if (newMeta) { nome = newMeta.nome || nome; tipo = newMeta.tipo || tipo; forcePw = newMeta.force_password_change; }
-    }
-  }
-  usuarioNome = nome; usuarioTipo = tipo; profileReady = true;
-  const sel = document.getElementById('sidebarUser');
-  if (sel) sel.textContent = usuarioNome;
-  window.dispatchEvent(new CustomEvent('profile-ready', { detail: { nome, tipo } }));
-  return forcePw === true;
-}
-function isMaster() { return usuarioTipo === 'master'; }
-function getProfile() { return { nome: usuarioNome, tipo: usuarioTipo, ready: profileReady }; }
-window.initProfile = initProfile; window.isMaster = isMaster; window.getProfile = getProfile;
-Object.defineProperty(window, 'usuarioNome', { get() { return usuarioNome; } });
-Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
+// (initProfile, isMaster, getProfile definidos inline no HTML — não duplicar aqui)
 
 // ========== STATE ==========
 const STATUS_OPTS = [
