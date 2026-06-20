@@ -1,5 +1,4 @@
 // ========== INDICAÇÕES (autocomplete) ==========
-const INDICACOES_KEY = 'crm_indicacoes';
 
 function carregarIndicacoes() {
   try {

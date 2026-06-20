@@ -19,9 +19,6 @@
 // ==================================================================
 // RESULTADO HELPERS (used by table renders)
 // ==================================================================
-const RESULTADO_CYCLE = ['', 'aprovado', 'condicionado', 'reprovado'];
-const RESULTADO_LABELS = { 'aprovado': '✅ APROVADO', 'condicionado': '⚠️ CONDICIONADO', 'reprovado': '❌ REPROVADO' };
-const RESULTADO_COLORS = { 'aprovado': 'color:#059669;', 'condicionado': 'color:#d97706;', 'reprovado': 'color:#dc2626;' };
 
 function getResultadoBadge(valor) {
   if (!valor) return '<span class=\"text-xs text-gray-400\">—</span>';

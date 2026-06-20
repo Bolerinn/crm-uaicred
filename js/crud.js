@@ -82,8 +82,6 @@ async function adicionarCliente() {
   }
 }
 
-let ultimoExcluido = null; // para desfazer
-
 async function excluirCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
   const c = clientes.find(c => c.id === id);
@@ -236,9 +234,6 @@ async function reverterEmitido(id) {
 }
 
 // ========== RESULTADO CYCLE (per bank) ==========
-const RESULTADO_CYCLE = ['', 'aprovado', 'condicionado', 'reprovado'];
-const RESULTADO_LABELS = { 'aprovado': '✅ APROVADO', 'condicionado': '⚠️ CONDICIONADO', 'reprovado': '❌ REPROVADO' };
-const RESULTADO_COLORS = { 'aprovado': 'color:#059669;', 'condicionado': 'color:#d97706;', 'reprovado': 'color:#dc2626;' };
 
 function getResultadoBadge(valor) {
   if (!valor) return '<span class="text-xs text-gray-400">—</span>';
@@ -328,7 +323,6 @@ async function iniciarNovaCompetencia() {
 }
 
 // ========== LIXEIRA ==========
-let clientesLixeira = [];
 
 async function carregarLixeira() {
   const trintaDiasAtras = new Date(Date.now() - 30*24*60*60*1000).toISOString();
@@ -380,7 +374,6 @@ async function excluirPermanentemente(id) {
 }
 
 // ========== REALTIME ==========
-let _rtChannel = null;
 
 function ouvirTempoReal() {
   if (_rtChannel) return;

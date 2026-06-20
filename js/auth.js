@@ -1,11 +1,4 @@
 // ========== AUTH ==========
-const NOME_PARA_EMAIL = {
-  'douglas': 'contatoadouglas@gmail.com',
-  'luana': 'salvador+luana@primeassessoria.net',
-  'fernanda': 'salvador+fernanda@primeassessoria.net',
-  'marjore': 'salvador+marjore@primeassessoria.net',
-  'teste': 'salvador+teste@primeassessoria.net',
-};
 
 async function entrar() {
   try {
