@@ -159,7 +159,6 @@ function abrirModalIndicacao() {
 function fecharModalIndicacao() {
   document.getElementById('modalIndicacao').classList.add('hidden');
   document.getElementById('indNome').value = '';
-  document.getElementById('indSobrenome').value = '';
 }
 
 function validarIndicacaoInput(el) {
@@ -186,9 +185,8 @@ function validarIndicacaoInput(el) {
 function adicionarIndicacao() {
   const tipo = document.getElementById('indTipo').value;
   const nome = document.getElementById('indNome').value.trim();
-  const sobrenome = document.getElementById('indSobrenome').value.trim();
   if (!nome) { mostrarToast('Preencha o nome'); return; }
-  const nomeCompleto = sobrenome ? `${nome} ${sobrenome}` : nome;
+  const nomeCompleto = nome;
   
   const lista = carregarIndicacoes();
   // Evitar duplicata
