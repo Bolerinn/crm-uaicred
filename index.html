@@ -1614,51 +1614,40 @@ async function converterCliente(id, checked) {
   const c = clientes.find(c => c.id === id);
   if (!c) return;
   
-  c.convertido = checked;
-  await atualizarCampo(id, 'convertido', checked);
+  const mesRef = new Date().toISOString().slice(0,7);
   
   if (checked) {
-    const mesRef = new Date().toISOString().slice(0,7);
-    c.mes_referencia = mesRef;
-    await atualizarCampo(id, 'mes_referencia', mesRef);
-    
-    // Clonar para Aba 2 se não existir ainda
+    // Criar clone na Aba 2 se não existir
     const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
     if (!jaExiste) {
       const { data: user } = await sb.auth.getUser();
       const clone = {
-        indicacao: c.indicacao || '',
-        cliente: c.cliente,
-        cpf: c.cpf || '',
-        agencia: c.agencia || '',
-        valor_imovel: c.valor_imovel || '',
-        valor_financiado: c.valor_financiado || '',
-        produto: c.produto || 'SBPE',
-        data_vistoria: '—',
-        status: 'aguardando-doc',
-        obs: '',
+        indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
+        valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
+        produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
         created_by: user?.user?.id,
         criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
-        convertido: true,
-        mes_referencia: mesRef,
-        fgts: c.fgts || false,
-        iq: c.iq || false,
-        banco: c.banco || '',
-        banco_caixa: c.banco_caixa || false,
-        banco_bradesco: c.banco_bradesco || false,
-        banco_itau: c.banco_itau || false,
-        banco_santander: c.banco_santander || false,
+        convertido: true, mes_referencia: mesRef,
+        fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
+        banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
+        banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
         banco_inter: c.banco_inter || false,
-        valor_fgts: c.valor_fgts || '',
-        data_iq: c.data_iq || '',
-        data_matricula: c.data_matricula || '',
-        urgente: false
+        valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
+        data_matricula: c.data_matricula || '', urgente: false
       };
       const { data: novo, error } = await sb.from('clientes').insert(clone).select().single();
       if (!error && novo) {
         clientes.push(novo);
         mostrarToast('Cliente convertido em processo ✅');
       }
+    }
+  } else {
+    // Desmarcar: remover clone da Aba 2 se existir
+    const clone = clientes.find(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
+    if (clone) {
+      await sb.from('clientes').delete().eq('id', clone.id);
+      clientes = clientes.filter(x => x.id !== clone.id);
+      mostrarToast('Conversão desfeita ↩️');
     }
   }
   
@@ -1821,8 +1810,8 @@ function getFiltrados(sourceClientes, tab) {
       if (filtroBancoEmitidos !== 'todos') passaStatus = passaStatus && c.banco === filtroBancoEmitidos;
       else if (filtroEmitidos !== 'todos') passaStatus = passaStatus && (c.produto === filtroEmitidos || c.indicacao === filtroEmitidos);
     } else {
-      // Aba Análises: mostrar todos do mês de competência (incluindo convertidos)
-      passaStatus = (c.mes_referencia || '') === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
+      // Aba Análises: excluir convertidos (originais ficam, clones vão pra Aba 2)
+      passaStatus = c.convertido !== true && (c.mes_referencia || '') === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
       if (filtroProduto !== 'todos') passaStatus = passaStatus && c.produto === filtroProduto;
       if (filtroResultadoAnalises !== 'todos') passaStatus = passaStatus && c.resultado === filtroResultadoAnalises;
       if (filtroBancoAnalises !== 'todos') passaStatus = passaStatus && c['resultado_' + filtroBancoAnalises.toLowerCase()] === 'aprovado';
@@ -2315,7 +2304,7 @@ function renderizarDashboard() {
 
   container.innerHTML = `
     <div class="mb-4 flex items-center gap-3">
-      <div class="text-sm font-semibold" style="color:var(--text);">Mês atual: <span style="color:var(--accent);">${mesAtual + 1}/${anoAtual}</span> &mdash; <span style="color:#059669;">${clientes.filter(c => c.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'))).length}</span> processos na base</div>
+      <div class="text-sm font-semibold" style="color:var(--text);">Mês atual: <span style="color:var(--accent);">${mesAtual + 1}/${anoAtual}</span> &mdash; <span style="color:#059669;">${clientes.filter(c => c.convertido !== true && c.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'))).length}</span> processos na base</div>
       <button onclick="renderizarDashboard()" class="text-xs px-3 py-1 rounded-lg border transition" style="border-color:var(--border);color:var(--text-secondary);background:var(--bg-card);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Atualizar</button>
     </div>
     <div class="mb-4 flex items-center gap-3">
@@ -3141,7 +3130,7 @@ function renderizarTabelaAnalises() {
         <input type="checkbox" ${c.follow_up?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="Follow-up">
       </td>
       <td class="px-2 py-2.5 text-center">
-        <input type="checkbox" ${c.convertido?'checked':''} onchange="converterCliente(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Converter em processo ativo">
+        <input type="checkbox" ${clientes.some(x => x.cliente === c.cliente && x.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0')) && x.convertido === true && x.id !== c.id)?'checked':''} onchange="converterCliente(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Converter em processo ativo">
       </td>
       <td class="px-3 py-2.5 criado-por-col">${c.criado_por || '—'}</td>
       <td class="px-2 py-2.5 text-center">
