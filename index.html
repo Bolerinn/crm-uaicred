@@ -1942,20 +1942,43 @@ function abrirModalParceiros() {
   if (lista.length === 0) {
     container.innerHTML = '<div class="text-xs text-center py-8" style="color:var(--text-muted);">Nenhum parceiro cadastrado</div>';
   } else {
-    container.innerHTML = lista.map(i => {
-      const tipoIcon = i.tipo === 'Corretor' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' : i.tipo === 'Gerente' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' : i.tipo === 'Imobiliária' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/><path d="M9 18h6v4H9z"/></svg>' : i.tipo === 'Correspondente' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-      return `<div class="flex items-center justify-between py-2 px-3 rounded-lg" style="background:var(--bg-body);">
-        <div class="flex items-center gap-2">
-          <span style="display:inline-flex;align-items:center;">${tipoIcon}</span>
-          <span class="text-sm font-medium">${i.nome}</span>
-          <span class="text-xs" style="color:var(--text-muted);">${i.tipo}</span>
-        </div>
-        ${isMaster() ? `<div class="flex items-center gap-1">
-          <button onclick="editarParceiro('${i.nome.replace(/'/g,"\'")}', '${i.tipo}')" class="text-xs px-2 py-1 rounded transition" style="background:transparent;color:var(--text-muted);border:none;cursor:pointer;" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
-          <button onclick="removerParceiro('${i.nome.replace(/'/g,"\'")}')" class="text-xs px-2 py-1 rounded transition" style="background:transparent;color:var(--text-muted);border:none;cursor:pointer;" title="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-        </div>` : ''}
-      </div>`;
-    }).join('');
+    const tipos = ['Corretor', 'Gerente', 'Imobiliária', 'Correspondente', 'Outro'];
+    const tipoIcon = {
+      'Corretor': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+      'Gerente': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+      'Imobiliária': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="9" y1="6" x2="9" y2="6"/><line x1="15" y1="6" x2="15" y2="6"/><line x1="9" y1="10" x2="9" y2="10"/><line x1="15" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="9" y2="14"/><line x1="15" y1="14" x2="15" y2="14"/><path d="M9 18h6v4H9z"/></svg>',
+      'Correspondente': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+      'Outro': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+    };
+    let html = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">';
+    for (const tipo of tipos) {
+      const parceiros = lista.filter(p => p.tipo === tipo).map(p => p.nome).sort((a,b) => a.localeCompare(b));
+      html += '<div class="rounded-xl p-3" style="background:var(--bg-body);border:1px solid var(--border);">';
+      html += '<div class="flex items-center gap-1.5 mb-2 pb-2" style="border-bottom:1px solid var(--border);">';
+      html += '<span style="display:inline-flex;align-items:center;color:var(--accent);">' + (tipoIcon[tipo] || '') + '</span>';
+      html += '<span class="text-xs font-semibold" style="color:var(--text);">' + tipo + '</span>';
+      html += '<span class="text-xs" style="color:var(--text-muted);margin-left:auto;">' + parceiros.length + '</span>';
+      html += '</div>';
+      if (parceiros.length === 0) {
+        html += '<p class="text-xs" style="color:var(--text-muted);">—</p>';
+      } else {
+        for (const nome of parceiros) {
+          const p = lista.find(i => i.nome === nome && i.tipo === tipo);
+          html += '<div class="flex items-center justify-between py-1 text-xs" style="color:var(--text-secondary);">';
+          html += '<span>' + nome + '</span>';
+          if (isMaster()) {
+            html += '<div class="flex items-center gap-0.5">';
+            html += '<button onclick="editarParceiro(\'' + nome.replace(/'/g,"\\'") + '\',\'' + tipo + '\')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:2px;" title="Editar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>';
+            html += '<button onclick="removerParceiro(\'' + nome.replace(/'/g,"\\'") + '\')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:2px;" title="Remover"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    container.innerHTML = html;
   }
   modal.classList.remove('hidden');
 }
