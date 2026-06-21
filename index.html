@@ -2174,6 +2174,7 @@ function getAlertasPrazoExcedido() {
   return clientes.filter(c => {
     if (c.status === 'emitido') return false;
     if (c.convertido !== true) return false;
+    if (c.mes_referencia !== new Date().toISOString().slice(0,7)) return false;
     if (!c.data_vistoria || c.data_vistoria === '—') return false;
     const inicio = parseDataBR(c.data_vistoria);
     if (!inicio) return false;
@@ -2185,6 +2186,7 @@ function getAlertasUrgentes() {
   return clientes.filter(c => {
     if (c.status === 'emitido') return false;
     if (c.convertido !== true) return false;
+    if (c.mes_referencia !== new Date().toISOString().slice(0,7)) return false;
     return c.urgente === true;
   });
 }
@@ -2193,6 +2195,7 @@ function getAlertasMatricula() {
   return clientes.filter(c => {
     if (c.status === 'emitido') return false;
     if (c.convertido !== true) return false;
+    if (c.mes_referencia !== new Date().toISOString().slice(0,7)) return false;
     const dataMat = parseDataBR(c.data_matricula);
     if (!dataMat) return false;
     const dias = diasDesde(dataMat);
@@ -2206,6 +2209,7 @@ function getAlertasIQ() {
   return clientes.filter(c => {
     if (c.status === 'emitido') return false;
     if (c.convertido !== true) return false;
+    if (c.mes_referencia !== new Date().toISOString().slice(0,7)) return false;
     if (!c.iq) return false;
     const dataIQ = parseDataBR(c.data_iq);
     if (!dataIQ) return false;
