@@ -2776,7 +2776,7 @@ function metricaFiltrarPorEmpresa(lista) {
   return lista;
 }
 
-function formatarMoeda(v) {
+function formatarMoedaMetrica(v) {
   if (v >= 1e6) return 'R$ ' + (v/1e6).toFixed(1).replace('.', ',') + 'M';
   if (v >= 1e3) return 'R$ ' + (v/1e3).toFixed(0).replace('.', ',') + 'k';
   return 'R$ ' + v.toFixed(0);
@@ -2944,11 +2944,11 @@ function renderizarMetricas() {
     <div class="metrica-card text-center">
       <div class="text-xs uppercase tracking-wider mb-1" style="color:var(--text-muted);">Emitidos</div>
       <div class="metrica-number" style="color:#059669;">${emit}</div>
-      <div class="text-xs mt-1" style="color:var(--text-muted);">${formatarMoeda(totalFinanciado)}</div>
+      <div class="text-xs mt-1" style="color:var(--text-muted);">${formatarMoedaMetrica(totalFinanciado)}</div>
     </div>
     <div class="metrica-card text-center">
       <div class="text-xs uppercase tracking-wider mb-1" style="color:var(--text-muted);">Total Financiado</div>
-      <div class="metrica-number" style="font-size:1.3rem;color:#1e40af;">${formatarMoeda(totalFinanciado)}</div>
+      <div class="metrica-number" style="font-size:1.3rem;color:#1e40af;">${formatarMoedaMetrica(totalFinanciado)}</div>
     </div>
     <div class="metrica-card text-center">
       <div class="text-xs uppercase tracking-wider mb-1" style="color:var(--text-muted);">Conversão</div>
@@ -2965,7 +2965,7 @@ function renderizarMetricas() {
         <div><div class="text-lg font-bold">${caixaAnalises}</div><div class="text-xs" style="color:var(--text-muted);">análises</div></div>
         <div><div class="text-lg font-bold">${caixaAndamento}</div><div class="text-xs" style="color:var(--text-muted);">andamento</div></div>
         <div><div class="text-lg font-bold">${caixaEmitidos}</div><div class="text-xs" style="color:var(--text-muted);">emitidos</div></div>
-        <div><div class="text-lg font-bold">${formatarMoeda(caixaFin)}</div><div class="text-xs" style="color:var(--text-muted);">financiado</div></div>
+        <div><div class="text-lg font-bold">${formatarMoedaMetrica(caixaFin)}</div><div class="text-xs" style="color:var(--text-muted);">financiado</div></div>
       </div>
     </div>
     <div class="metrica-card" style="border-left:4px solid #7c3aed;">
@@ -2974,7 +2974,7 @@ function renderizarMetricas() {
         <div><div class="text-lg font-bold">${privAnalises}</div><div class="text-xs" style="color:var(--text-muted);">análises</div></div>
         <div><div class="text-lg font-bold">${privAndamento}</div><div class="text-xs" style="color:var(--text-muted);">andamento</div></div>
         <div><div class="text-lg font-bold">${privEmitidos}</div><div class="text-xs" style="color:var(--text-muted);">emitidos</div></div>
-        <div><div class="text-lg font-bold">${formatarMoeda(privFin)}</div><div class="text-xs" style="color:var(--text-muted);">financiado</div></div>
+        <div><div class="text-lg font-bold">${formatarMoedaMetrica(privFin)}</div><div class="text-xs" style="color:var(--text-muted);">financiado</div></div>
       </div>
     </div>
   </div>`;
@@ -3033,22 +3033,22 @@ function renderizarMetricas() {
       <div class="text-center p-3 rounded-xl" style="background:#f0fdf4;">
         <div class="text-xs" style="color:var(--text-muted);">Este mês</div>
         <div class="text-xl font-bold" style="color:#059669;">${emitidosMes}</div>
-        <div class="text-xs" style="color:var(--text-muted);">${formatarMoeda(finMes)}</div>
+        <div class="text-xs" style="color:var(--text-muted);">${formatarMoedaMetrica(finMes)}</div>
       </div>
       <div class="text-center p-3 rounded-xl" style="background:#fefce8;">
         <div class="text-xs" style="color:var(--text-muted);">Mês passado</div>
         <div class="text-xl font-bold" style="color:#d97706;">${emitidosMesAnt}</div>
-        <div class="text-xs" style="color:var(--text-muted);">${formatarMoeda(finMesAnt)}</div>
+        <div class="text-xs" style="color:var(--text-muted);">${formatarMoedaMetrica(finMesAnt)}</div>
       </div>
       <div class="text-center p-3 rounded-xl" style="background:#eff6ff;">
         <div class="text-xs" style="color:var(--text-muted);">12 meses</div>
         <div class="text-xl font-bold" style="color:#1e40af;">${emitidos12m}</div>
-        <div class="text-xs" style="color:var(--text-muted);">${formatarMoeda(fin12m)}</div>
+        <div class="text-xs" style="color:var(--text-muted);">${formatarMoedaMetrica(fin12m)}</div>
       </div>
       <div class="text-center p-3 rounded-xl" style="background:#faf5ff;">
         <div class="text-xs" style="color:var(--text-muted);">Personalizado</div>
         <div class="text-xl font-bold" style="color:#7c3aed;">${emit}</div>
-        <div class="text-xs" style="color:var(--text-muted);">${formatarMoeda(totalFinanciado)}</div>
+        <div class="text-xs" style="color:var(--text-muted);">${formatarMoedaMetrica(totalFinanciado)}</div>
       </div>
     </div>
   </div>`;
