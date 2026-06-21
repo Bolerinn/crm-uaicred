@@ -2304,7 +2304,7 @@ function renderizarDashboard() {
 
   container.innerHTML = `
     <div class="mb-4 flex items-center gap-3">
-      <div class="text-sm font-semibold" style="color:var(--text);">Mês atual: <span style="color:var(--accent);">${mesAtual + 1}/${anoAtual}</span> &mdash; <span style="color:#059669;">${clientes.filter(c => c.convertido !== true && c.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'))).length}</span> processos na base</div>
+      <div class="text-sm font-semibold" style="color:var(--text);">Mês atual: <span style="color:var(--accent);">${mesAtual + 1}/${anoAtual}</span> &mdash; <span style="color:#059669;">${clientes.filter(c => c.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'))).length}</span> processos na base</div>
       <button onclick="renderizarDashboard()" class="text-xs px-3 py-1 rounded-lg border transition" style="border-color:var(--border);color:var(--text-secondary);background:var(--bg-card);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Atualizar</button>
     </div>
     <div class="mb-4 flex items-center gap-3">
