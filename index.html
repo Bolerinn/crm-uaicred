@@ -2304,7 +2304,7 @@ function renderizarDashboard() {
 
   container.innerHTML = `
     <div class="mb-4 flex items-center gap-3">
-      <div class="text-sm font-semibold" style="color:var(--text);">Mês atual: <span style="color:var(--accent);">${mesAtual + 1}/${anoAtual}</span> &mdash; <span style="color:#059669;">${clientes.filter(c => c.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'))).length}</span> processos na base</div>
+      <div class="text-sm font-semibold" style="color:var(--text);">Mês atual: <span style="color:var(--accent);">${new Date().getMonth() + 1}/${new Date().getFullYear()}</span> &mdash; <span style="color:#059669;">${clientes.filter(c => c.mes_referencia === (String(new Date().getFullYear())+'-'+String(new Date().getMonth()+1).padStart(2,'0'))).length}</span> processos na base</div>
       <button onclick="renderizarDashboard()" class="text-xs px-3 py-1 rounded-lg border transition" style="border-color:var(--border);color:var(--text-secondary);background:var(--bg-card);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Atualizar</button>
     </div>
     <div class="mb-4 flex items-center gap-3">
@@ -3117,8 +3117,8 @@ function renderizarTabelaAnalises() {
         <label class="inline-flex items-center gap-0.5 text-xs cursor-pointer font-semibold" style="color:#FF7A00;"><input type="checkbox" ${c.banco_inter?'checked':''} onchange="toggleBanco(${c.id},'inter',this.checked)" class="w-3 h-3 accent-orange-500"> Inter</label>
       </td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_imovel||''}" style="color:inherit;width:110px;"></td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_financiado||''}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_imovel ? (c.valor_imovel.startsWith('R$') ? c.valor_imovel : 'R$ ' + c.valor_imovel) : ''}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_financiado ? (c.valor_financiado.startsWith('R$') ? c.valor_financiado : 'R$ ' + c.valor_financiado) : ''}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
         <select onchange="atualizarCampo(${c.id},'produto',this.value)" class="text-xs font-semibold bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text);">
           ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
@@ -3181,8 +3181,8 @@ function renderizarTabelaAndamento() {
         </select>
       </td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_imovel||''}" style="color:inherit;width:110px;"></td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_financiado||''}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_imovel ? (c.valor_imovel.startsWith('R$') ? c.valor_imovel : 'R$ ' + c.valor_imovel) : ''}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_financiado ? (c.valor_financiado.startsWith('R$') ? c.valor_financiado : 'R$ ' + c.valor_financiado) : ''}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
         <select onchange="atualizarCampo(${c.id},'produto',this.value)" class="text-xs font-semibold bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text-secondary);">
           ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
@@ -3208,7 +3208,7 @@ function renderizarTabelaAndamento() {
             <label style="cursor:pointer;" onclick="toggleFGTS(${c.id})">
               <input type="checkbox" ${fgts?'checked':''} onchange="toggleFGTS(${c.id})" style="accent-color:#f97316;"> FGTS
             </label>
-            <input type="text" data-id="${c.id}" data-campo="valor_fgts" class="valor-fgts-field ${fgts?'':'hidden'}" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_fgts||''}" placeholder="R\$ 0,00" style="color:inherit;width:130px;${fgts?'':'display:none;'}">
+            <input type="text" data-id="${c.id}" data-campo="valor_fgts" class="valor-fgts-field ${fgts?'':'hidden'}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${c.valor_fgts||''}" placeholder="R\$ 0,00" style="color:inherit;width:130px;${fgts?'':'display:none;'}">
           </div>
           <div class="expanded-item">
             <label style="cursor:pointer;" onclick="toggleIQ(${c.id})">
