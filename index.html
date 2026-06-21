@@ -1842,17 +1842,29 @@ function capitalizarCliente(el) {
 
 function formatarR$(val) {
   if (!val) return '';
-  val = String(val).replace(/[^0-9]/g, '');
-  if (!val) return '';
-  const num = parseInt(val, 10);
-  return 'R$ ' + num.toLocaleString('pt-BR');
+  try {
+    var v = String(val).replace(/[^0-9]/g, '');
+    if (!v) return '';
+    var num = parseInt(v, 10);
+    var s = String(num), result = '';
+    while (s.length > 3) { result = '.' + s.slice(-3) + result; s = s.slice(0, -3); }
+    result = s + result;
+    return 'R$ ' + result;
+  } catch(e) { return ''; }
 }
 
 function formatarMoeda(input) {
-  let v = input.value.replace(/\D/g, '');
-  if (!v) { input.value = ''; return; }
-  const num = parseInt(v, 10);
-  input.value = 'R$ ' + num.toLocaleString('pt-BR');
+  try {
+    let v = input.value.replace(/[^0-9]/g, '');
+    if (!v) { input.value = ''; return; }
+    var num = parseInt(v, 10);
+    // Format manually (avoid toLocaleString issues)
+    var s = String(num);
+    var result = '';
+    while (s.length > 3) { result = '.' + s.slice(-3) + result; s = s.slice(0, -3); }
+    result = s + result;
+    input.value = 'R$ ' + result;
+  } catch(e) { input.value = ''; }
 }
 function mascaraData(input) {
   let v = input.value.replace(/\D/g, '').slice(0, 8);
