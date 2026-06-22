@@ -347,7 +347,7 @@ function atualizarStats() {
     });
     
     // Total financiamento
-    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt((c.valor_financiado || '').replace(/\\D/g, '')) || 0), 0);
+    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt((c.valor_financiado || '').replace(/\\D/g, '')) || 0), 0) / 100;
     html += `<div class=\"stat-card\"><div class=\"stat-label\">Total Financ.</div><div class=\"stat-value\" style=\"color:#059669;\">R$ ${totalFinanc.toLocaleString('pt-BR')}</div></div>`;
     
     // Aprovações (pelo menos um banco aprovado)
@@ -376,7 +376,7 @@ function atualizarStatsAndamento() {
       html += `<div class=\"stat-card\"><div class=\"stat-label\">${nome}</div><div class=\"stat-value\" style=\"color:var(--accent);\">${n}</div></div>`;
     });
     // Total financiamento
-    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt((c.valor_financiado || '').replace(/\\D/g, '')) || 0), 0);
+    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt((c.valor_financiado || '').replace(/\\D/g, '')) || 0), 0) / 100;
     html += `<div class=\"stat-card\"><div class=\"stat-label\">Total Financ.</div><div class=\"stat-value\" style=\"color:#059669;\">R$ ${totalFinanc.toLocaleString('pt-BR')}</div></div>`;
     // Por produto
     PRODUTO_OPTS.forEach(p => {
@@ -405,7 +405,7 @@ function atualizarStatsEmitidos() {
       html += `<div class=\"stat-card\"><div class=\"stat-label\">${nome}</div><div class=\"stat-value\" style=\"color:var(--accent);\">${n}</div></div>`;
     });
     // Total financiamento
-    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt((c.valor_financiado || '').replace(/\\D/g, '')) || 0), 0);
+    const totalFinanc = filtrados.reduce((s, c) => s + (parseInt((c.valor_financiado || '').replace(/\\D/g, '')) || 0), 0) / 100;
     html += `<div class=\"stat-card\"><div class=\"stat-label\">Total Financ.</div><div class=\"stat-value\" style=\"color:#059669;\">R$ ${totalFinanc.toLocaleString('pt-BR')}</div></div>`;
     // Por produto
     PRODUTO_OPTS.forEach(p => {
@@ -1003,8 +1003,8 @@ function renderizarTabelaAnalises() {
       <td class=\"px-3 py-2.5\"><input list=\"indicacaoSuggestions\" data-id=\"${c.id}\" data-campo=\"indicacao\" class=\"editavel px-1 rounded bg-transparent border-0\" onblur=\"validarIndicacaoInput(this)\" onfocus=\"this.dataset.oldValue=this.value\" value=\"${c.indicacao||''}\" style=\"color:inherit;width:120px;\" autocomplete=\"off\" placeholder=\"Escolha...\"></td>
       <td class=\"px-3 py-2.5\"><span contenteditable=\"true\" tabindex=\"0\" data-id=\"${c.id}\" data-campo=\"cliente\" class=\"editavel px-1 -mx-1 rounded\" data-placeholder=\"Cliente\" onblur=\"capitalizarCliente(this);editarCampo(this)\" onkeydown=\"if(event.key==='Enter'){event.preventDefault();this.blur();}\">${c.cliente||''}</span></td>
       <td class=\"px-3 py-2.5\"><input tabindex=\"0\" data-id=\"${c.id}\" data-campo=\"cpf\" class=\"editavel px-1 rounded font-mono text-xs bg-transparent border-0\" oninput=\"mascaraCPF(this)\" onblur=\"editarCampoInput(this)\" value=\"${c.cpf||''}\" maxlength=\"14\" style=\"color:inherit;width:110px;\"></td>
-      <td class=\"px-3 py-2.5\"><input tabindex=\"0\" data-id=\"${c.id}\" data-campo=\"data\" onfocus=\"if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)\" class=\"editavel px-1 rounded bg-transparent border-0 text-xs\" oninput=\"mascaraData(this)\" onblur=\"editarCampoInput(this)\" value=\"${c.data||''}\" placeholder=\"dd/mm\" maxlength=\"5\" style=\"color:inherit;width:70px;\"></td>
-      <td class=\"px-3 py-2.5\" style=\"white-space:nowrap;\">
+      <td class=\\"px-3 py-2.5\\"><input tabindex=\\"0\\" data-id=\\"${c.id}\\" data-campo=\\"data\\" onfocus=\\"if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)\\" class=\\"editavel px-1 rounded bg-transparent border-0 text-xs\\" oninput=\\"mascaraData(this)\\" onblur=\\"editarCampoInput(this)\\" value=\\"${c.data||''}\\" placeholder=\\"dd/mm\\" maxlength=\\"5\\" style=\\"color:inherit;width:70px;\\"></td>
+      <td class=\\"px-3 py-2.5 text-center\\" style=\\"white-space:nowrap;\\">
         <label class=\"inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold\" style=\"color:#0061A8;\"><input type=\"checkbox\" ${c.banco_caixa?'checked':''} onchange=\"toggleBanco(${c.id},'caixa',this.checked)\" class=\"w-3 h-3 accent-blue-600\"> Caixa</label>
         <label class=\"inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold\" style=\"color:#CC092F;\"><input type=\"checkbox\" ${c.banco_bradesco?'checked':''} onchange=\"toggleBanco(${c.id},'bradesco',this.checked)\" class=\"w-3 h-3 accent-red-600\"> Bradesco</label>
         <label class=\"inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold\" style=\"color:#F97316;\"><input type=\"checkbox\" ${c.banco_itau?'checked':''} onchange=\"toggleBanco(${c.id},'itau',this.checked)\" class=\"w-3 h-3 accent-orange-500\"> Itaú</label>

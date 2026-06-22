@@ -65,7 +65,7 @@ function abrirModalParceiros() {
       return `<div class="flex items-center justify-between py-2 px-3 rounded-lg" style="background:var(--bg-body);">
         <div class="flex items-center gap-2">
           <span style="display:inline-flex;align-items:center;">${tipoIcon}</span>
-          <span class="text-sm font-medium">${i.nome}</span>
+          <span class="text-sm font-medium">${i.nome}${i.tipo === 'Corretor' && i.imobiliaria ? `<span class="text-xs ml-2" style="color:var(--text-muted);">→ ${i.imobiliaria}</span>` : ''}</span>
           <span class="text-xs" style="color:var(--text-muted);">${i.tipo}</span>
         </div>
         ${isMaster() ? `<div class="flex items-center gap-1">
@@ -158,6 +158,10 @@ function abrirModalIndicacao() {
 function fecharModalIndicacao() {
   document.getElementById('modalIndicacao').classList.add('hidden');
   document.getElementById('indNome').value = '';
+  const imo = document.getElementById('indImobiliaria');
+  if (imo) { imo.value = ''; }
+  const imoGrp = document.getElementById('indImobiliariaGroup');
+  if (imoGrp) { imoGrp.classList.add('hidden'); }
 }
 
 function validarIndicacaoInput(el) {
@@ -194,7 +198,8 @@ function adicionarIndicacao() {
     mostrarToast('⚠️ Parceiro já cadastrado: ' + existente.nome + ' (' + (existente.tipo || 'Outro') + ')');
     return;
   }
-  lista.push({ nome: nomeCompleto, tipo, adicionado_em: new Date().toISOString() });
+  const imobiliaria = (document.getElementById('indImobiliaria')?.value || '').trim();
+  lista.push({ nome: nomeCompleto, tipo, imobiliaria, adicionado_em: new Date().toISOString() });
   salvarIndicacoes(lista);
   popularDatalistIndicacoes();
   fecharModalIndicacao();
