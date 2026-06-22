@@ -1000,7 +1000,7 @@ function renderizarTabelaAnalises() {
     return `
     <tr class=\"border-b border-[#1f1f1f] hover:bg-orange-900/5 transition\" data-id=\"${c.id}\">
       <td class=\"px-2 py-2.5 text-gray-600 text-xs text-center\">${i + 1}</td>
-      <td class=\"px-3 py-2.5\"><input list=\"indicacaoSuggestions\" data-id=\"${c.id}\" data-campo=\"indicacao\" class=\"editavel px-1 rounded bg-transparent border-0\" onblur=\"validarIndicacaoInput(this)\" onfocus=\"this.dataset.oldValue=this.value\" value=\"${c.indicacao||''}\" style=\"color:inherit;width:120px;\" autocomplete=\"off\" placeholder=\"Escolha...\"></td>
+      <td class=\"px-3 py-2.5\"><input list=\"indicacaoSuggestions\" data-id=\"${c.id}\" data-campo=\"indicacao\" class=\"editavel px-1 rounded bg-transparent border-0\" onblur=\"validarIndicacaoInput(this)\" onfocus=\"this.dataset.oldValue=this.value\" value=\"${c.indicacao||''}\" style=\"color:inherit;width:120px;\" autocomplete=\"off\"></td>
       <td class=\"px-3 py-2.5\"><span contenteditable=\"true\" tabindex=\"0\" data-id=\"${c.id}\" data-campo=\"cliente\" class=\"editavel px-1 -mx-1 rounded\" onblur=\"capitalizarCliente(this);editarCampo(this)\" onkeydown=\"if(event.key==='Enter'){event.preventDefault();this.blur();}\">${c.cliente||''}</span></td>
       <td class=\"px-3 py-2.5\"><input tabindex=\"0\" data-id=\"${c.id}\" data-campo=\"cpf\" class=\"editavel px-1 rounded font-mono text-xs bg-transparent border-0\" oninput=\"mascaraCPF(this)\" onblur=\"editarCampoInput(this)\" value=\"${c.cpf||''}\" maxlength=\"14\" style=\"color:inherit;width:110px;\"></td>
       <td class=\"px-3 py-2.5\"><input tabindex=\"0\" data-id=\"${c.id}\" data-campo=\"data\" onfocus=\"if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)\" class=\"editavel px-1 rounded bg-transparent border-0 text-xs\" oninput=\"mascaraData(this)\" onblur=\"editarCampoInput(this)\" value=\"${c.data||''}\" placeholder=\"dd/mm\" maxlength=\"5\" style=\"color:inherit;width:70px;\"></td>
@@ -1022,10 +1022,10 @@ function renderizarTabelaAnalises() {
       <td class=\"px-3 py-2.5\" id=\"resultado-${c.id}\">${getResultadoPerBancoHtml(c)}</td>
       <td class=\"px-3 py-2.5\"><span contenteditable=\"true\" tabindex=\"0\" data-id=\"${c.id}\" data-campo=\"obs\" class=\"editavel px-1 -mx-1 rounded\" onblur=\"editarCampo(this)\" onkeydown=\"if(event.key==='Enter'){event.preventDefault();this.blur();}\">${c.obs||''}</span></td>
       <td class=\"px-2 py-2.5 text-center\">
-        <input type=\"checkbox\" ${c.follow_up?'checked':''} onchange=\"atualizarCampo(${c.id},'follow_up',this.checked)\" class=\"w-3.5 h-3.5 accent-blue-500 cursor-pointer\" title=\"Follow-up\">
+        <input type=\"checkbox\" ${c.follow_up?'checked':''} onchange=\"atualizarCampo(${c.id},'follow_up',this.checked)\" class=\"w-3.5 h-3.5 accent-blue-500 cursor-pointer\" title=\"F-U\">
       </td>
       <td class=\"px-2 py-2.5 text-center\">
-        <input type=\"checkbox\" ${c.convertido?'checked':''} onchange=\"converterCliente(${c.id},this.checked)\" class=\"w-3.5 h-3.5 accent-green-600 cursor-pointer\" title=\"Converter em processo ativo\">
+        <input type=\"checkbox\" ${c.convertido?'checked':''} onchange=\"converterCliente(${c.id},this.checked)\" class=\"w-3.5 h-3.5 accent-green-600 cursor-pointer\" title=\"Conv.\">
       </td>
       <td class=\"px-3 py-2.5 criado-por-col\">${c.criado_por || '—'}</td>
       <td class=\"px-2 py-2.5 text-center\">
@@ -1063,7 +1063,7 @@ function renderizarTabelaAndamento() {
     return `
     <tr style=\"border-bottom:1px solid var(--border-light);\" data-id=\"${c.id}\" class=\"main-row\">
       <td class=\"px-2 py-2.5 text-xs text-center\" style=\"color:var(--text-muted);\">${i + 1}</td>
-      <td class=\"px-3 py-2.5\"><input list=\"indicacaoSuggestions\" data-id=\"${c.id}\" data-campo=\"indicacao\" class=\"editavel px-1 rounded bg-transparent border-0\" onblur=\"validarIndicacaoInput(this)\" onfocus=\"this.dataset.oldValue=this.value\" value=\"${c.indicacao||''}\" style=\"color:inherit;width:120px;\" autocomplete=\"off\" placeholder=\"Escolha...\"></td>
+      <td class=\"px-3 py-2.5\"><input list=\"indicacaoSuggestions\" data-id=\"${c.id}\" data-campo=\"indicacao\" class=\"editavel px-1 rounded bg-transparent border-0\" onblur=\"validarIndicacaoInput(this)\" onfocus=\"this.dataset.oldValue=this.value\" value=\"${c.indicacao||''}\" style=\"color:inherit;width:120px;\" autocomplete=\"off\"></td>
       <td class=\"px-3 py-2.5\"><span contenteditable=\"true\" tabindex=\"0\" data-id=\"${c.id}\" data-campo=\"cliente\" class=\"editavel px-1 -mx-1 rounded\" onblur=\"capitalizarCliente(this);editarCampo(this)\" onkeydown=\"if(event.key==='Enter'){event.preventDefault();this.blur();}\">${c.cliente||''}</span></td>
       <td class=\"px-1 py-2.5 text-center\">
         <span class=\"expand-btn\" onclick=\"toggleExpand(${c.id})\" title=\"Expandir\">▼</span>
