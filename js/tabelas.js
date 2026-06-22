@@ -1049,7 +1049,7 @@ function renderizarTabelaAndamento() {
   const filtrados = getFiltrados(null, 'andamento');
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan=\"14\" class=\"text-center py-16\" style=\"color:var(--text-muted);\">Nenhum processo em andamento.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan=\"15\" class=\"text-center py-16\" style=\"color:var(--text-muted);\">Nenhum processo em andamento.</td></tr>';
     atualizarStatsAndamento();
     return;
   }
@@ -1090,6 +1090,15 @@ function renderizarTabelaAndamento() {
           ${statusOpts.map(s => getStatusLabel(s)).map((label,i) => `<option value=\"${statusOpts[i]}\" ${statusOpts[i]===c.status?'selected':''}>${label}</option>`).join('')}
         </select>
       </td>
+      <td class=\"px-3 py-2.5\">
+        <input list=\"analistaSuggestions\" data-id=\"${c.id}\" data-campo=\"analista\"
+          class=\"editavel px-1 rounded bg-transparent border-0\"
+          oninput=\"this.value=this.value.replace(/[^A-Za-zÀ-ÿ\\s]/g,'')\"
+          onblur=\"this.value=this.value.charAt(0).toUpperCase()+this.value.slice(1).toLowerCase();editarCampoInput(this)\"
+          value=\"${c.analista||''}\"
+          style=\"color:inherit;width:110px;\" autocomplete=\"off\"
+          placeholder=\"Analista\">
+      </td>
       <td class=\"px-3 py-2.5\"><span contenteditable=\"true\" tabindex=\"0\" data-id=\"${c.id}\" data-campo=\"obs\" class=\"editavel px-1 -mx-1 rounded\" onblur=\"editarCampo(this)\" onkeydown=\"if(event.key==='Enter'){event.preventDefault();this.blur();}\">${c.obs||''}</span></td>
       <td class=\"px-3 py-2.5 criado-por-col\">${c.criado_por || '—'}</td>
       <td class=\"px-2 py-2.5 text-center\">
@@ -1097,7 +1106,7 @@ function renderizarTabelaAndamento() {
       </td>
     </tr>
     <tr class=\"expanded-row hidden\" data-parent=\"${c.id}\">
-      <td colspan=\"14\">
+      <td colspan=\"15\">
         <div class=\"expanded-grid\">
           <div class=\"expanded-item\">
             <label style=\"cursor:pointer;\" onclick=\"toggleFGTS(${c.id})\">

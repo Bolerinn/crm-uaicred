@@ -146,10 +146,10 @@ function filtrarEmitidos(filtro, btn) {
 }
 
 function exportarCSV() {
-  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Início','Status','Obs'];
+  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Início','Status','Analista','Obs'];
   const rows = clientes.map(c => [
     c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.banco, c.data_vistoria,
-    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.analista, c.obs
   ]);
   const csv = [headers.join(','), ...rows.map(r => r.map(v => '"'+(v||'')+'"').join(','))].join("\n");
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -162,14 +162,14 @@ function exportarCSV() {
 }
 
 function exportarExcel() {
-  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Início','Status','Obs'];
+  const headers = ['Indicação','Cliente','CPF','Agência','Valor Imóvel','Valor Financiado','Produto','Banco','Início','Status','Analista','Obs'];
   const rows = clientes.map(c => [
     c.indicacao, c.cliente, c.cpf, c.agencia, c.valor_imovel, c.valor_financiado, c.produto, c.banco, c.data_vistoria,
-    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.obs
+    STATUS_OPTS.find(s => s.id === c.status)?.label || c.status, c.analista, c.obs
   ]);
   const data = [headers, ...rows];
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{ wch:22 },{ wch:26 },{ wch:16 },{ wch:22 },{ wch:16 },{ wch:16 },{ wch:10 },{ wch:12 },{ wch:16 },{ wch:22 },{ wch:30 }];
+  ws['!cols'] = [{ wch:22 },{ wch:26 },{ wch:16 },{ wch:22 },{ wch:16 },{ wch:16 },{ wch:10 },{ wch:12 },{ wch:16 },{ wch:22 },{ wch:14 },{ wch:30 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Processos');
   XLSX.writeFile(wb, 'rede-prime-processos.xlsx');

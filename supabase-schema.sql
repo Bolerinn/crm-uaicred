@@ -18,6 +18,7 @@ CREATE TABLE clientes (
     'conformidade', 'em-registro'
   )),
   obs TEXT DEFAULT '',
+  analista TEXT DEFAULT '',
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
