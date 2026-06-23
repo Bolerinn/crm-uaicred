@@ -948,6 +948,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
           <label class="text-xs mb-1 block" style="color:var(--text-muted);">Nome completo</label>
           <input type="text" id="editParceiroNome" class="w-full px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);">
         </div>
+        <div class="mb-3 hidden" id="editImobiliariaGroup">
+          <label class="text-xs mb-1 block" style="color:var(--text-muted);">Imobiliária</label>
+          <input type="text" id="editImobiliaria" placeholder="Nome da imobiliária (opcional)" class="w-full px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);">
+        </div>
         <p class="text-xs mb-3" style="color:var(--text-muted);">Processos já vinculados manterão o nome original.</p>
         <button onclick="salvarEdicaoParceiro()" class="w-full py-2.5 rounded-xl text-sm font-medium text-white" style="background:var(--accent);">Salvar</button>
       </div>
@@ -2146,6 +2150,12 @@ document.getElementById('indTipo').addEventListener('change', function() {
   const grupo = document.getElementById('indImobiliariaGroup');
   grupo.classList.toggle('hidden', this.value !== 'Corretor');
   if (this.value !== 'Corretor') document.getElementById('indImobiliaria').value = '';
+});
+
+document.getElementById('editParceiroTipo').addEventListener('change', function() {
+  const grupo = document.getElementById('editImobiliariaGroup');
+  grupo.classList.toggle('hidden', this.value !== 'Corretor');
+  if (this.value !== 'Corretor') document.getElementById('editImobiliaria').value = '';
 });
 
 function validarIndicacaoInput(el) {

@@ -86,11 +86,20 @@ function editarParceiro(nome, tipo) {
   document.getElementById('editParceiroNomeOriginal').value = nome;
   document.getElementById('editParceiroNome').value = nome;
   document.getElementById('editParceiroTipo').value = tipo || 'Outro';
+  const lista = carregarIndicacoes();
+  const parceiro = lista.find(i => i.nome === nome);
+  const imobiliaria = parceiro?.imobiliaria || '';
+  document.getElementById('editImobiliaria').value = imobiliaria;
+  document.getElementById('editParceiroTipo').dispatchEvent(new Event('change'));
   document.getElementById('modalEditarParceiro').classList.remove('hidden');
 }
 
 function fecharModalEditarParceiro() {
   document.getElementById('modalEditarParceiro').classList.add('hidden');
+  const imo = document.getElementById('editImobiliaria');
+  if (imo) imo.value = '';
+  const grp = document.getElementById('editImobiliariaGroup');
+  if (grp) grp.classList.add('hidden');
 }
 
 function salvarEdicaoParceiro() {
@@ -113,16 +122,20 @@ function salvarEdicaoParceiro() {
   // Count how many processes use this partner
   const emUso = clientes.filter(c => (c.indicacao || '').trim() === nomeOriginal).length;
   
+  const novaImobiliaria = (document.getElementById('editImobiliaria')?.value || '').trim();
+
   if (novoNome !== nomeOriginal) {
     // Name changed: update partner entry, old processes keep original name
     lista[idx].nome = novoNome;
     lista[idx].tipo = novoTipo;
+    lista[idx].imobiliaria = novaImobiliaria;
     // Keep old name available by adding an alias if processes reference it
     if (emUso > 0 && !lista.some(i => i.nome === nomeOriginal)) {
-      lista.push({ nome: nomeOriginal, tipo: novoTipo, adicionado_em: new Date().toISOString(), _legado: true });
+      lista.push({ nome: nomeOriginal, tipo: novoTipo, imobiliaria: novaImobiliaria, adicionado_em: new Date().toISOString(), _legado: true });
     }
   } else {
     lista[idx].tipo = novoTipo;
+    lista[idx].imobiliaria = novaImobiliaria;
   }
   
   salvarIndicacoes(lista);
