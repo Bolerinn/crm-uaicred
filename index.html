@@ -2046,7 +2046,7 @@ function abrirModalParceiros() {
         for (const nome of parceiros) {
           const p = lista.find(i => i.nome === nome && i.tipo === tipo);
           html += '<div class="flex items-center justify-between py-1 text-xs" style="color:var(--text-secondary);">';
-          html += '<span>' + nome + '</span>';
+          html += '<span>' + esc(nome) + '</span>';
           if (isMaster()) {
             html += '<div class="flex items-center gap-0.5">';
             html += '<button onclick="editarParceiro(\'' + nome.replace(/'/g,"\\'") + '\',\'' + tipo + '\')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:2px;" title="Editar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>';
@@ -2725,7 +2725,7 @@ function renderizarTabelaLixeira() {
       '<td class="px-3 py-2">' + (c.banco || '—') + '</td>' +
       '<td class="px-3 py-2">' + (c.produto || '—') + '</td>' +
       '<td class="px-3 py-2"><span style="color:' + etapaCor + ';font-weight:600;font-size:0.7rem;">' + etapa + '</span></td>' +
-      '<td class="px-3 py-2">' + (c.deleted_by || '—') + '</td>' +
+      '<td class="px-3 py-2">' + esc(c.deleted_by || '—') + '</td>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + data + '</td>' +
       '<td class="px-3 py-2">' +
         '<button onclick="restaurarDaLixeira(' + c.id + ')" style="background:#10b981;color:#fff;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:0.7rem;">↩ Restaurar</button> ' +
@@ -3196,7 +3196,7 @@ function renderizarTabelaAnalises() {
     return `
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
-      <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${c.indicacao||''}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
+      <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${esc(c.indicacao||'')}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data" onfocus="if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data||''}" placeholder="dd/mm" maxlength="5" style="color:inherit;width:70px;"></td>
@@ -3223,7 +3223,7 @@ function renderizarTabelaAnalises() {
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${clientes.some(x => x.cliente === c.cliente && x.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0')) && x.convertido === true && x.id !== c.id)?'checked':''} onchange="converterCliente(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Conv.">
       </td>
-      <td class="px-3 py-2.5 criado-por-col">${c.criado_por || '—'}</td>
+      <td class="px-3 py-2.5 criado-por-col">${esc(c.criado_por || '—')}</td>
       <td class="px-2 py-2.5 text-center">
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
@@ -3259,7 +3259,7 @@ function renderizarTabelaAndamento() {
     return `
     <tr style="border-bottom:1px solid var(--border-light);" data-id="${c.id}" class="main-row">
       <td class="px-2 py-2.5 text-xs text-center" style="color:var(--text-muted);">${i + 1}</td>
-      <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${c.indicacao||''}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
+      <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${esc(c.indicacao||'')}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
       <td class="px-1 py-2.5 text-center">
         <span class="expand-btn" onclick="toggleExpand(${c.id})" title="Expandir">▼</span>
@@ -3296,7 +3296,7 @@ function renderizarTabelaAndamento() {
           placeholder="Analista">
       </td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
-      <td class="px-3 py-2.5 criado-por-col">${c.criado_por || '—'}</td>
+      <td class="px-3 py-2.5 criado-por-col">${esc(c.criado_por || '—')}</td>
       <td class="px-2 py-2.5 text-center">
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
