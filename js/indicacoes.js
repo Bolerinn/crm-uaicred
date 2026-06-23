@@ -153,6 +153,7 @@ function removerParceiro(nome) {
 function abrirModalIndicacao() {
   document.getElementById('modalIndicacao').classList.remove('hidden');
   document.getElementById('indNome').focus();
+  document.getElementById('indTipo').dispatchEvent(new Event('change'));
 }
 
 function fecharModalIndicacao() {
