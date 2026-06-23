@@ -3542,6 +3542,22 @@ function filtrarBancoAndamento(banco, btn) {
       document.querySelectorAll('.nav-master').forEach(el => el.classList.add('visible'));
     }
 
+    document.getElementById('sidebar').addEventListener('click', function(e) {
+      const link = e.target.closest('a[data-tab]');
+      if (!link) return;
+      if (link.getAttribute('data-tab') === 'whatsapp') return;
+      e.preventDefault();
+      mudarTab(link.getAttribute('data-tab'));
+    });
+
+    (function() {
+      const h = location.hash;
+      if (h && h.startsWith('#tab-')) {
+        const t = h.replace('#tab-', '');
+        if (t && t !== 'whatsapp') mudarTab(t);
+      }
+    })();
+
     if (precisaTrocar) {
       document.getElementById('pwChangeScreen').classList.remove('hidden');
       return;
