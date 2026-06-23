@@ -1110,9 +1110,7 @@ document.addEventListener('keydown', function(e) {
 
 // ========== SUPABASE ==========
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-// Admin client com service_role (bypass RLS) — usado apenas pelo master para excluir
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6dGlrdGN2dWVvcmxhZmlvY2RmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTcxMzk5MCwiZXhwIjoyMDk3Mjg5OTkwfQ.WG1wrbfp7RO5yIQ0MoaqFSHGh6D__W30ckCmNcGYRpU';
-const sbAdmin = supabase.createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+// Admin client removido por segurança — todas operações usam RLS via sb
 
 // ========== STATE ==========
 const STATUS_OPTS = [
@@ -1499,18 +1497,18 @@ async function carregarListaUsuarios() {
 
 // ========== CRUD ==========
 async function carregarDados() {
-  const resp = await fetch(SUPABASE_URL + '/rest/v1/clientes?select=*&deleted_at=is.null&order=id', {
-    headers: { 'apikey': SERVICE_ROLE_KEY, 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY }
-  });
-  if (resp.ok) {
-    clientes = await resp.json(); clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
+  const { data, error } = await sb.from('clientes').select('*').is('deleted_at', null).order('id');
+  if (!error) {
+    clientes = data || [];
+    clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
   } else {
-    // Fallback sem filtro
-    const r2 = await fetch(SUPABASE_URL + '/rest/v1/clientes?select=*&order=id', {
-      headers: { 'apikey': SERVICE_ROLE_KEY, 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY }
-    });
-    if (r2.ok) { clientes = await r2.json(); console.log('carregarDados FALLBACK: '+clientes.length+' registros'); }
-    else { mostrarToast('Erro ao carregar dados'); return; }
+    // Fallback via RPC
+    const { data: d2, error: e2 } = await sb.rpc('get_clientes');
+    if (!e2) {
+      clientes = (d2 || []).filter(c => !c.deleted_at);
+    } else {
+      mostrarToast('Erro ao carregar dados'); return;
+    }
   }
 
 // Save old value on focus for indicação validation
@@ -1580,7 +1578,7 @@ async function excluirCliente(id) {
   }
   // Soft-delete: marca deleted_at (nunca remove do banco)
   const analista = usuarioNome || (await sb.auth.getUser()).data?.user?.email?.split('@')[0] || '—';
-  const { error } = await sbAdmin.from('clientes').update({ deleted_at: new Date().toISOString(), deleted_by: analista }).eq('id', id);
+  const { error } = await sb.from('clientes').update({ deleted_at: new Date().toISOString(), deleted_by: analista }).eq('id', id);
   if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
   ultimoExcluido = { id, cliente: c.cliente, timer: setTimeout(() => { ultimoExcluido = null; }, 8000) };
   clientes = clientes.filter(c => c.id !== id);
@@ -1590,7 +1588,7 @@ async function excluirCliente(id) {
 
 async function restaurarCliente(id) {
   if (ultimoExcluido && ultimoExcluido.timer) clearTimeout(ultimoExcluido.timer);
-  const { error } = await sbAdmin.from('clientes').update({ deleted_at: null }).eq('id', id);
+  const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
   if (error) { mostrarToast('Erro ao restaurar'); return; }
   await carregarDados();
   mostrarToast('Processo restaurado ↩️');
@@ -2696,7 +2694,7 @@ let clientesLixeira = [];
 
 async function carregarLixeira() {
   const trintaDiasAtras = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-  const { data, error } = await sbAdmin
+  const { data, error } = await sb
     .from('clientes')
     .select('*')
     .not('deleted_at', 'is', null)
@@ -2738,7 +2736,7 @@ function renderizarTabelaLixeira() {
 }
 
 async function restaurarDaLixeira(id) {
-  const { error } = await sbAdmin.from('clientes').update({ deleted_at: null }).eq('id', id);
+  const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
   if (error) { mostrarToast('Erro ao restaurar'); return; }
   clientesLixeira = clientesLixeira.filter(c => c.id !== id);
   renderizarTabelaLixeira();
@@ -2747,11 +2745,8 @@ async function restaurarDaLixeira(id) {
 
 async function excluirPermanentemente(id) {
   if (!confirm('ATENÇÃO: Este processo será EXCLUÍDO PERMANENTEMENTE e não poderá ser recuperado. Continuar?')) return;
-  const resp = await fetch(SUPABASE_URL + '/rest/v1/clientes?id=eq.' + id, {
-    method: 'DELETE',
-    headers: { 'apikey': SERVICE_ROLE_KEY, 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY }
-  });
-  if (!resp.ok) { mostrarToast('Erro ao excluir permanentemente'); return; }
+  const { error: delErr } = await sb.from('clientes').delete().eq('id', id);
+  if (delErr) { mostrarToast('Erro ao excluir: apenas o criador pode excluir permanentemente'); return; }
   clientesLixeira = clientesLixeira.filter(c => c.id !== id);
   renderizarTabelaLixeira();
   mostrarToast('Processo excluído permanentemente '+String.fromCharCode(10060));
