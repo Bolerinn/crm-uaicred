@@ -1116,6 +1116,12 @@ document.addEventListener('keydown', function(e) {
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Admin client removido por segurança — todas operações usam RLS via sb
 
+// ========== UTILS ==========
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // ========== STATE ==========
 const STATUS_OPTS = [
   { id: 'aguardando-doc',  label: 'Aguardando Documentação' },
