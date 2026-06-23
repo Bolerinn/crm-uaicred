@@ -2215,8 +2215,9 @@ function parseDataBR(str) {
   if (!str || str === '—') return null;
   const parts = str.split('/');
   if (parts.length !== 3) return null;
-  const d = parseInt(parts[0]), m = parseInt(parts[1]) - 1, a = parseInt(parts[2]);
+  let d = parseInt(parts[0]), m = parseInt(parts[1]) - 1, a = parseInt(parts[2]);
   if (isNaN(d) || isNaN(m) || isNaN(a)) return null;
+  if (a < 100) a += 2000;
   return new Date(a, m, d);
 }
 
@@ -2857,10 +2858,14 @@ function renderizarMetricas() {
   const conversao = analises + andamento + emit > 0 ? (emit / (analises + andamento + emit) * 100) : 0;
 
   // CAIXA vs Privados
-  const caixa = filtrados.filter(c => (c.banco||'').toLowerCase() === 'caixa');
+  const caixa = filtrados.filter(c => 
+    (c.banco||'').toLowerCase() === 'caixa' || c.banco_caixa === true
+  );
   const privados = filtrados.filter(c => {
     const b = (c.banco||'').toLowerCase();
-    return ['bradesco','itaú','itau','santander','inter'].includes(b);
+    return ['bradesco','itaú','itau','santander','inter'].includes(b) ||
+      c.banco_bradesco === true || c.banco_itau === true || 
+      c.banco_santander === true || c.banco_inter === true;
   });
   const caixaAnalises = caixa.filter(c => c.convertido !== true).length;
   const caixaAndamento = caixa.filter(c => c.convertido === true && c.status !== 'emitido').length;
@@ -2964,9 +2969,9 @@ function renderizarMetricas() {
         style="${ativo ? 'background:var(--accent);color:#fff;border:1px solid var(--accent);' : 'background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);'}">${labels[p]}</button>`;
     }).join('')}
     ${metricaPeriodo === 'personalizado' ? `
-      <input type="text" id="metricaDataInicio" placeholder="dd/mm/aaaa" value="${metricaDataInicio}" onchange="metricaDataInicio=this.value;renderizarMetricas()" class="px-2 py-1 rounded text-xs border" style="width:100px;border-color:var(--border);background:var(--bg-input);color:var(--text);">
+      <input type="text" id="metricaDataInicio" placeholder="dd/mm/aaaa" value="${metricaDataInicio}" oninput="mascaraData(this)" onchange="metricaDataInicio=this.value;renderizarMetricas()" class="px-2 py-1 rounded text-xs border" style="width:100px;border-color:var(--border);background:var(--bg-input);color:var(--text);">
       <span class="text-xs" style="color:var(--text-muted);">até</span>
-      <input type="text" id="metricaDataFim" placeholder="dd/mm/aaaa" value="${metricaDataFim}" onchange="metricaDataFim=this.value;renderizarMetricas()" class="px-2 py-1 rounded text-xs border" style="width:100px;border-color:var(--border);background:var(--bg-input);color:var(--text);">
+      <input type="text" id="metricaDataFim" placeholder="dd/mm/aaaa" value="${metricaDataFim}" oninput="mascaraData(this)" onchange="metricaDataFim=this.value;renderizarMetricas()" class="px-2 py-1 rounded text-xs border" style="width:100px;border-color:var(--border);background:var(--bg-input);color:var(--text);">
     ` : ''}
     <span class="mx-2" style="color:var(--border);">|</span>
     <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Empresa:</span>
