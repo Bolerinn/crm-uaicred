@@ -702,6 +702,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
         <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
         <span class="nav-text">ANÁLISES</span>
       </a>
+      <a href="#tab-fu" data-tab="fu">
+        <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+        <span class="nav-text">FOLLOW UP</span>
+      </a>
       <a href="#tab-andamento" data-tab="andamento">
         <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>
         <span class="nav-text">EM ANDAMENTO</span>
@@ -808,6 +812,66 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Exportar CSV
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: FOLLOW UP -->
+    <div id="tab-fu" class="tab-panel">
+      <div class="px-6 pt-6 pb-2 flex items-center justify-between flex-wrap gap-3">
+        <div class="section-title">
+          <span class="gold-dot"></span> Follow Up
+        </div>
+        <div id="mesSelectorFu" class="flex items-center gap-2"></div>
+      </div>
+
+      <div class="px-6 py-3 flex flex-wrap gap-3 text-sm" id="statsBarFu"></div>
+
+      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosProdutoFu"></div>
+      <div class="px-6 mb-2 flex flex-wrap items-center gap-2" id="filtrosResultadoFu"></div>
+      <div class="px-6 mb-2 flex items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2" id="filtrosBancoFu"></div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Indicações:</span>
+          <button onclick="abrirModalIndicacao()" class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold transition shadow-lg" style="background:var(--accent);color:#fff;border:none;cursor:pointer;" title="Adicionar Parceiro">
+            <span style="font-size:1.2rem;">+</span> Novo Parceiro
+          </button>
+          <button onclick="abrirModalParceiros()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition" style="background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border);cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>Ver parceiros
+          </button>
+        </div>
+      </div>
+
+      <div class="px-6 pb-6">
+        <div class="table-container">
+          <table class="w-full text-sm" id="crmTableFu">
+            <thead>
+              <tr>
+                <th class="text-center px-2 py-3 w-10">#</th>
+                <th class="text-center px-3 py-3">Indicação</th>
+                <th class="text-center px-3 py-3">Cliente</th>
+                <th class="text-center px-3 py-3">CPF</th>
+                <th class="text-center px-3 py-3">Data</th>
+                <th class="text-center px-3 py-3">Banco</th>
+                <th class="text-center px-3 py-3">Agência</th>
+                <th class="text-center px-3 py-3">Valor Imóvel</th>
+                <th class="text-center px-3 py-3">Valor Financ.</th>
+                <th class="text-center px-3 py-3">Produto</th>
+                <th class="text-center px-3 py-3">Resultado</th>
+                <th class="text-center px-3 py-3">Obs</th>
+                <th class="text-center px-2 py-3 w-16">F-U</th>
+                <th class="text-center px-3 py-3">Analista</th>
+                <th class="text-center px-3 py-3">Data F-U</th>
+                <th class="text-center px-3 py-3">Última ação</th>
+                <th class="text-center px-3 py-3">Próximo F-U</th>
+                <th class="text-center px-3 py-3">Próxima ação</th>
+                <th class="text-center px-2 py-3 w-16">Conv.</th>
+                <th class="text-center px-3 py-3 criado-por-col" style="display:none;">Criado por</th>
+                <th class="text-center px-2 py-3 w-10"></th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyFu"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1166,6 +1230,11 @@ let filtroProdutoEmitidos = 'todos';
 let filtroBancoEmitidos = 'todos';
 let filtroEmitidos = 'todos';
 let mesSelecionado = new Date().toISOString().slice(0,7); // YYYY-MM
+let mesSelecionadoFu = new Date().toISOString().slice(0,7);
+let filtroProdutoFu = 'todos';
+let filtroResultadoFu = 'todos';
+let filtroBancoFu = 'todos';
+let filtroStatusFu = 'todos';
 let tabAtivo = 'dashboard';
 let mesAtual = new Date().getMonth(); // 0-11
 let anoAtual = new Date().getFullYear();
@@ -1199,6 +1268,13 @@ function mudarTab(tab) {
     return;
   } else if (tab === 'dashboard') {
     renderizarDashboard();
+    return;
+  } else if (tab === 'fu') {
+    mesSelecionadoFu = mesSelecionadoFu || new Date().toISOString().slice(0,7);
+    renderizarMesSelectorFu();
+    renderizarFiltrosFu();
+    renderizarTabelaFu();
+    atualizarStatsFu();
     return;
   } else {
     filtroStatus = 'todos';
@@ -1574,6 +1650,9 @@ async function adicionarCliente() {
     } else if (tabAtivo === 'andamento') {
       insertData.mes_referencia = mesSelecionado;
       insertData.convertido = true;
+    } else if (tabAtivo === 'fu') {
+      insertData.mes_referencia = mesSelecionadoFu || mesSelecionado;
+      insertData.follow_up = true;
     }
     const { data, error } = await sb
       .from('clientes')
@@ -1584,7 +1663,7 @@ async function adicionarCliente() {
     if (error) { mostrarToast('Erro ao adicionar'); return; }
     mostrarToast('Processo adicionado ✏️');
     setTimeout(() => {
-      const tbodyId = tabAtivo === 'andamento' ? 'tableBodyAndamento' : tabAtivo === 'emitidos' ? 'tableBodyEmitidos' : 'tableBody';
+      const tbodyId = tabAtivo === 'andamento' ? 'tableBodyAndamento' : tabAtivo === 'emitidos' ? 'tableBodyEmitidos' : tabAtivo === 'fu' ? 'tableBodyFu' : 'tableBody';
       const row = document.querySelector(`#${tbodyId} tr[data-id="${data.id}"]`);
       if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     }, 300);
@@ -1658,6 +1737,65 @@ async function atualizarCampo(id, campo, valor) {
     renderizarTabelaAndamento();
     renderizarTabelaEmitidos();
     notificarMudancaStatus(id, c.cliente || '', valor);
+  }
+
+  // F-U toggle on Analises → clone/remove from FU tab
+  if (campo === 'follow_up' && tabAtivo === 'analises') {
+    const c2 = clientes.find(c => c.id === id);
+    if (!c2) return;
+    const mesRef = (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
+    if (valor === true) {
+      const jaExisteFu = clientes.some(x =>
+        x.cliente === c2.cliente && x.id !== c2.id &&
+        x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
+      );
+      if (!jaExisteFu) {
+        const { data: user } = await sb.auth.getUser();
+        const clone = {
+          indicacao: c2.indicacao || '', cliente: c2.cliente, cpf: c2.cpf || '',
+          agencia: c2.agencia || '', valor_imovel: c2.valor_imovel || '',
+          valor_financiado: c2.valor_financiado || '',
+          produto: c2.produto || 'SBPE', data_vistoria: c2.data_vistoria || '—',
+          status: c2.status || 'aguardando-doc', obs: c2.obs || '', data: c2.data || '',
+          created_by: user?.user?.id,
+          criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
+          follow_up: true, mes_referencia: mesRef,
+          fgts: c2.fgts || false, iq: c2.iq || false, banco: c2.banco || '',
+          banco_caixa: c2.banco_caixa || false, banco_bradesco: c2.banco_bradesco || false,
+          banco_itau: c2.banco_itau || false, banco_santander: c2.banco_santander || false,
+          banco_inter: c2.banco_inter || false,
+          valor_fgts: c2.valor_fgts || '', data_iq: c2.data_iq || '',
+          data_matricula: c2.data_matricula || '', urgente: c2.urgente || false,
+          resultado: c2.resultado || '',
+          resultado_caixa: c2.resultado_caixa || '', resultado_bradesco: c2.resultado_bradesco || '',
+          resultado_itau: c2.resultado_itau || '', resultado_santander: c2.resultado_santander || '',
+          resultado_inter: c2.resultado_inter || ''
+        };
+        const { error } = await sb.from('clientes').insert(clone);
+        if (!error) {
+          mostrarToast('Cliente copiado para Follow Up 📋');
+          await carregarDados();
+          renderizarTabelaAnalises();
+          renderizarTabelaFu();
+          atualizarStatsFu();
+        }
+      } else {
+        mostrarToast('Cliente já está no Follow Up');
+      }
+    } else {
+      const cloneFu = clientes.find(x =>
+        x.cliente === c2.cliente && x.id !== c2.id &&
+        x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
+      );
+      if (cloneFu) {
+        await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', cloneFu.id);
+        mostrarToast('Cliente removido do Follow Up');
+        await carregarDados();
+        renderizarTabelaAnalises();
+        renderizarTabelaFu();
+        atualizarStatsFu();
+      }
+    }
   }
 }
 
@@ -1851,10 +1989,10 @@ async function iniciarNovaCompetenciaAnalises() {
   const [ano, mes] = (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0')).split('-').map(Number);
   const dataSeguinte = new Date(ano, mes, 1);
   const mesAlvo = dataSeguinte.toISOString().slice(0,7);
-  const followUps = clientes.filter(c => c.follow_up === true && c.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0')) && c.convertido !== true && c.status !== 'emitido');
+  const naoFollowUps = clientes.filter(c => c.follow_up !== true && c.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0')) && c.convertido !== true && c.status !== 'emitido');
   const existentesNoAlvo = clientes.filter(c => c.mes_referencia === mesAlvo).map(c => c.cliente);
-  const todos = followUps.filter(c => !existentesNoAlvo.includes(c.cliente));
-  if (todos.length === 0) { mostrarToast('Nenhum follow-up para duplicar.'); _dupLock = false; return; }
+  const todos = naoFollowUps.filter(c => !existentesNoAlvo.includes(c.cliente));
+  if (todos.length === 0) { mostrarToast('Nenhum processo para duplicar.'); _dupLock = false; return; }
   await duplicarClientes(todos, mesAlvo);
   await carregarDados();
   _dupLock = false;
@@ -1886,6 +2024,12 @@ function getFiltrados(sourceClientes, tab) {
       if (filtroProdutoEmitidos !== 'todos') passaStatus = passaStatus && c.produto === filtroProdutoEmitidos;
       if (filtroBancoEmitidos !== 'todos') passaStatus = passaStatus && c.banco === filtroBancoEmitidos;
       else if (filtroEmitidos !== 'todos') passaStatus = passaStatus && (c.produto === filtroEmitidos || c.indicacao === filtroEmitidos);
+    } else if (t === 'fu') {
+      passaStatus = c.follow_up === true && c.convertido !== true && c.status !== 'emitido' && (c.mes_referencia || '') === (mesSelecionadoFu || mesSelecionado);
+      if (filtroProdutoFu !== 'todos') passaStatus = passaStatus && c.produto === filtroProdutoFu;
+      if (filtroResultadoFu !== 'todos') passaStatus = passaStatus && c.resultado === filtroResultadoFu;
+      if (filtroBancoFu !== 'todos') passaStatus = passaStatus && c['resultado_' + filtroBancoFu.toLowerCase()] === 'aprovado';
+      if (filtroStatusFu !== 'todos') passaStatus = passaStatus && c.status === filtroStatusFu;
     } else {
       // Aba Análises: excluir convertidos (originais ficam, clones vão pra Aba 2)
       passaStatus = c.convertido !== true && (c.mes_referencia || '') === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
@@ -3209,6 +3353,11 @@ function renderizarTudo() {
     atualizarStatsEmitidos();
   } else if (tabAtivo === 'metricas') {
     renderizarMetricas();
+  } else if (tabAtivo === 'fu') {
+    renderizarMesSelectorFu();
+    renderizarFiltrosFu();
+    renderizarTabelaFu();
+    atualizarStatsFu();
   } else {
     renderizarMesSelectorAnalises();
     renderizarTabelaAnalises();
@@ -3232,6 +3381,9 @@ function renderizarTabelas() {
     atualizarStatsAndamento();
   } else if (tabAtivo === 'emitidos') {
     renderizarTabelaEmitidos();
+  } else if (tabAtivo === 'fu') {
+    renderizarTabelaFu();
+    atualizarStatsFu();
   } else {
     renderizarTabelaAnalises();
   }
@@ -3285,6 +3437,236 @@ function renderizarTabelaAnalises() {
     </tr>`;
   }).join('');
   atualizarStats();
+}
+
+// ========== ABAS FU (FOLLOW UP) ==========
+
+function renderizarTabelaFu() {
+  const tbody = document.getElementById('tableBodyFu');
+  const filtrados = getFiltrados(null, 'fu');
+
+  if (filtrados.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="21" class="text-center py-16" style="color:var(--text-muted);">Nenhum follow-up encontrado.</td></tr>';
+    atualizarStatsFu();
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map((c, i) => {
+    const ANALISTA_OPTS = ['Douglas','Fernanda','Luana','Marjore'];
+    return `
+    <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
+      <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
+      <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${esc(c.indicacao||'')}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data" onfocus="if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data||''}" placeholder="dd/mm" maxlength="5" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5 text-center" style="white-space:nowrap;">
+        <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#0061A8;"><input type="checkbox" ${c.banco_caixa?'checked':''} onchange="toggleBanco(${c.id},'caixa',this.checked)" class="w-3 h-3 accent-blue-600"> Caixa</label>
+        <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#CC092F;"><input type="checkbox" ${c.banco_bradesco?'checked':''} onchange="toggleBanco(${c.id},'bradesco',this.checked)" class="w-3 h-3 accent-red-600"> Bradesco</label>
+        <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#F97316;"><input type="checkbox" ${c.banco_itau?'checked':''} onchange="toggleBanco(${c.id},'itau',this.checked)" class="w-3 h-3 accent-orange-500"> Itaú</label>
+        <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#EC0000;"><input type="checkbox" ${c.banco_santander?'checked':''} onchange="toggleBanco(${c.id},'santander',this.checked)" class="w-3 h-3 accent-red-600"> Santander</label>
+        <label class="inline-flex items-center gap-0.5 text-xs cursor-pointer font-semibold" style="color:#FF7A00;"><input type="checkbox" ${c.banco_inter?'checked':''} onchange="toggleBanco(${c.id},'inter',this.checked)" class="w-3 h-3 accent-orange-500"> Inter</label>
+      </td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_imovel)}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_financiado)}" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5">
+        <select onchange="atualizarCampo(${c.id},'produto',this.value)" class="text-xs font-semibold bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text);">
+          ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </td>
+      <td class="px-3 py-2.5" id="resultado-${c.id}">${getResultadoPerBancoHtml(c)}</td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
+      <td class="px-2 py-2.5 text-center">
+        <input type="checkbox" ${c.follow_up?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="F-U">
+      </td>
+      <td class="px-3 py-2.5">
+        <select onchange="atualizarCampo(${c.id},'analista',this.value)" class="text-xs font-semibold bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text);min-width:100px;">
+          <option value="" ${!c.analista?'selected':''}>—</option>
+          ${ANALISTA_OPTS.map(a => `<option value="${a}" ${c.analista===a?'selected':''}>${a}</option>`).join('')}
+        </select>
+      </td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data_fu" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.data_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:105px;"></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="ultima_acao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.ultima_acao||''}</span></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="proximo_fu" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.proximo_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:105px;"></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="proxima_acao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.proxima_acao||''}</span></td>
+      <td class="px-2 py-2.5 text-center">
+        <input type="checkbox" ${c.convertido_fu?'checked':''} onchange="converterClienteFu(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Conv.">
+      </td>
+      <td class="px-3 py-2.5 criado-por-col">${esc(c.criado_por || '—')}</td>
+      <td class="px-2 py-2.5 text-center">
+        <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+  atualizarStatsFu();
+}
+
+async function converterClienteFu(id, checked) {
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  const mesRef = new Date().toISOString().slice(0,7);
+  if (checked) {
+    const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
+    if (!jaExiste) {
+      const { data: user } = await sb.auth.getUser();
+      const clone = {
+        indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
+        valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
+        produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
+        created_by: user?.user?.id,
+        criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
+        convertido: true, mes_referencia: mesRef,
+        fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
+        banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
+        banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
+        banco_inter: c.banco_inter || false,
+        valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
+        data_matricula: c.data_matricula || '', urgente: false,
+        data: c.data || '', analista: c.analista || ''
+      };
+      const { error } = await sb.from('clientes').insert(clone);
+      if (error) { mostrarToast('Erro ao converter'); return; }
+    }
+    await atualizarCampo(id, 'convertido_fu', true);
+    mostrarToast('Cliente convertido para Em Andamento ✅');
+  } else {
+    await atualizarCampo(id, 'convertido_fu', false);
+    mostrarToast('Conversão desfeita');
+  }
+  await carregarDados();
+  renderizarTabelaFu();
+  renderizarTabelaAndamento();
+  atualizarStatsFu();
+}
+
+function renderizarMesSelectorFu() {
+  const container = document.getElementById('mesSelectorFu');
+  if (!container) return;
+  const [ano, mes] = (mesSelecionadoFu || new Date().toISOString().slice(0,7)).split('-').map(Number);
+  const data = new Date(ano, mes - 1, 1);
+  const nomeMes = data.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const nomeMesCap = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+  container.innerHTML = `
+    <button onclick="mudarMesFu(-1)" class="px-2 py-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition">&larr;</button>
+    <span class="text-sm font-semibold" style="min-width:140px;text-align:center;">${nomeMesCap}</span>
+    <button onclick="mudarMesFu(1)" class="px-2 py-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition">&rarr;</button>
+    <button onclick="iniciarNovaCompetenciaFu()" class="ml-3 text-xs px-3 py-1 rounded-xl font-semibold transition shadow" style="background:var(--accent);color:#fff;border:none;cursor:pointer;">+ Nova competência</button>
+  `;
+}
+
+function mudarMesFu(delta) {
+  const [ano, mes] = (mesSelecionadoFu || new Date().toISOString().slice(0,7)).split('-').map(Number);
+  const data = new Date(ano, mes - 1 + delta, 1);
+  mesSelecionadoFu = data.toISOString().slice(0,7);
+  renderizarMesSelectorFu();
+  renderizarTabelaFu();
+  atualizarStatsFu();
+}
+
+function renderizarFiltrosFu() {
+  renderizarFiltrosProdutoFu();
+  renderizarFiltrosResultadoFu();
+  renderizarFiltrosBancoFu();
+}
+
+function renderizarFiltrosProdutoFu() {
+  const container = document.getElementById('filtrosProdutoFu');
+  if (!container) return;
+  container.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Produto:</span> <button class="filter-btn ${filtroProdutoFu==='todos'?'active':''}" onclick="filtrarProdutoFu('todos', this)">Todos</button> ${['SBPE','FGTS','Carta Crédito','Rural','Imobiliário'].map(p => `<button class="filter-btn ${filtroProdutoFu===p?'active':''}" onclick="filtrarProdutoFu('${p}', this)">${p}</button>`).join('')}`;
+}
+
+function filtrarProdutoFu(produto, btn) {
+  filtroProdutoFu = produto;
+  document.querySelectorAll('#filtrosProdutoFu .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarTabelaFu();
+  atualizarStatsFu();
+}
+
+function renderizarFiltrosResultadoFu() {
+  const container = document.getElementById('filtrosResultadoFu');
+  if (!container) return;
+  const resultados = ['Aprovado','Pendente','Negado','Revisão'];
+  container.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Status Bancos:</span> <button class="filter-btn ${filtroResultadoFu==='todos'?'active':''}" onclick="filtrarResultadoFu('todos', this)">Todos</button> ${resultados.map(r => `<button class="filter-btn ${filtroResultadoFu===r?'active':''}" onclick="filtrarResultadoFu('${r}', this)">${r}</button>`).join('')}`;
+}
+
+function filtrarResultadoFu(resultado, btn) {
+  filtroResultadoFu = resultado;
+  document.querySelectorAll('#filtrosResultadoFu .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarTabelaFu();
+  atualizarStatsFu();
+}
+
+function renderizarFiltrosBancoFu() {
+  const container = document.getElementById('filtrosBancoFu');
+  if (!container) return;
+  const bancos = ['Caixa','Bradesco','Itaú','Santander','Inter'];
+  container.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Resultado:</span> <button class="filter-btn ${filtroBancoFu==='todos'?'active':''}" onclick="filtrarBancoFu('todos', this)">Todos</button> ${bancos.map(b => `<button class="filter-btn ${filtroBancoFu===b?'active':''}" onclick="filtrarBancoFu('${b}', this)">${b}</button>`).join('')}`;
+}
+
+function filtrarBancoFu(banco, btn) {
+  filtroBancoFu = banco;
+  document.querySelectorAll('#filtrosBancoFu .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarTabelaFu();
+  atualizarStatsFu();
+}
+
+function atualizarStatsFu() {
+  const container = document.getElementById('statsBarFu');
+  if (!container) return;
+  const filtrados = getFiltrados(null, 'fu');
+  const total = filtrados.length;
+  const aprovados = filtrados.filter(c => c.resultado === 'Aprovado').length;
+  const pendentes = filtrados.filter(c => !c.resultado || c.resultado === 'Pendente').length;
+  const convertidos = filtrados.filter(c => c.convertido_fu === true).length;
+  container.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total FU</div><div class="stat-value">${total}</div></div>
+    <div class="stat-card"><div class="stat-label">Aprovados</div><div class="stat-value" style="color:#22c55e;">${aprovados}</div></div>
+    <div class="stat-card"><div class="stat-label">Pendentes</div><div class="stat-value" style="color:#f59e0b;">${pendentes}</div></div>
+    <div class="stat-card"><div class="stat-label">Convertidos</div><div class="stat-value" style="color:#3b82f6;">${convertidos}</div></div>
+  `;
+}
+
+async function iniciarNovaCompetenciaFu() {
+  if (_dupLock) return;
+  _dupLock = true;
+  const [ano, mes] = (mesSelecionadoFu || new Date().toISOString().slice(0,7)).split('-').map(Number);
+  const dataSeguinte = new Date(ano, mes, 1);
+  const mesAlvo = dataSeguinte.toISOString().slice(0,7);
+  const origem = clientes.filter(c => c.follow_up === true && c.mes_referencia === mesSelecionadoFu && c.status !== 'emitido' && c.convertido !== true && c.convertido_fu !== true);
+  const existentesNoAlvo = clientes.filter(c => c.mes_referencia === mesAlvo).map(c => c.cliente);
+  const todos = origem.filter(c => !existentesNoAlvo.includes(c.cliente));
+  if (todos.length === 0) { mostrarToast('Nenhum follow-up para duplicar.'); _dupLock = false; return; }
+  await duplicarClientesFu(todos, mesAlvo);
+  await carregarDados();
+  _dupLock = false;
+}
+
+async function duplicarClientesFu(lista, novoMes) {
+  let count = 0;
+  const { data: { user } } = await sb.auth.getUser();
+  const userId = user?.id;
+  for (const c of lista) {
+    const { id, created_at, updated_at, ...dados } = c;
+    dados.created_by = userId;
+    dados.mes_referencia = novoMes;
+    dados.follow_up = true;
+    dados.status = dados.status || 'aguardando-doc';
+    const { error } = await sb.from('clientes').insert(dados);
+    if (error) { mostrarToast('Erro ao duplicar: ' + error.message); return; }
+    count++;
+  }
+  mostrarToast(`📋 ${count} follow-ups duplicados para ${novoMes}`);
+}
+
+function mascaraDataCompleta(input) {
+  let v = input.value.replace(/\\D/g, '').slice(0, 8);
+  if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+  if (v.length > 5) v = v.slice(0,5) + '/' + v.slice(5);
+  input.value = v;
 }
 
 function renderizarTabelaAndamento() {
