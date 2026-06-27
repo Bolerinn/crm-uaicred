@@ -1204,13 +1204,18 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
         <div class="section-title">
           <span class="gold-dot"></span> Lixeira
         </div>
-        <span class="text-xs" style="color:var(--text-muted);">Processos excluídos nos últimos 30 dias</span>
+        <div class="flex items-center gap-2">
+          <span class="text-xs" style="color:var(--text-muted);">Processos excluídos nos últimos 30 dias</span>
+          <button onclick="restaurarTodosLixeira()" class="text-xs px-3 py-1.5 rounded-lg font-medium transition" style="background:#10b981;color:#fff;border:none;cursor:pointer;">↩ Restaurar Todos</button>
+          <button onclick="excluirTodosLixeira()" class="text-xs px-3 py-1.5 rounded-lg font-medium transition" style="background:#ef4444;color:#fff;border:none;cursor:pointer;">✕ Excluir Todos</button>
+        </div>
       </div>
       <div class="px-6 pb-6">
         <div class="table-container">
           <table class="w-full text-xs">
             <thead>
               <tr>
+                <th class="px-2 py-2 text-center w-8"><input type="checkbox" onclick="toggleTodosLixeira(this)" title="Selecionar todos"></th>
                 <th class="px-3 py-2 text-center">#</th>
                 <th class="px-3 py-2 text-center">Cliente</th>
                 <th class="px-3 py-2 text-center">Banco</th>
@@ -3259,6 +3264,7 @@ function renderizarTabelaLixeira() {
     const etapa = c.status === 'emitido' ? 'EMITIDO' : c.follow_up === true ? 'FOLLOW UP' : c.convertido === true ? 'EM ANDAMENTO' : 'ANÁLISE';
     const etapaCor = etapa === 'EMITIDO' ? '#b8860b' : etapa === 'FOLLOW UP' ? '#f97316' : etapa === 'EM ANDAMENTO' ? '#ea580c' : '#6b7280';
     return '<tr>' +
+      '<td class="px-2 py-2 text-center"><input type="checkbox" class="lixeira-check" value="' + c.id + '" onchange="atualizarBotoesLixeira()"></td>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + (i+1) + '</td>' +
       '<td class="px-3 py-2 font-medium" style="color:var(--text);">' + (c.cliente || '—') + '</td>' +
       '<td class="px-3 py-2">' + (c.banco || '—') + '</td>' +
@@ -3291,6 +3297,45 @@ async function excluirPermanentemente(id) {
   clientesLixeira = clientesLixeira.filter(c => c.id !== id);
   renderizarTabelaLixeira();
   mostrarToast('Processo excluído permanentemente '+String.fromCharCode(10060));
+}
+
+function toggleTodosLixeira(el) {
+  document.querySelectorAll('.lixeira-check').forEach(cb => { cb.checked = el.checked; });
+  atualizarBotoesLixeira();
+}
+
+function atualizarBotoesLixeira() {
+  // só pra dar feedback visual, se quiser
+}
+
+async function restaurarTodosLixeira() {
+  const checks = document.querySelectorAll('.lixeira-check:checked');
+  if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
+  if (!confirm('Restaurar ' + checks.length + ' processo(s)?')) return;
+  let count = 0;
+  for (const cb of checks) {
+    const id = parseInt(cb.value);
+    const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
+    if (!error) count++;
+  }
+  mostrarToast(count + ' processo(s) restaurado(s) ↩️');
+  await carregarLixeira();
+  await carregarDados();
+  renderizarTudo();
+}
+
+async function excluirTodosLixeira() {
+  const checks = document.querySelectorAll('.lixeira-check:checked');
+  if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
+  if (!confirm('ATENÇÃO: ' + checks.length + ' processo(s) serão EXCLUÍDOS PERMANENTEMENTE. Continuar?')) return;
+  let count = 0;
+  for (const cb of checks) {
+    const id = parseInt(cb.value);
+    const { error } = await sb.from('clientes').delete().eq('id', id);
+    if (!error) count++;
+  }
+  mostrarToast(count + ' processo(s) excluído(s) ✕');
+  await carregarLixeira();
 }
 
 
