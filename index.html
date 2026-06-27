@@ -1748,6 +1748,18 @@ async function atualizarCampo(id, campo, valor) {
     notificarMudancaStatus(id, c.cliente || '', valor);
   }
 
+  // Desmarcar F-U na aba FU → soft-delete o clone (volta pra aba 1 sem duplicar)
+  if (campo === 'follow_up' && valor === false && tabAtivo === 'fu') {
+    await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', id);
+    clientes = clientes.filter(x => x.id !== id);
+    await carregarDados();
+    renderizarTabelaFu();
+    renderizarTabelaAnalises();
+    atualizarStatsFu();
+    mostrarToast('Cliente removido do Follow Up');
+    return;
+  }
+
   // F-U toggle on Analises → clone/remove from FU tab
   if (campo === 'follow_up' && tabAtivo === 'analises') {
     const c2 = clientes.find(c => c.id === id);
