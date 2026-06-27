@@ -2652,6 +2652,105 @@ function cardAlerta(titulo, cor, icone, items, renderItem) {
   </div>`;
 }
 
+// ========== CALENDÁRIO DASH ==========
+function coletarEventosCalendario() {
+  const hoje = new Date();
+  const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
+  const anoAtual = String(hoje.getFullYear());
+  const mesRef = anoAtual + '-' + mesAtual;
+
+  const doMes = clientes.filter(c => c.mes_referencia === mesRef && !c.deleted_at);
+
+  const eventos = {};
+
+  const adicionar = (dia, tipo, nome) => {
+    if (!dia || dia < 1 || dia > 31) return;
+    if (!eventos[dia]) eventos[dia] = { matricula: [], iq: [], fu: [] };
+    if (!eventos[dia][tipo].includes(nome)) eventos[dia][tipo].push(nome);
+  };
+
+  doMes.forEach(c => {
+    if (c.convertido === true && c.status !== 'emitido' && c.data_matricula) {
+      const dt = parseDataBR(c.data_matricula);
+      if (dt && dt.getMonth() + 1 === hoje.getMonth() + 1 && dt.getFullYear() === hoje.getFullYear()) {
+        adicionar(dt.getDate(), 'matricula', c.cliente || 'Sem nome');
+      }
+    }
+    if (c.convertido === true && c.status !== 'emitido' && c.iq && c.data_iq) {
+      const dt = parseDataBR(c.data_iq);
+      if (dt && dt.getMonth() + 1 === hoje.getMonth() + 1 && dt.getFullYear() === hoje.getFullYear()) {
+        adicionar(dt.getDate(), 'iq', c.cliente || 'Sem nome');
+      }
+    }
+    if (c.follow_up === true && c.convertido !== true && c.status !== 'emitido' && c.proximo_fu) {
+      const dt = parseDataBR(c.proximo_fu);
+      if (dt && dt.getMonth() + 1 === hoje.getMonth() + 1 && dt.getFullYear() === hoje.getFullYear()) {
+        adicionar(dt.getDate(), 'fu', c.cliente || 'Sem nome');
+      }
+    }
+  });
+
+  return eventos;
+}
+
+function renderizarCalendarioDash() {
+  const hoje = new Date();
+  const mes = hoje.getMonth();
+  const ano = hoje.getFullYear();
+  const diaHoje = hoje.getDate();
+
+  const primeiroDia = new Date(ano, mes, 1).getDay();
+  const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+
+  const eventos = coletarEventosCalendario();
+
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const diasSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  let html = '<div class="calendario-dash">';
+  html += '<div class="cal-header"><span>' + meses[mes] + ' ' + ano + '</span></div>';
+  html += '<div class="cal-grid">';
+  diasSemana.forEach(function(d) { html += '<div class="cal-day-header">' + d + '</div>'; });
+  for (let i = 0; i < primeiroDia; i++) {
+    html += '<div class="cal-cell empty"></div>';
+  }
+  for (let dia = 1; dia <= ultimoDia; dia++) {
+    const evts = eventos[dia] || { matricula: [], iq: [], fu: [] };
+    const temEvento = evts.matricula.length > 0 || evts.iq.length > 0 || evts.fu.length > 0;
+    const ehHoje = dia === diaHoje;
+
+    let dotsHtml = '';
+    if (temEvento) {
+      dotsHtml = '<div class="cal-dot-row">';
+      if (evts.matricula.length > 0) dotsHtml += '<span class="cal-dot matricula"></span>';
+      if (evts.iq.length > 0) dotsHtml += '<span class="cal-dot iq"></span>';
+      if (evts.fu.length > 0) dotsHtml += '<span class="cal-dot fu"></span>';
+      dotsHtml += '</div>';
+    }
+
+    let tooltipHtml = '';
+    if (temEvento) {
+      const partes = [];
+      if (evts.matricula.length > 0) partes.push('📋 ' + evts.matricula.join(', '));
+      if (evts.iq.length > 0) partes.push('🔔 ' + evts.iq.join(', '));
+      if (evts.fu.length > 0) partes.push('📞 ' + evts.fu.join(', '));
+      tooltipHtml = '<div class="cal-tooltip">' + partes.join('<br>') + '</div>';
+    }
+
+    html += '<div class="cal-cell' + (ehHoje ? ' hoje' : '') + '">' + tooltipHtml + '<span>' + dia + '</span>' + dotsHtml + '</div>';
+  }
+  html += '</div>';
+
+  html += '<div class="cal-legenda">';
+  html += '<div class="cal-legenda-item"><span class="cal-legenda-dot matricula"></span> Matrícula</div>';
+  html += '<div class="cal-legenda-item"><span class="cal-legenda-dot iq"></span> IQ</div>';
+  html += '<div class="cal-legenda-item"><span class="cal-legenda-dot fu"></span> Follow-up</div>';
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
 function renderizarDashboard() {
   const container = document.getElementById('dashboardContent');
   if (!container) return;
@@ -2732,6 +2831,11 @@ function renderizarDashboard() {
       ${cardAlerta('Urgência', '#dc2626', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', urgentes, renderUrgente)}
       ${cardAlerta('Matrícula Vencendo', '#d97706', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>', matriculas, renderMatricula)}
       ${cardAlerta('Vencimento IQ', '#7c3aed', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 2 3.5 2 5.5s-1 4-1 4h12s-1-2-1-4 2-3.12 2-5.5a7 7 0 0 0-7-7z"/><path d="M9 20h6"/><path d="M12 17v3"/></svg>', iqs, renderIQ)}
+    </div>
+    <div class="mt-6 flex justify-center">
+      <div class="p-4 rounded-2xl border shadow-sm" style="background:var(--bg-card);border-color:var(--border);max-width:380px;width:100%;">
+        ${renderizarCalendarioDash()}
+      </div>
     </div>
   `;
 }
