@@ -1757,6 +1757,11 @@ async function atualizarCampo(id, campo, valor) {
         };
         const { error } = await sb.from('clientes').insert(clone);
         if (!error) {
+          // Reverter follow_up do original (só o clone deve ter follow_up = true)
+          c2.follow_up = false;
+          const cOrig = clientes.find(x => x.id === id);
+          if (cOrig) cOrig.follow_up = false;
+          await sb.from('clientes').update({ follow_up: false }).eq('id', id);
           mostrarToast('Cliente copiado para Follow Up 📋');
           await carregarDados();
           renderizarTabelaAnalises();
@@ -1767,6 +1772,7 @@ async function atualizarCampo(id, campo, valor) {
         mostrarToast('Cliente já está no Follow Up');
       }
     } else {
+      // Desmarcou: remover clone da FU (soft-delete)
       const cloneFu = clientes.find(x =>
         x.cliente === c2.cliente && x.id !== c2.id &&
         x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
@@ -3409,7 +3415,7 @@ function renderizarTabelaAnalises() {
       <td class="px-3 py-2.5" id="resultado-${c.id}">${getResultadoPerBancoHtml(c)}</td>
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
       <td class="px-2 py-2.5 text-center">
-        <input type="checkbox" ${c.follow_up?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="F-U">
+        <input type="checkbox" ${clientes.some(x => x.cliente === c.cliente && x.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0')) && x.follow_up === true && x.id !== c.id)?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="F-U">
       </td>
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${clientes.some(x => x.cliente === c.cliente && x.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0')) && x.convertido === true && x.id !== c.id)?'checked':''} onchange="converterCliente(${c.id},this.checked)" class="w-3.5 h-3.5 accent-green-600 cursor-pointer" title="Conv.">
