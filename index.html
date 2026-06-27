@@ -1913,6 +1913,8 @@ async function atualizarCampo(id, campo, valor) {
           renderizarTabelaAnalises();
           renderizarTabelaFu();
           atualizarStatsFu();
+          // Garantir que estado final prevalece (realtime pode ter renderizado estado intermediário)
+          setTimeout(() => { renderizarTabelaAnalises(); renderizarTabelaFu(); }, 500);
         }
       } else {
         mostrarToast('Cliente já está no Follow Up');
