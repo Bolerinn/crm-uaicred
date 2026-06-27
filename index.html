@@ -3955,9 +3955,8 @@ function renderizarMesSelectorFu() {
   const nomeMesCap = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
   container.innerHTML = `
     <button onclick="mudarMesFu(-1)" class="px-2 py-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition">&larr;</button>
-    <span class="text-sm font-semibold" style="min-width:140px;text-align:center;">${nomeMesCap}</span>
+    <span class="text-lg font-bold px-3" style="min-width:140px;text-align:center;color:var(--text);">${nomeMesCap}</span>
     <button onclick="mudarMesFu(1)" class="px-2 py-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition">&rarr;</button>
-    <button onclick="iniciarNovaCompetenciaFu()" class="ml-3 text-xs px-3 py-1 rounded-xl font-semibold transition shadow" style="background:var(--accent);color:#fff;border:none;cursor:pointer;">+ Nova competência</button>
   `;
 }
 
