@@ -1686,6 +1686,17 @@ async function excluirCliente(id) {
   const { error } = await sb.from('clientes').update({ deleted_at: new Date().toISOString(), deleted_by: analista }).eq('id', id);
   if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
   ultimoExcluido = { id, cliente: c.cliente, timer: setTimeout(() => { ultimoExcluido = null; }, 8000) };
+  // Se deletou um registro com follow_up, reverter follow_up no original (evita que ele reapareça na FU)
+  if (c.follow_up === true) {
+    const igual = clientes.find(x =>
+      x.cliente === c.cliente && x.id !== c.id &&
+      x.follow_up === true && x.mes_referencia === c.mes_referencia && !x.deleted_at
+    );
+    if (igual) {
+      igual.follow_up = false;
+      sb.from('clientes').update({ follow_up: false }).eq('id', igual.id).then(() => {});
+    }
+  }
   clientes = clientes.filter(c => c.id !== id);
   renderizarTabelas();
   mostrarToastDesfazer(c.cliente, id);
