@@ -607,6 +607,112 @@ Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
   color: #999;
   pointer-events: none;
 }
+  /* ===== CALENDÁRIO DASH ===== */
+  .calendario-dash {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .cal-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cal-header button {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-secondary); border-radius: 6px;
+    padding: 2px 8px; cursor: pointer; font-size: 14px; line-height: 1;
+  }
+  .cal-header button:hover { border-color: var(--accent); color: var(--accent); }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    max-width: 320px;
+    width: 100%;
+    font-size: 11px;
+  }
+  .cal-day-header {
+    text-align: center;
+    font-weight: 600;
+    color: var(--accent);
+    padding: 4px 0;
+    font-size: 10px;
+    text-transform: uppercase;
+  }
+  .cal-cell {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: default;
+    position: relative;
+    color: var(--text);
+    transition: background 0.15s;
+  }
+  .cal-cell:hover { background: var(--row-hover); }
+  .cal-cell.empty { cursor: default; }
+  .cal-cell.hoje {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cal-cell.hoje:hover { background: var(--accent-hover); }
+  .cal-dot-row {
+    display: flex;
+    gap: 2px;
+    margin-top: 1px;
+    justify-content: center;
+  }
+  .cal-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .cal-dot.matricula { background: #d97706; }
+  .cal-dot.iq { background: #7c3aed; }
+  .cal-dot.fu { background: #3b82f6; }
+  .cal-legenda {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: var(--text-muted);
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 4px;
+  }
+  .cal-legenda-item { display: flex; align-items: center; gap: 4px; }
+  .cal-legenda-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .cal-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-toast);
+    color: var(--text-inverse);
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 999;
+    pointer-events: none;
+    box-shadow: var(--shadow-md);
+  }
+  .cal-cell:hover .cal-tooltip { display: block; }
 </style>
 </head>
 <body>
@@ -2638,7 +2744,7 @@ async function reverterEmitido(id) {
 
 // ========== RESULTADO CYCLE (per bank) ==========
 const RESULTADO_CYCLE = ['', 'aprovado', 'condicionado', 'reprovado'];
-const RESULTADO_LABELS = { 'aprovado': '✅ APROVADO', 'condicionado': '⚠️ CONDICIONADO', 'reprovado': '❌ REPROVADO' };
+const RESULTADO_LABELS = { 'aprovado': 'APROVADO', 'condicionado': 'CONDICIONADO', 'reprovado': 'REPROVADO' };
 const RESULTADO_COLORS = { 'aprovado': 'color:#059669;', 'condicionado': 'color:#d97706;', 'reprovado': 'color:#dc2626;' };
 
 function getResultadoBadge(valor) {
@@ -3546,11 +3652,11 @@ function renderizarTabelaFu() {
             </select>
           </div>
           <div class="expanded-item">
-            <label>Data F-U</label>
+            <label>Data do último follow up</label>
             <input tabindex="0" data-id="${c.id}" data-campo="data_fu" class="editavel px-2 py-1 rounded bg-transparent border" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.data_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:var(--text);width:140px;border-color:var(--border);">
           </div>
           <div class="expanded-item">
-            <label>Próximo F-U</label>
+            <label>Próximo follow up</label>
             <input tabindex="0" data-id="${c.id}" data-campo="proximo_fu" class="editavel px-2 py-1 rounded bg-transparent border" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.proximo_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:var(--text);width:140px;border-color:var(--border);">
           </div>
           <div class="expanded-item" style="flex-basis:100%;margin-top:4px;padding-top:10px;border-top:1px solid var(--border-light);">
@@ -3754,7 +3860,7 @@ async function duplicarClientesFu(lista, novoMes) {
 }
 
 function mascaraDataCompleta(input) {
-  let v = input.value.replace(/\\D/g, '').slice(0, 8);
+  let v = input.value.replace(/\D/g, '').slice(0, 8);
   if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
   if (v.length > 5) v = v.slice(0,5) + '/' + v.slice(5);
   input.value = v;
