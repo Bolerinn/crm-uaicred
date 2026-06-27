@@ -1589,6 +1589,20 @@ async function carregarDados() {
   if (!error) {
     clientes = data || [];
     clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
+
+    // Limpeza: reverter follow_up em originais que têm clone na FU (dados sujos do bug antigo)
+    const fuRecords = clientes.filter(c => c.follow_up === true && !c.deleted_at);
+    for (const r of fuRecords) {
+      const temCloneMaisNovo = fuRecords.some(x =>
+        x.cliente === r.cliente && x.id > r.id &&
+        x.mes_referencia === r.mes_referencia
+      );
+      if (temCloneMaisNovo) {
+        // Este é o original — reverter follow_up (o clone fica com follow_up = true)
+        r.follow_up = false;
+        sb.from('clientes').update({ follow_up: false }).eq('id', r.id).then(() => {});
+      }
+    }
   } else {
     // Fallback via RPC
     const { data: d2, error: e2 } = await sb.rpc('get_clientes');
@@ -2929,6 +2943,8 @@ async function restaurarDaLixeira(id) {
   if (error) { mostrarToast('Erro ao restaurar'); return; }
   clientesLixeira = clientesLixeira.filter(c => c.id !== id);
   renderizarTabelaLixeira();
+  await carregarDados();
+  renderizarTudo();
   mostrarToast('Processo restaurado ↩️');
 }
 
