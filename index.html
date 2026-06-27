@@ -3443,13 +3443,24 @@ function renderizarTabelaFu() {
 
   const filtrados = getFiltrados(null, 'fu');
 
-  if (filtrados.length === 0) {
+  // Deduplicar: se houver 2 registros com mesmo cliente + mês, ficar só com o de maior ID (o clone)
+  const dedupMap = new Map();
+  for (const c of filtrados) {
+    const key = (c.cliente || '') + '|' + (c.mes_referencia || '');
+    const existing = dedupMap.get(key);
+    if (!existing || c.id > existing.id) {
+      dedupMap.set(key, c);
+    }
+  }
+  const unicos = [...dedupMap.values()];
+
+  if (unicos.length === 0) {
     tbody.innerHTML = '<tr><td colspan="16" class="text-center py-16" style="color:var(--text-muted);">Nenhum follow-up encontrado.</td></tr>';
     atualizarStatsFu();
     return;
   }
 
-  tbody.innerHTML = filtrados.map((c, i) => {
+  tbody.innerHTML = unicos.map((c, i) => {
     return `
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition main-row" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
