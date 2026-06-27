@@ -2046,8 +2046,8 @@ function getFiltrados(sourceClientes, tab) {
       if (filtroBancoFu !== 'todos') passaStatus = passaStatus && c['resultado_' + filtroBancoFu.toLowerCase()] === 'aprovado';
       if (filtroStatusFu !== 'todos') passaStatus = passaStatus && c.status === filtroStatusFu;
     } else {
-      // Aba Análises: excluir convertidos (originais ficam, clones vão pra Aba 2)
-      passaStatus = c.convertido !== true && (c.mes_referencia || '') === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
+      // Aba Análises: excluir convertidos e follow_ups (originais ficam, clones vão pra Aba 2 e FU)
+      passaStatus = c.convertido !== true && c.follow_up !== true && (c.mes_referencia || '') === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
       if (filtroProduto !== 'todos') passaStatus = passaStatus && c.produto === filtroProduto;
       if (filtroResultadoAnalises !== 'todos') passaStatus = passaStatus && c.resultado === filtroResultadoAnalises;
       if (filtroBancoAnalises !== 'todos') passaStatus = passaStatus && c['resultado_' + filtroBancoAnalises.toLowerCase()] === 'aprovado';
