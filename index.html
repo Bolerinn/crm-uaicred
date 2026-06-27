@@ -3517,28 +3517,28 @@ function renderizarTabelaFu() {
         <div class="expanded-grid">
           <div class="expanded-item">
             <label>Analista</label>
-            <select onchange="atualizarCampo(${c.id},'analista',this.value)" class="font-semibold bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text);min-width:130px;">
+            <select onchange="atualizarCampo(${c.id},'analista',this.value)" class="font-semibold bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text);min-width:140px;">
               <option value="" ${!c.analista?'selected':''}>—</option>
               ${['Douglas','Fernanda','Luana','Marjore'].map(a => `<option value="${a}" ${c.analista===a?'selected':''}>${a}</option>`).join('')}
             </select>
           </div>
           <div class="expanded-item">
             <label>Data F-U</label>
-            <input tabindex="0" data-id="${c.id}" data-campo="data_fu" class="editavel px-1 rounded bg-transparent border-0" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.data_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:130px;">
-          </div>
-          <div class="expanded-item">
-            <label>Última ação</label>
-            <span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="ultima_acao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.ultima_acao||''}</span>
+            <input tabindex="0" data-id="${c.id}" data-campo="data_fu" class="editavel px-2 py-1 rounded bg-transparent border" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.data_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:var(--text);width:140px;border-color:var(--border);">
           </div>
           <div class="expanded-item">
             <label>Próximo F-U</label>
-            <input tabindex="0" data-id="${c.id}" data-campo="proximo_fu" class="editavel px-1 rounded bg-transparent border-0" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.proximo_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:130px;">
+            <input tabindex="0" data-id="${c.id}" data-campo="proximo_fu" class="editavel px-2 py-1 rounded bg-transparent border" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.proximo_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:var(--text);width:140px;border-color:var(--border);">
           </div>
-          <div class="expanded-item">
+          <div class="expanded-item" style="flex-basis:100%;margin-top:4px;padding-top:10px;border-top:1px solid var(--border-light);">
+            <label>Última ação</label>
+            <input tabindex="0" data-id="${c.id}" data-campo="ultima_acao" class="editavel px-2 py-1 rounded bg-transparent border" onblur="editarCampoInput(this)" value="${esc(c.ultima_acao||'')}" placeholder="Descreva a última ação realizada..." maxlength="500" style="color:var(--text);width:100%;border-color:var(--border);">
+          </div>
+          <div class="expanded-item" style="flex-basis:100%;">
             <label>Próxima ação</label>
-            <span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="proxima_acao" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.proxima_acao||''}</span>
+            <input tabindex="0" data-id="${c.id}" data-campo="proxima_acao" class="editavel px-2 py-1 rounded bg-transparent border" onblur="editarCampoInput(this)" value="${esc(c.proxima_acao||'')}" placeholder="Descreva a próxima ação a ser tomada..." maxlength="500" style="color:var(--text);width:100%;border-color:var(--border);">
           </div>
-          <div class="expanded-item" style="justify-content:flex-start;align-items:center;">
+          <div class="expanded-item" style="flex-basis:100%;justify-content:flex-start;align-items:center;padding-top:8px;border-top:1px solid var(--border-light);">
             <label style="cursor:pointer;">
               <input type="checkbox" ${c.convertido_fu?'checked':''} onchange="converterClienteFu(${c.id},this.checked)" style="accent-color:#22c55e;"> Conversão (→ Em Andamento)
             </label>
