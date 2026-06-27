@@ -2906,8 +2906,8 @@ function renderizarTabelaLixeira() {
   vazia.classList.add('hidden');
   tbody.innerHTML = clientesLixeira.map((c, i) => {
     const data = c.deleted_at ? new Date(c.deleted_at).toLocaleDateString('pt-BR') : '—';
-    const etapa = c.status === 'emitido' ? 'EMITIDO' : c.mes_referencia ? 'EM ANDAMENTO' : 'ANÁLISE';
-    const etapaCor = etapa === 'EMITIDO' ? '#b8860b' : etapa === 'EM ANDAMENTO' ? '#f97316' : '#6b7280';
+    const etapa = c.status === 'emitido' ? 'EMITIDO' : c.follow_up === true ? 'FOLLOW UP' : c.convertido === true ? 'EM ANDAMENTO' : 'ANÁLISE';
+    const etapaCor = etapa === 'EMITIDO' ? '#b8860b' : etapa === 'FOLLOW UP' ? '#f97316' : etapa === 'EM ANDAMENTO' ? '#ea580c' : '#6b7280';
     return '<tr>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + (i+1) + '</td>' +
       '<td class="px-3 py-2 font-medium" style="color:var(--text);">' + (c.cliente || '—') + '</td>' +
