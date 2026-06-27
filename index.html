@@ -699,6 +699,25 @@ Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
   .cal-legenda-dot.matricula { background: #d97706; }
   .cal-legenda-dot.iq { background: #7c3aed; }
   .cal-legenda-dot.fu { background: #3b82f6; }
+  .cal-legenda-dot.feriado { background: var(--gold); }
+  .cal-cell.feriado {
+    background: rgba(184,134,11,0.08);
+    font-weight: 600;
+  }
+  [data-theme="dark"] .cal-cell.feriado {
+    background: rgba(212,168,83,0.12);
+  }
+  .cal-cell.feriado.hoje {
+    background: var(--accent);
+    color: #fff;
+  }
+  .cal-feriado-icon {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    font-size: 6px;
+    line-height: 1;
+  }
   .cal-tooltip {
     display: none;
     position: absolute;
@@ -2658,6 +2677,71 @@ function cardAlerta(titulo, cor, icone, items, renderItem) {
 }
 
 // ========== CALENDÁRIO DASH ==========
+// Feriados salvador-BA — cache 24h em localStorage
+async function carregarFeriados() {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const cacheKey = 'feriados_' + ano;
+  const cacheTsKey = 'feriados_ts_' + ano;
+  const cached = localStorage.getItem(cacheKey);
+  const cachedTs = localStorage.getItem(cacheTsKey);
+  const agora = Date.now();
+
+  // Cache válido por 24h
+  if (cached && cachedTs && (agora - parseInt(cachedTs)) < 86400000) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+
+  const feriados = {};
+
+  // --- Feriados municipais fixos Salvador-BA ---
+  const municipais = {
+    '02/02': 'Festa de Iemanjá',
+    '02/07': 'Independência da Bahia',
+    '24/06': 'São João',
+    '08/12': 'N. Sra. da Conceição'
+  };
+
+  // --- Feriados móveis 2026-2027 ---
+  // Páscoa 2026 = 05/04, Carnaval = Terça 17/02, Sexta Santa = 03/04, Corpus Christi = 04/06
+  // Páscoa 2027 = 28/03, Carnaval = 09/02, Sexta Santa = 26/03, Corpus Christi = 27/05
+  const moveisPorAno = {
+    2026: { '17/02': 'Carnaval', '03/04': 'Sexta-feira Santa', '04/06': 'Corpus Christi' },
+    2027: { '09/02': 'Carnaval', '26/03': 'Sexta-feira Santa', '27/05': 'Corpus Christi' }
+  };
+
+  // Adicionar municipais fixos
+  for (const [data, nome] of Object.entries(municipais)) {
+    const key = data; // "DD/MM"
+    feriados[key] = nome;
+  }
+
+  // Adicionar móveis do ano corrente
+  if (moveisPorAno[ano]) {
+    for (const [data, nome] of Object.entries(moveisPorAno[ano])) {
+      feriados[data] = nome;
+    }
+  }
+
+  // Tentar buscar nacionais via BrasilAPI
+  try {
+    const resp = await fetch('https://brasilapi.com.br/api/feriados/v1/' + ano);
+    if (resp.ok) {
+      const nacionais = await resp.json();
+      nacionais.forEach(f => {
+        const d = new Date(f.date + 'T12:00:00'); // evitar timezone shift
+        const key = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+        // Não sobrescrever municipais se já existir (prioridade local)
+        if (!feriados[key]) feriados[key] = f.name;
+      });
+    }
+  } catch(e) { /* offline ou rate-limit — usa só os locais */ }
+
+  localStorage.setItem(cacheKey, JSON.stringify(feriados));
+  localStorage.setItem(cacheTsKey, String(agora));
+  return feriados;
+}
+
 function coletarEventosCalendario() {
   const hoje = new Date();
   const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
@@ -2698,7 +2782,8 @@ function coletarEventosCalendario() {
   return eventos;
 }
 
-function renderizarCalendarioDash() {
+function renderizarCalendarioDash(feriados) {
+  feriados = feriados || {};
   const hoje = new Date();
   const mes = hoje.getMonth();
   const ano = hoje.getFullYear();
@@ -2723,6 +2808,16 @@ function renderizarCalendarioDash() {
     const evts = eventos[dia] || { matricula: [], iq: [], fu: [] };
     const temEvento = evts.matricula.length > 0 || evts.iq.length > 0 || evts.fu.length > 0;
     const ehHoje = dia === diaHoje;
+    const diaStr = String(dia).padStart(2,'0');
+    const mesStr = String(mes+1).padStart(2,'0');
+    const nomeFeriado = feriados[diaStr + '/' + mesStr];
+
+    let classes = ['cal-cell'];
+    if (ehHoje) classes.push('hoje');
+    if (nomeFeriado) classes.push('feriado');
+
+    let iconeFeriado = '';
+    if (nomeFeriado) iconeFeriado = '<span class="cal-feriado-icon">🏖️</span>';
 
     let dotsHtml = '';
     if (temEvento) {
@@ -2734,15 +2829,16 @@ function renderizarCalendarioDash() {
     }
 
     let tooltipHtml = '';
-    if (temEvento) {
+    if (temEvento || nomeFeriado) {
       const partes = [];
+      if (nomeFeriado) partes.push('🏖️ ' + nomeFeriado);
       if (evts.matricula.length > 0) partes.push('📋 ' + evts.matricula.join(', '));
       if (evts.iq.length > 0) partes.push('🔔 ' + evts.iq.join(', '));
       if (evts.fu.length > 0) partes.push('📞 ' + evts.fu.join(', '));
       tooltipHtml = '<div class="cal-tooltip">' + partes.join('<br>') + '</div>';
     }
 
-    html += '<div class="cal-cell' + (ehHoje ? ' hoje' : '') + '">' + tooltipHtml + '<span>' + dia + '</span>' + dotsHtml + '</div>';
+    html += '<div class="' + classes.join(' ') + '">' + tooltipHtml + iconeFeriado + '<span>' + dia + '</span>' + dotsHtml + '</div>';
   }
   html += '</div>';
 
@@ -2750,15 +2846,18 @@ function renderizarCalendarioDash() {
   html += '<div class="cal-legenda-item"><span class="cal-legenda-dot matricula"></span> Matrícula</div>';
   html += '<div class="cal-legenda-item"><span class="cal-legenda-dot iq"></span> IQ</div>';
   html += '<div class="cal-legenda-item"><span class="cal-legenda-dot fu"></span> Follow-up</div>';
+  html += '<div class="cal-legenda-item"><span class="cal-legenda-dot feriado"></span> Feriado</div>';
   html += '</div>';
 
   html += '</div>';
   return html;
 }
 
-function renderizarDashboard() {
+async function renderizarDashboard() {
   const container = document.getElementById('dashboardContent');
   if (!container) return;
+
+  const feriados = await carregarFeriados();
 
   const prazoExcedido = getAlertasPrazoExcedido();
   const urgentes = getAlertasUrgentes();
@@ -2839,7 +2938,7 @@ function renderizarDashboard() {
     </div>
     <div class="mt-6 flex justify-center">
       <div class="p-4 rounded-2xl border shadow-sm" style="background:var(--bg-card);border-color:var(--border);max-width:420px;width:100%;">
-        ${renderizarCalendarioDash()}
+        ${renderizarCalendarioDash(feriados)}
       </div>
     </div>
   `;
