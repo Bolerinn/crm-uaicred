@@ -3490,14 +3490,14 @@ function renderizarTabelaFu() {
         <div class="expanded-grid">
           <div class="expanded-item">
             <label>Analista</label>
-            <select onchange="atualizarCampo(${c.id},'analista',this.value)" class="text-xs font-semibold bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text);min-width:130px;">
+            <select onchange="atualizarCampo(${c.id},'analista',this.value)" class="font-semibold bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text);min-width:130px;">
               <option value="" ${!c.analista?'selected':''}>—</option>
               ${['Douglas','Fernanda','Luana','Marjore'].map(a => `<option value="${a}" ${c.analista===a?'selected':''}>${a}</option>`).join('')}
             </select>
           </div>
           <div class="expanded-item">
             <label>Data F-U</label>
-            <input tabindex="0" data-id="${c.id}" data-campo="data_fu" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.data_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:130px;">
+            <input tabindex="0" data-id="${c.id}" data-campo="data_fu" class="editavel px-1 rounded bg-transparent border-0" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.data_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:130px;">
           </div>
           <div class="expanded-item">
             <label>Última ação</label>
@@ -3505,7 +3505,7 @@ function renderizarTabelaFu() {
           </div>
           <div class="expanded-item">
             <label>Próximo F-U</label>
-            <input tabindex="0" data-id="${c.id}" data-campo="proximo_fu" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.proximo_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:130px;">
+            <input tabindex="0" data-id="${c.id}" data-campo="proximo_fu" class="editavel px-1 rounded bg-transparent border-0" oninput="mascaraDataCompleta(this)" onblur="editarCampoInput(this)" value="${c.proximo_fu||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:130px;">
           </div>
           <div class="expanded-item">
             <label>Próxima ação</label>
