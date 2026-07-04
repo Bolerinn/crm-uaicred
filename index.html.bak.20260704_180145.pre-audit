@@ -1712,7 +1712,7 @@ async function carregarListaUsuarios() {
     }
     let html = '<table class="w-full text-xs"><thead><tr class="text-center text-gray-500 uppercase"><th class="px-2 py-1">Nome</th><th class="px-2 py-1">Email</th><th class="px-2 py-1">Tipo</th></tr></thead><tbody>';
     for (const p of data) {
-      html += `<tr style="border-top:1px solid var(--border);"><td class="px-2 py-1" style="color:var(--text-secondary);">${esc(p.nome)}</td><td class="px-2 py-1" style="color:var(--text-secondary);">${p.email}</td><td class="px-2 py-1">${p.tipo === 'master' ? '👑 Master' : 'Usuário'}</td></tr>`;
+      html += `<tr style="border-top:1px solid var(--border);"><td class="px-2 py-1" style="color:var(--text-secondary);">${p.nome}</td><td class="px-2 py-1" style="color:var(--text-secondary);">${p.email}</td><td class="px-2 py-1">${p.tipo === 'master' ? '👑 Master' : 'Usuário'}</td></tr>`;
     }
     html += '</tbody></table>';
     el.innerHTML = html;
@@ -1723,48 +1723,43 @@ async function carregarListaUsuarios() {
 
 // ========== CRUD ==========
 async function carregarDados() {
-  try {
-    const { data, error } = await sb.from('clientes').select('*').is('deleted_at', null).order('id');
-    if (!error) {
-      clientes = data || [];
-      clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
+  const { data, error } = await sb.from('clientes').select('*').is('deleted_at', null).order('id');
+  if (!error) {
+    clientes = data || [];
+    clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
 
-      // Limpeza: reverter follow_up em originais que têm clone na FU (dados sujos do bug antigo)
-      const fuRecords = clientes.filter(c => c.follow_up === true && !c.deleted_at);
-      for (const r of fuRecords) {
-        const temCloneMaisNovo = fuRecords.some(x =>
-          x.cliente === r.cliente && x.id > r.id &&
-          x.mes_referencia === r.mes_referencia
-        );
-        if (temCloneMaisNovo) {
-          // Este é o original — reverter follow_up (o clone fica com follow_up = true)
-          r.follow_up = false;
-          sb.from('clientes').update({ follow_up: false }).eq('id', r.id).then(() => {});
-        }
+    // Limpeza: reverter follow_up em originais que têm clone na FU (dados sujos do bug antigo)
+    const fuRecords = clientes.filter(c => c.follow_up === true && !c.deleted_at);
+    for (const r of fuRecords) {
+      const temCloneMaisNovo = fuRecords.some(x =>
+        x.cliente === r.cliente && x.id > r.id &&
+        x.mes_referencia === r.mes_referencia
+      );
+      if (temCloneMaisNovo) {
+        // Este é o original — reverter follow_up (o clone fica com follow_up = true)
+        r.follow_up = false;
+        sb.from('clientes').update({ follow_up: false }).eq('id', r.id).then(() => {});
       }
+    }
+  } else {
+    // Fallback via RPC
+    const { data: d2, error: e2 } = await sb.rpc('get_clientes');
+    if (!e2) {
+      clientes = (d2 || []).filter(c => !c.deleted_at);
     } else {
-      // Fallback via RPC
-      const { data: d2, error: e2 } = await sb.rpc('get_clientes');
-      if (!e2) {
-        clientes = (d2 || []).filter(c => !c.deleted_at);
-      } else {
-        mostrarToast('Erro ao carregar dados'); return;
-      }
+      mostrarToast('Erro ao carregar dados'); return;
     }
-
-  // Save old value on focus for indicação validation
-  document.addEventListener('focusin', function(e) {
-    if (e.target.dataset && e.target.dataset.campo === 'indicacao') {
-      e.target.dataset.oldValue = e.target.value;
-    }
-  });
-
-    popularDatalistIndicacoes();
-    renderizarTudo();
-  } catch(e) {
-    console.error('Erro em carregarDados:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
   }
+
+// Save old value on focus for indicação validation
+document.addEventListener('focusin', function(e) {
+  if (e.target.dataset && e.target.dataset.campo === 'indicacao') {
+    e.target.dataset.oldValue = e.target.value;
+  }
+});
+
+  popularDatalistIndicacoes();
+  renderizarTudo();
 }
 
 async function adicionarCliente() {
@@ -1816,38 +1811,33 @@ async function adicionarCliente() {
 let ultimoExcluido = null; // para desfazer
 
 async function excluirCliente(id) {
-  try {
-    if (!confirm('Excluir este cliente?')) return;
-    const c = clientes.find(c => c.id === id);
-    if (!c) return;
-    // Emitidos: só master pode excluir
-    if (c.status === 'emitido' && !isMaster()) {
-      mostrarToast('Apenas o master pode excluir processos emitidos');
-      return;
-    }
-    // Soft-delete: marca deleted_at (nunca remove do banco)
-    const analista = usuarioNome || (await sb.auth.getUser()).data?.user?.email?.split('@')[0] || '—';
-    const { error } = await sb.from('clientes').update({ deleted_at: new Date().toISOString(), deleted_by: analista }).eq('id', id);
-    if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
-    ultimoExcluido = { id, cliente: c.cliente, timer: setTimeout(() => { ultimoExcluido = null; }, 8000) };
-    // Se deletou um registro com follow_up, reverter follow_up no original (evita que ele reapareça na FU)
-    if (c.follow_up === true) {
-      const igual = clientes.find(x =>
-        x.cliente === c.cliente && x.id !== c.id &&
-        x.follow_up === true && x.mes_referencia === c.mes_referencia && !x.deleted_at
-      );
-      if (igual) {
-        igual.follow_up = false;
-        sb.from('clientes').update({ follow_up: false }).eq('id', igual.id).then(() => {});
-      }
-    }
-    clientes = clientes.filter(c => c.id !== id);
-    renderizarTabelas();
-    mostrarToastDesfazer(c.cliente, id);
-  } catch(e) {
-    console.error('Erro em excluirCliente:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
+  if (!confirm('Excluir este cliente?')) return;
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  // Emitidos: só master pode excluir
+  if (c.status === 'emitido' && !isMaster()) {
+    mostrarToast('Apenas o master pode excluir processos emitidos');
+    return;
   }
+  // Soft-delete: marca deleted_at (nunca remove do banco)
+  const analista = usuarioNome || (await sb.auth.getUser()).data?.user?.email?.split('@')[0] || '—';
+  const { error } = await sb.from('clientes').update({ deleted_at: new Date().toISOString(), deleted_by: analista }).eq('id', id);
+  if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
+  ultimoExcluido = { id, cliente: c.cliente, timer: setTimeout(() => { ultimoExcluido = null; }, 8000) };
+  // Se deletou um registro com follow_up, reverter follow_up no original (evita que ele reapareça na FU)
+  if (c.follow_up === true) {
+    const igual = clientes.find(x =>
+      x.cliente === c.cliente && x.id !== c.id &&
+      x.follow_up === true && x.mes_referencia === c.mes_referencia && !x.deleted_at
+    );
+    if (igual) {
+      igual.follow_up = false;
+      sb.from('clientes').update({ follow_up: false }).eq('id', igual.id).then(() => {});
+    }
+  }
+  clientes = clientes.filter(c => c.id !== id);
+  renderizarTabelas();
+  mostrarToastDesfazer(c.cliente, id);
 }
 
 async function restaurarCliente(id) {
@@ -1876,109 +1866,104 @@ function mostrarToastDesfazer(nome, id) {
 }
 
 async function atualizarCampo(id, campo, valor) {
-  try {
-    ultimaEdicao = { id, campo, ts: Date.now() };
-    const { error } = await sb
-      .from('clientes')
-      .update({ [campo]: valor, ...(campo === 'status' && valor === 'emitido' ? { emitido_por: usuarioNome || '' } : {}) })
-      .eq('id', id);
+  ultimaEdicao = { id, campo, ts: Date.now() };
+  const { error } = await sb
+    .from('clientes')
+    .update({ [campo]: valor, ...(campo === 'status' && valor === 'emitido' ? { emitido_por: usuarioNome || '' } : {}) })
+    .eq('id', id);
 
-    if (error) { mostrarToast('Erro ao salvar: ' + error.message); return; }
+  if (error) { mostrarToast('Erro ao salvar: ' + error.message); return; }
 
-    const c = clientes.find(c => c.id === id);
-    if (c) { c[campo] = valor; }
-    atualizarStats();
+  const c = clientes.find(c => c.id === id);
+  if (c) { c[campo] = valor; }
+  atualizarStats();
 
-    // Status change → force re-render all tabs (cross-tab migration)
-    if (campo === 'status') {
-      renderizarTabelaAnalises();
-      renderizarTabelaAndamento();
-      renderizarTabelaEmitidos();
-      notificarMudancaStatus(id, c.cliente || '', valor);
-    }
+  // Status change → force re-render all tabs (cross-tab migration)
+  if (campo === 'status') {
+    renderizarTabelaAnalises();
+    renderizarTabelaAndamento();
+    renderizarTabelaEmitidos();
+    notificarMudancaStatus(id, c.cliente || '', valor);
+  }
 
-    // Desmarcar F-U na aba FU → soft-delete o clone (volta pra aba 1 sem duplicar)
-    if (campo === 'follow_up' && valor === false && tabAtivo === 'fu') {
-      await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', id);
-      clientes = clientes.filter(x => x.id !== id);
-      await carregarDados();
-      renderizarTabelaFu();
-      renderizarTabelaAnalises();
-      atualizarStatsFu();
-      mostrarToast('Cliente removido do Follow Up');
-      return;
-    }
+  // Desmarcar F-U na aba FU → soft-delete o clone (volta pra aba 1 sem duplicar)
+  if (campo === 'follow_up' && valor === false && tabAtivo === 'fu') {
+    await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', id);
+    clientes = clientes.filter(x => x.id !== id);
+    await carregarDados();
+    renderizarTabelaFu();
+    renderizarTabelaAnalises();
+    atualizarStatsFu();
+    mostrarToast('Cliente removido do Follow Up');
+    return;
+  }
 
-    // F-U toggle on Analises → clone/remove from FU tab
-    if (campo === 'follow_up' && tabAtivo === 'analises') {
-      const c2 = clientes.find(c => c.id === id);
-      if (!c2) return;
-      const mesRef = (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
-      if (valor === true) {
-        const jaExisteFu = clientes.some(x =>
-          x.cliente === c2.cliente && x.id !== c2.id &&
-          x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
-        );
-        if (!jaExisteFu) {
-          const { data: user } = await sb.auth.getUser();
-          const clone = {
-            indicacao: c2.indicacao || '', cliente: c2.cliente, cpf: c2.cpf || '',
-            agencia: c2.agencia || '', valor_imovel: c2.valor_imovel || '',
-            valor_financiado: c2.valor_financiado || '',
-            produto: c2.produto || 'SBPE', data_vistoria: c2.data_vistoria || '—',
-            status: c2.status || 'aguardando-doc', obs: c2.obs || '', data: c2.data || '',
-            created_by: user?.user?.id,
-            criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
-            follow_up: true, mes_referencia: mesRef,
-            fgts: c2.fgts || false, iq: c2.iq || false, banco: c2.banco || '',
-            banco_caixa: c2.banco_caixa || false, banco_bradesco: c2.banco_bradesco || false,
-            banco_itau: c2.banco_itau || false, banco_santander: c2.banco_santander || false,
-            banco_inter: c2.banco_inter || false,
-            valor_fgts: c2.valor_fgts || '', data_iq: c2.data_iq || '',
-            data_matricula: c2.data_matricula || '', urgente: c2.urgente || false,
-            ultimo_andamento_data: c2.ultimo_andamento_data || '', ultimo_andamento_texto: c2.ultimo_andamento_texto || '',
-            resultado: c2.resultado || '',
-            resultado_caixa: c2.resultado_caixa || '', resultado_bradesco: c2.resultado_bradesco || '',
-            resultado_itau: c2.resultado_itau || '', resultado_santander: c2.resultado_santander || '',
-            resultado_inter: c2.resultado_inter || ''
-          };
-          const { error } = await sb.from('clientes').insert(clone);
-          if (!error) {
-            // Reverter follow_up do original (só o clone deve ter follow_up = true)
-            c2.follow_up = false;
-            const cOrig = clientes.find(x => x.id === id);
-            if (cOrig) cOrig.follow_up = false;
-            await sb.from('clientes').update({ follow_up: false }).eq('id', id);
-            mostrarToast('Cliente copiado para Follow Up 📋');
-            await carregarDados();
-            renderizarTabelaAnalises();
-            renderizarTabelaFu();
-            atualizarStatsFu();
-            // Garantir que estado final prevalece (realtime pode ter renderizado estado intermediário)
-            setTimeout(() => { renderizarTabelaAnalises(); renderizarTabelaFu(); }, 500);
-          }
-        } else {
-          mostrarToast('Cliente já está no Follow Up');
-        }
-      } else {
-        // Desmarcou: remover clone da FU (soft-delete)
-        const cloneFu = clientes.find(x =>
-          x.cliente === c2.cliente && x.id !== c2.id &&
-          x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
-        );
-        if (cloneFu) {
-          await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', cloneFu.id);
-          mostrarToast('Cliente removido do Follow Up');
+  // F-U toggle on Analises → clone/remove from FU tab
+  if (campo === 'follow_up' && tabAtivo === 'analises') {
+    const c2 = clientes.find(c => c.id === id);
+    if (!c2) return;
+    const mesRef = (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
+    if (valor === true) {
+      const jaExisteFu = clientes.some(x =>
+        x.cliente === c2.cliente && x.id !== c2.id &&
+        x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
+      );
+      if (!jaExisteFu) {
+        const { data: user } = await sb.auth.getUser();
+        const clone = {
+          indicacao: c2.indicacao || '', cliente: c2.cliente, cpf: c2.cpf || '',
+          agencia: c2.agencia || '', valor_imovel: c2.valor_imovel || '',
+          valor_financiado: c2.valor_financiado || '',
+          produto: c2.produto || 'SBPE', data_vistoria: c2.data_vistoria || '—',
+          status: c2.status || 'aguardando-doc', obs: c2.obs || '', data: c2.data || '',
+          created_by: user?.user?.id,
+          criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
+          follow_up: true, mes_referencia: mesRef,
+          fgts: c2.fgts || false, iq: c2.iq || false, banco: c2.banco || '',
+          banco_caixa: c2.banco_caixa || false, banco_bradesco: c2.banco_bradesco || false,
+          banco_itau: c2.banco_itau || false, banco_santander: c2.banco_santander || false,
+          banco_inter: c2.banco_inter || false,
+          valor_fgts: c2.valor_fgts || '', data_iq: c2.data_iq || '',
+          data_matricula: c2.data_matricula || '', urgente: c2.urgente || false,
+          ultimo_andamento_data: c2.ultimo_andamento_data || '', ultimo_andamento_texto: c2.ultimo_andamento_texto || '',
+          resultado: c2.resultado || '',
+          resultado_caixa: c2.resultado_caixa || '', resultado_bradesco: c2.resultado_bradesco || '',
+          resultado_itau: c2.resultado_itau || '', resultado_santander: c2.resultado_santander || '',
+          resultado_inter: c2.resultado_inter || ''
+        };
+        const { error } = await sb.from('clientes').insert(clone);
+        if (!error) {
+          // Reverter follow_up do original (só o clone deve ter follow_up = true)
+          c2.follow_up = false;
+          const cOrig = clientes.find(x => x.id === id);
+          if (cOrig) cOrig.follow_up = false;
+          await sb.from('clientes').update({ follow_up: false }).eq('id', id);
+          mostrarToast('Cliente copiado para Follow Up 📋');
           await carregarDados();
           renderizarTabelaAnalises();
           renderizarTabelaFu();
           atualizarStatsFu();
+          // Garantir que estado final prevalece (realtime pode ter renderizado estado intermediário)
+          setTimeout(() => { renderizarTabelaAnalises(); renderizarTabelaFu(); }, 500);
         }
+      } else {
+        mostrarToast('Cliente já está no Follow Up');
+      }
+    } else {
+      // Desmarcou: remover clone da FU (soft-delete)
+      const cloneFu = clientes.find(x =>
+        x.cliente === c2.cliente && x.id !== c2.id &&
+        x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
+      );
+      if (cloneFu) {
+        await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', cloneFu.id);
+        mostrarToast('Cliente removido do Follow Up');
+        await carregarDados();
+        renderizarTabelaAnalises();
+        renderizarTabelaFu();
+        atualizarStatsFu();
       }
     }
-  } catch(e) {
-    console.error('Erro em atualizarCampo:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
   }
 }
 
@@ -2009,55 +1994,50 @@ async function notificarMudancaStatus(clienteId, clienteNome, novoStatus) {
 }
 
 async function converterCliente(id, checked) {
-  try {
-    const c = clientes.find(c => c.id === id);
-    if (!c) return;
-    
-    const mesRef = new Date().toISOString().slice(0,7);
-    
-    if (checked) {
-      // Criar clone na Aba 2 se não existir
-      const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
-      if (!jaExiste) {
-        const { data: user } = await sb.auth.getUser();
-        const clone = {
-          indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
-          valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
-          produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
-          created_by: user?.user?.id,
-          criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
-          convertido: true, mes_referencia: mesRef,
-          fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
-          banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
-          banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
-          banco_inter: c.banco_inter || false,
-          valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
-          data_matricula: c.data_matricula || '', urgente: false,
-          ultimo_andamento_data: c.ultimo_andamento_data || '', ultimo_andamento_texto: c.ultimo_andamento_texto || ''
-        };
-        const { data: novo, error } = await sb.from('clientes').insert(clone).select().single();
-        if (!error && novo) {
-          clientes.push(novo);
-          mostrarToast('Cliente convertido em processo ✅');
-        }
-      }
-    } else {
-      // Desmarcar: remover clone da Aba 2 se existir
-      const clone = clientes.find(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
-      if (clone) {
-        await sb.from('clientes').delete().eq('id', clone.id);
-        clientes = clientes.filter(x => x.id !== clone.id);
-        mostrarToast('Conversão desfeita ↩️');
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  
+  const mesRef = new Date().toISOString().slice(0,7);
+  
+  if (checked) {
+    // Criar clone na Aba 2 se não existir
+    const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
+    if (!jaExiste) {
+      const { data: user } = await sb.auth.getUser();
+      const clone = {
+        indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
+        valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
+        produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
+        created_by: user?.user?.id,
+        criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
+        convertido: true, mes_referencia: mesRef,
+        fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
+        banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
+        banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
+        banco_inter: c.banco_inter || false,
+        valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
+        data_matricula: c.data_matricula || '', urgente: false,
+        ultimo_andamento_data: c.ultimo_andamento_data || '', ultimo_andamento_texto: c.ultimo_andamento_texto || ''
+      };
+      const { data: novo, error } = await sb.from('clientes').insert(clone).select().single();
+      if (!error && novo) {
+        clientes.push(novo);
+        mostrarToast('Cliente convertido em processo ✅');
       }
     }
-    
-    renderizarTabelaAnalises();
-    renderizarTabelaAndamento();
-    atualizarStats();
-  } catch(e) {
-    console.error('Erro em converterCliente:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
+  } else {
+    // Desmarcar: remover clone da Aba 2 se existir
+    const clone = clientes.find(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
+    if (clone) {
+      await sb.from('clientes').delete().eq('id', clone.id);
+      clientes = clientes.filter(x => x.id !== clone.id);
+      mostrarToast('Conversão desfeita ↩️');
+    }
   }
+  
+  renderizarTabelaAnalises();
+  renderizarTabelaAndamento();
+  atualizarStats();
 }
 
 function onBancoChange(id, novoBanco) {
@@ -3034,24 +3014,19 @@ function getResultadoPerBancoHtml(c) {
 }
 
 async function ciclarResultadoBanco(id, banco) {
-  try {
-    const c = clientes.find(c => c.id === id);
-    if (!c) return;
-    const campo = 'resultado_' + banco;
-    const atual = c[campo] || '';
-    const idx = RESULTADO_CYCLE.indexOf(atual);
-    const proximo = RESULTADO_CYCLE[(idx + 1) % RESULTADO_CYCLE.length];
-    c[campo] = proximo;
-    // Update DOM immediately
-    const td = document.getElementById('resultado-' + id);
-    if (td) td.innerHTML = getResultadoPerBancoHtml(c);
-    // Persist
-    await atualizarCampo(id, campo, proximo);
-    atualizarStats();
-  } catch(e) {
-    console.error('Erro em ciclarResultadoBanco:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
-  }
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  const campo = 'resultado_' + banco;
+  const atual = c[campo] || '';
+  const idx = RESULTADO_CYCLE.indexOf(atual);
+  const proximo = RESULTADO_CYCLE[(idx + 1) % RESULTADO_CYCLE.length];
+  c[campo] = proximo;
+  // Update DOM immediately
+  const td = document.getElementById('resultado-' + id);
+  if (td) td.innerHTML = getResultadoPerBancoHtml(c);
+  // Persist
+  await atualizarCampo(id, campo, proximo);
+  atualizarStats();
 }
 
 // ========== BANCO MULTI / RESULTADO ==========
@@ -3296,22 +3271,17 @@ async function duplicarClientes(lista, novoMes) {
 let clientesLixeira = [];
 
 async function carregarLixeira() {
-  try {
-    const trintaDiasAtras = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-    const { data, error } = await sb
-      .from('clientes')
-      .select('*')
-      .not('deleted_at', 'is', null)
-      .gte('deleted_at', trintaDiasAtras)
-      .order('deleted_at', { ascending: false });
+  const trintaDiasAtras = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+  const { data, error } = await sb
+    .from('clientes')
+    .select('*')
+    .not('deleted_at', 'is', null)
+    .gte('deleted_at', trintaDiasAtras)
+    .order('deleted_at', { ascending: false });
 
-    if (error) { mostrarToast('Erro ao carregar lixeira'); return; }
-    clientesLixeira = data || [];
-    renderizarTabelaLixeira();
-  } catch(e) {
-    console.error('Erro em carregarLixeira:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
-  }
+  if (error) { mostrarToast('Erro ao carregar lixeira'); return; }
+  clientesLixeira = data || [];
+  renderizarTabelaLixeira();
 }
 
 function renderizarTabelaLixeira() {
@@ -3330,9 +3300,9 @@ function renderizarTabelaLixeira() {
     return '<tr>' +
       '<td class="px-2 py-2 text-center"><input type="checkbox" class="lixeira-check" value="' + c.id + '" onchange="atualizarBotoesLixeira()"></td>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + (i+1) + '</td>' +
-      '<td class="px-3 py-2 font-medium" style="color:var(--text);">' + esc(c.cliente || '—') + '</td>' +
-      '<td class="px-3 py-2">' + esc(c.banco || '—') + '</td>' +
-      '<td class="px-3 py-2">' + esc(c.produto || '—') + '</td>' +
+      '<td class="px-3 py-2 font-medium" style="color:var(--text);">' + (c.cliente || '—') + '</td>' +
+      '<td class="px-3 py-2">' + (c.banco || '—') + '</td>' +
+      '<td class="px-3 py-2">' + (c.produto || '—') + '</td>' +
       '<td class="px-3 py-2"><span style="color:' + etapaCor + ';font-weight:600;font-size:0.7rem;">' + etapa + '</span></td>' +
       '<td class="px-3 py-2">' + esc(c.deleted_by || '—') + '</td>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + data + '</td>' +
@@ -3345,32 +3315,22 @@ function renderizarTabelaLixeira() {
 }
 
 async function restaurarDaLixeira(id) {
-  try {
-    const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
-    if (error) { mostrarToast('Erro ao restaurar'); return; }
-    clientesLixeira = clientesLixeira.filter(c => c.id !== id);
-    renderizarTabelaLixeira();
-    await carregarDados();
-    renderizarTudo();
-    mostrarToast('Processo restaurado ↩️');
-  } catch(e) {
-    console.error('Erro em restaurarDaLixeira:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
-  }
+  const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
+  if (error) { mostrarToast('Erro ao restaurar'); return; }
+  clientesLixeira = clientesLixeira.filter(c => c.id !== id);
+  renderizarTabelaLixeira();
+  await carregarDados();
+  renderizarTudo();
+  mostrarToast('Processo restaurado ↩️');
 }
 
 async function excluirPermanentemente(id) {
-  try {
-    if (!confirm('ATENÇÃO: Este processo será EXCLUÍDO PERMANENTEMENTE e não poderá ser recuperado. Continuar?')) return;
-    const { error: delErr } = await sb.from('clientes').delete().eq('id', id);
-    if (delErr) { mostrarToast('Erro ao excluir: apenas o criador pode excluir permanentemente'); return; }
-    clientesLixeira = clientesLixeira.filter(c => c.id !== id);
-    renderizarTabelaLixeira();
-    mostrarToast('Processo excluído permanentemente '+String.fromCharCode(10060));
-  } catch(e) {
-    console.error('Erro em excluirPermanentemente:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
-  }
+  if (!confirm('ATENÇÃO: Este processo será EXCLUÍDO PERMANENTEMENTE e não poderá ser recuperado. Continuar?')) return;
+  const { error: delErr } = await sb.from('clientes').delete().eq('id', id);
+  if (delErr) { mostrarToast('Erro ao excluir: apenas o criador pode excluir permanentemente'); return; }
+  clientesLixeira = clientesLixeira.filter(c => c.id !== id);
+  renderizarTabelaLixeira();
+  mostrarToast('Processo excluído permanentemente '+String.fromCharCode(10060));
 }
 
 async function limparTudo() {
@@ -3418,52 +3378,42 @@ function atualizarBotoesLixeira() {
 }
 
 async function restaurarTodosLixeira() {
-  try {
-    const checks = document.querySelectorAll('.lixeira-check:checked');
-    if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
-    if (!confirm('Restaurar ' + checks.length + ' processo(s)?')) return;
-    let count = 0;
-    for (const cb of checks) {
-      const id = parseInt(cb.value);
-      const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
-      if (!error) count++;
-    }
-    mostrarToast(count + ' processo(s) restaurado(s) ↩️');
-    await carregarLixeira();
-    await carregarDados();
-    renderizarTudo();
-  } catch(e) {
-    console.error('Erro em restaurarTodosLixeira:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
+  const checks = document.querySelectorAll('.lixeira-check:checked');
+  if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
+  if (!confirm('Restaurar ' + checks.length + ' processo(s)?')) return;
+  let count = 0;
+  for (const cb of checks) {
+    const id = parseInt(cb.value);
+    const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
+    if (!error) count++;
   }
+  mostrarToast(count + ' processo(s) restaurado(s) ↩️');
+  await carregarLixeira();
+  await carregarDados();
+  renderizarTudo();
 }
 
 async function excluirTodosLixeira() {
-  try {
-    const checks = document.querySelectorAll('.lixeira-check:checked');
-    if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
-    if (!confirm('ATENÇÃO: ' + checks.length + ' processo(s) serão EXCLUÍDOS PERMANENTEMENTE. Continuar?')) return;
-    let count = 0;
-    let erros = 0;
-    for (const cb of checks) {
-      const id = parseInt(cb.value);
-      const { error } = await sb.from('clientes').delete().eq('id', id);
-      if (!error) {
-        count++;
-        clientesLixeira = clientesLixeira.filter(c => c.id !== id);
-      } else {
-        erros++;
-        console.error('Falha ao excluir permanentemente id=' + id + ':', error.message);
-      }
+  const checks = document.querySelectorAll('.lixeira-check:checked');
+  if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
+  if (!confirm('ATENÇÃO: ' + checks.length + ' processo(s) serão EXCLUÍDOS PERMANENTEMENTE. Continuar?')) return;
+  let count = 0;
+  let erros = 0;
+  for (const cb of checks) {
+    const id = parseInt(cb.value);
+    const { error } = await sb.from('clientes').delete().eq('id', id);
+    if (!error) {
+      count++;
+      clientesLixeira = clientesLixeira.filter(c => c.id !== id);
+    } else {
+      erros++;
+      console.error('Falha ao excluir permanentemente id=' + id + ':', error.message);
     }
-    renderizarTabelaLixeira();
-    if (count > 0) mostrarToast(count + ' processo(s) excluído(s) ✕');
-    if (erros > 0) mostrarToast('⚠️ ' + erros + ' processo(s) NÃO puderam ser excluídos (apenas o criador pode excluir permanentemente)');
-    await carregarLixeira();
-  } catch(e) {
-    console.error('Erro em excluirTodosLixeira:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
   }
+  renderizarTabelaLixeira();
+  if (count > 0) mostrarToast(count + ' processo(s) excluído(s) ✕');
+  if (erros > 0) mostrarToast('⚠️ ' + erros + ' processo(s) NÃO puderam ser excluídos (apenas o criador pode excluir permanentemente)');
+  await carregarLixeira();
 }
 
 
@@ -3919,8 +3869,8 @@ function renderizarTabelaAnalises() {
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
       <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${esc(c.indicacao||'')}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.cliente||'')}</span></td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${esc(c.cpf||'')}" maxlength="14" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data" onfocus="if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data||''}" placeholder="dd/mm" maxlength="5" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5 text-center" style="white-space:nowrap;">
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#0061A8;"><input type="checkbox" ${c.banco_caixa?'checked':''} onchange="toggleBanco(${c.id},'caixa',this.checked)" class="w-3 h-3 accent-blue-600"> Caixa</label>
@@ -3929,7 +3879,7 @@ function renderizarTabelaAnalises() {
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#EC0000;"><input type="checkbox" ${c.banco_santander?'checked':''} onchange="toggleBanco(${c.id},'santander',this.checked)" class="w-3 h-3 accent-red-600"> Santander</label>
         <label class="inline-flex items-center gap-0.5 text-xs cursor-pointer font-semibold" style="color:#FF7A00;"><input type="checkbox" ${c.banco_inter?'checked':''} onchange="toggleBanco(${c.id},'inter',this.checked)" class="w-3 h-3 accent-orange-500"> Inter</label>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${esc(c.agencia||'')}" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_imovel)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_financiado)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
@@ -3938,7 +3888,7 @@ function renderizarTabelaAnalises() {
         </select>
       </td>
       <td class="px-3 py-2.5" id="resultado-${c.id}">${getResultadoPerBancoHtml(c)}</td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.obs||'')}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${clientes.some(x => x.cliente === c.cliente && x.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0')) && x.follow_up === true && x.id !== c.id)?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="F-U">
       </td>
@@ -3990,11 +3940,11 @@ function renderizarTabelaFu() {
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition main-row" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
       <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${esc(c.indicacao||'')}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.cliente||'')}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
       <td class="px-1 py-2.5 text-center">
         <span class="expand-btn" onclick="toggleExpandFu(${c.id})" title="Expandir">▼</span>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${esc(c.cpf||'')}" maxlength="14" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data" onfocus="if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data||''}" placeholder="dd/mm" maxlength="5" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5 text-center" style="white-space:nowrap;">
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#0061A8;"><input type="checkbox" ${c.banco_caixa?'checked':''} onchange="toggleBanco(${c.id},'caixa',this.checked)" class="w-3 h-3 accent-blue-600"> Caixa</label>
@@ -4003,7 +3953,7 @@ function renderizarTabelaFu() {
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#EC0000;"><input type="checkbox" ${c.banco_santander?'checked':''} onchange="toggleBanco(${c.id},'santander',this.checked)" class="w-3 h-3 accent-red-600"> Santander</label>
         <label class="inline-flex items-center gap-0.5 text-xs cursor-pointer font-semibold" style="color:#FF7A00;"><input type="checkbox" ${c.banco_inter?'checked':''} onchange="toggleBanco(${c.id},'inter',this.checked)" class="w-3 h-3 accent-orange-500"> Inter</label>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${esc(c.agencia||'')}" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_imovel)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_financiado)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
@@ -4012,7 +3962,7 @@ function renderizarTabelaFu() {
         </select>
       </td>
       <td class="px-3 py-2.5" id="resultado-${c.id}">${getResultadoPerBancoHtml(c)}</td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.obs||'')}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${c.follow_up?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="F-U">
       </td>
@@ -4082,47 +4032,42 @@ function toggleExpandFu(id) {
 }
 
 async function converterClienteFu(id, checked) {
-  try {
-    const c = clientes.find(c => c.id === id);
-    if (!c) return;
-    const mesRef = new Date().toISOString().slice(0,7);
-    if (checked) {
-      const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
-      if (!jaExiste) {
-        const { data: user } = await sb.auth.getUser();
-        const clone = {
-          indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
-          valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
-          produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
-          created_by: user?.user?.id,
-          criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
-          convertido: true, mes_referencia: mesRef,
-          fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
-          banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
-          banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
-          banco_inter: c.banco_inter || false,
-          valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
-          data_matricula: c.data_matricula || '', urgente: false,
-          ultimo_andamento_data: c.ultimo_andamento_data || '', ultimo_andamento_texto: c.ultimo_andamento_texto || '',
-          data: c.data || '', analista: c.analista || ''
-        };
-        const { error } = await sb.from('clientes').insert(clone);
-        if (error) { mostrarToast('Erro ao converter'); return; }
-      }
-      await atualizarCampo(id, 'convertido_fu', true);
-      mostrarToast('Cliente convertido para Em Andamento ✅');
-    } else {
-      await atualizarCampo(id, 'convertido_fu', false);
-      mostrarToast('Conversão desfeita');
+  const c = clientes.find(c => c.id === id);
+  if (!c) return;
+  const mesRef = new Date().toISOString().slice(0,7);
+  if (checked) {
+    const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
+    if (!jaExiste) {
+      const { data: user } = await sb.auth.getUser();
+      const clone = {
+        indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
+        valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
+        produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
+        created_by: user?.user?.id,
+        criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
+        convertido: true, mes_referencia: mesRef,
+        fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
+        banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
+        banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
+        banco_inter: c.banco_inter || false,
+        valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
+        data_matricula: c.data_matricula || '', urgente: false,
+        ultimo_andamento_data: c.ultimo_andamento_data || '', ultimo_andamento_texto: c.ultimo_andamento_texto || '',
+        data: c.data || '', analista: c.analista || ''
+      };
+      const { error } = await sb.from('clientes').insert(clone);
+      if (error) { mostrarToast('Erro ao converter'); return; }
     }
-    await carregarDados();
-    renderizarTabelaFu();
-    renderizarTabelaAndamento();
-    atualizarStatsFu();
-  } catch(e) {
-    console.error('Erro em converterClienteFu:', e);
-    mostrarToast('Erro inesperado. Recarregue a página.');
+    await atualizarCampo(id, 'convertido_fu', true);
+    mostrarToast('Cliente convertido para Em Andamento ✅');
+  } else {
+    await atualizarCampo(id, 'convertido_fu', false);
+    mostrarToast('Conversão desfeita');
   }
+  await carregarDados();
+  renderizarTabelaFu();
+  renderizarTabelaAndamento();
+  atualizarStatsFu();
 }
 
 function renderizarMesSelectorFu() {
@@ -4279,18 +4224,18 @@ function renderizarTabelaAndamento() {
     <tr style="border-bottom:1px solid var(--border-light);" data-id="${c.id}" class="main-row">
       <td class="px-2 py-2.5 text-xs text-center" style="color:var(--text-muted);">${i + 1}</td>
       <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${esc(c.indicacao||'')}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.cliente||'')}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
       <td class="px-1 py-2.5 text-center">
         <span class="expand-btn" onclick="toggleExpand(${c.id})" title="Expandir">▼</span>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${esc(c.cpf||'')}" maxlength="14" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
         <select onchange="onBancoChange(${c.id},this.value)" class="text-xs bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:inherit;">
           <option value="" ${!c.banco?'selected':''}>—</option>
           ${['Bradesco','Caixa','Itaú','Santander','Inter'].map(b => `<option value="${b}" ${c.banco===b?'selected':''}>${b}</option>`).join('')}
         </select>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${esc(c.agencia||'')}" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_imovel)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_financiado)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
@@ -4298,8 +4243,8 @@ function renderizarTabelaAndamento() {
           ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
         </select>
       </td>
-      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_vistoria" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${esc(c.data_vistoria||'')}" maxlength="10" style="color:inherit;width:90px;"></td>
-      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_emissao" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${esc(c.data_emissao||'')}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:100px;"></td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_vistoria" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_vistoria||''}" maxlength="10" style="color:inherit;width:90px;"></td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_emissao" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_emissao||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:100px;"></td>
       <td class="px-3 py-2.5">
         <select onchange="atualizarCampo(${c.id},'status',this.value)" data-id="${c.id}" class="status-select text-xs bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text-secondary);">
           ${statusOpts.map(s => getStatusLabel(s)).map((label,i) => `<option value="${statusOpts[i]}" ${statusOpts[i]===c.status?'selected':''}>${label}</option>`).join('')}
@@ -4314,8 +4259,8 @@ function renderizarTabelaAndamento() {
           style="color:inherit;width:110px;" autocomplete="off"
           placeholder="Analista">
       </td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.obs||'')}</span></td>
-      <td class="px-3 py-2.5 criado-por-col">${esc(c.criado_por || '—')}</td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
+      <td class="px-3 py-2.5 criado-por-col">${c.criado_por || '—'}</td>
       <td class="px-2 py-2.5 text-center">
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
@@ -4339,7 +4284,7 @@ function renderizarTabelaAndamento() {
                 class="editavel px-1 rounded bg-transparent border-0 text-xs"
                 oninput="mascaraDataCompleta(this)"
                 onblur="editarCampoInput(this)"
-                value="${esc(c.ultimo_andamento_data||'')}"
+                value="${c.ultimo_andamento_data||''}"
                 placeholder="dd/mm/aaaa" maxlength="10"
                 style="color:inherit;width:100px;">
               <input type="text" data-id="${c.id}" data-campo="ultimo_andamento_texto"
@@ -4417,15 +4362,15 @@ function renderizarTabelaEmitidos() {
     return `
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
-      <td class="px-3 py-2.5 text-gray-300">${esc(c.indicacao||'—')}</td>
-      <td class="px-3 py-2.5 text-gray-200 font-medium">${esc(c.cliente||'—')}</td>
-      <td class="px-3 py-2.5 text-gray-400 font-mono text-xs">${esc(c.cpf||'—')}</td>
-      <td class="px-3 py-2.5 text-gray-300">${esc(c.banco||'—')}</td>
-      <td class="px-3 py-2.5 text-gray-300">${esc(c.agencia||'—')}</td>
-      <td class="px-3 py-2.5 text-gray-300">${esc(c.valor_imovel||'—')}</td>
-      <td class="px-3 py-2.5 text-gray-300">${esc(c.valor_financiado||'—')}</td>
-      <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='FGTS'?'text-orange-400':'text-gray-300'}">${esc(c.produto||'—')}</span></td>
-      <td class="px-3 py-2.5 text-gray-400 text-xs">${esc(c.emitido_por||c.criado_por||'—')}</td>
+      <td class="px-3 py-2.5 text-gray-300">${c.indicacao||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-200 font-medium">${c.cliente||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-400 font-mono text-xs">${c.cpf||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-300">${c.banco||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-300">${c.agencia||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-300">${c.valor_imovel||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-300">${c.valor_financiado||'—'}</td>
+      <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='FGTS'?'text-orange-400':'text-gray-300'}">${c.produto||'—'}</span></td>
+      <td class="px-3 py-2.5 text-gray-400 text-xs">${c.emitido_por||c.criado_por||'—'}</td>
       <td class="px-2 py-2.5 text-center">
         ${master ? `<button onclick="reverterEmitido(${c.id})" class="text-xs px-2 py-1 rounded-lg border transition" style="color:var(--accent);border-color:var(--accent);background:transparent;" title="Reverter para Análises"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>` : ''}
         ${master ? `<button onclick="excluirCliente(${c.id})" class="ml-1 text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>` : ''}
