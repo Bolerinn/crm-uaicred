@@ -11,9 +11,19 @@ app.use(express.json());
 const PORTA = 3456;
 const FOTO_GRUPO = path.join(__dirname, '..', 'logo-p.png');
 const PARTICIPANTES_FIXOS = [
-  '557199745617@c.us',  // Douglas (pessoal) — 71 9974-5617
-  '557192057760@c.us',  // Escritório — 71 9205-7760
+  '557199745617@c.us',  // Douglas — 71 9974-5617
+  '557193299300@c.us',  // Luana — 71 9932-9300
+  '557199246791@c.us',  // Fernanda — 71 9924-67911
 ];
+
+// Extrair primeiro nome + sobrenome de um nome completo
+function extrairNomeGrupo(nomeCompleto) {
+  const partes = (nomeCompleto || '').trim().split(/\s+/);
+  if (partes.length >= 2) {
+    return (partes[0] + ' ' + partes[1]).toUpperCase();
+  }
+  return (partes[0] || 'CLIENTE').toUpperCase();
+}
 
 // ============ WHATSAPP CLIENT ============
 const client = new Client({
@@ -97,18 +107,14 @@ app.post('/api/criar-grupo', async (req, res) => {
   }
 
   try {
-    const nomeGrupo = `${nomeCliente || 'Cliente'} — Rede Prime`;
-    const participantes = [
-      `${telefoneCliente}@c.us`,
-      `${telefoneCorretor}@c.us`,
-      ...PARTICIPANTES_FIXOS,
-    ];
+    // Nome do grupo: FINANCIAMENTO + PRIMEIRO NOME + SOBRENOME (caixa alta)
+    const nomeGrupo = 'FINANCIAMENTO ' + extrairNomeGrupo(nomeCliente);
+    const participantesConvidados = [];
 
     console.log(`📝 Criando grupo: "${nomeGrupo}"`);
-    console.log(`   Participantes: ${participantes.length}`);
 
-    // 1. Criar grupo
-    const grupo = await client.createGroup(nomeGrupo, participantes);
+    // 1. Criar grupo APENAS com participantes fixos (Douglas, Luana, Fernanda)
+    const grupo = await client.createGroup(nomeGrupo, PARTICIPANTES_FIXOS);
     console.log(`✅ Grupo criado: ${grupo.gid._serialized}`);
 
     // 2. Definir foto (se existir)
@@ -126,45 +132,78 @@ app.post('/api/criar-grupo', async (req, res) => {
     const linkUrl = `https://chat.whatsapp.com/${inviteCode}`;
     console.log(`🔗 Link: ${linkUrl}`);
 
-    // 4. Mensagem personalizada
-    const msgBoasVindas = [
-      `*Rede Prime Assessoria RMS* 🤝`,
-      ``,
-      `Seu grupo de acompanhamento foi criado!`,
-      `Abaixo o link para entrar:`,
-      `${linkUrl}`,
-      ``,
-      `Cliente: *${nomeCliente || '—'}*`,
-      `Corretor: *${nomeCorretor || '—'}*`,
-      ``,
-      `A Rede Prime está à disposição!`,
-    ].join('\n');
-
-    // Enviar link para corretor
-    await client.sendMessage(`${telefoneCorretor}@c.us`, msgBoasVindas);
-
-    // Enviar link para cliente (se tiver whatsapp)
-    if (telefoneCliente) {
-      await client.sendMessage(`${telefoneCliente}@c.us`, msgBoasVindas);
+    // 4. Tentar adicionar corretor ao grupo
+    try {
+      await grupo.addParticipants([`${telefoneCorretor}@c.us`]);
+      console.log(`✅ Corretor (${nomeCorretor}) adicionado ao grupo`);
+      participantesConvidados.push(`${telefoneCorretor}@c.us`);
+    } catch (corretorErr) {
+      console.log(`⚠️ Corretor (${nomeCorretor}) não pode ser adicionado. Enviando link por DM...`);
+      // Abrir conversa com corretor e enviar convite
+      const msgCorretor = [
+        `*REDE PRIME ASSESSORIA RMS*`,
+        ``,
+        `Olá *${nomeCorretor || 'Corretor'}*! 👋`,
+        ``,
+        `O grupo de financiamento do cliente *${extrairNomeGrupo(nomeCliente)}* foi criado!`,
+        `Como você não está na lista de contatos da PRIME, não foi possível adicioná-lo automaticamente.`,
+        ``,
+        `👉 *Compartilhe o link abaixo com o cliente* para que ele entre no grupo:`,
+        `${linkUrl}`,
+        ``,
+        `🔗 *Link do grupo:* ${linkUrl}`,
+        ``,
+        `Atenciosamente,`,
+        `Rede Prime Assessoria RMS`,
+      ].join('\n');
+      await client.sendMessage(`${telefoneCorretor}@c.us`, msgCorretor);
+      console.log(`✅ Mensagem de convite enviada para corretor (${telefoneCorretor})`);
     }
 
-    // Mensagem de boas-vindas no grupo
+    // 5. Tentar adicionar cliente ao grupo
+    try {
+      await grupo.addParticipants([`${telefoneCliente}@c.us`]);
+      console.log(`✅ Cliente (${nomeCliente}) adicionado ao grupo`);
+      participantesConvidados.push(`${telefoneCliente}@c.us`);
+    } catch (clienteErr) {
+      console.log(`⚠️ Cliente (${nomeCliente}) não pode ser adicionado. Enviando link por DM para o corretor...`);
+      // Se corretor já foi adicionado, enviar DM pedindo pra ele compartilhar com o cliente
+      const msgConvite = [
+        `*REDE PRIME ASSESSORIA RMS*`,
+        ``,
+        `Olá *${nomeCorretor || 'Corretor'}*! 👋`,
+        ``,
+        `O cliente *${extrairNomeGrupo(nomeCliente)}* não pôde ser adicionado automaticamente ao grupo de financiamento, pois não tem o contato da PRIME salvo.`,
+        ``,
+        `👉 *Por favor, compartilhe o link abaixo com ele:*`,
+        `${linkUrl}`,
+        ``,
+        `🔗 *Link do grupo:* ${linkUrl}`,
+        ``,
+        `Desde já, obrigado!`,
+        `Rede Prime Assessoria RMS`,
+      ].join('\n');
+      await client.sendMessage(`${telefoneCorretor}@c.us`, msgConvite);
+      console.log(`✅ Mensagem com link enviada para corretor (${telefoneCorretor}) compartilhar com cliente`);
+    }
+
+    // 6. Mensagem de boas-vindas no grupo
     await client.sendMessage(grupo.gid._serialized, [
-      `🎉 *Bem-vindos ao grupo!*`,
+      `🎉 *BEM-VINDOS AO GRUPO!*`,
       ``,
-      `Este é o acompanhamento do processo de *${nomeCliente || 'Cliente'}*.`,
+      `Acompanhamento do processo de *${extrairNomeGrupo(nomeCliente)}*.`,
       ``,
-      `📋 Corretor: ${nomeCorretor || '—'}`,
-      `🏢 Rede Prime Assessoria RMS`,
+      `🏢 *Rede Prime Assessoria RMS*`,
+      `📞 (71) 9974-5617`,
       ``,
       `Qualquer dúvida, estamos à disposição!`,
     ].join('\n'));
 
-    // 5. Salvar no banco Supabase (opcional)
+    // 7. Salvar no banco Supabase (opcional)
     salvarGrupoNoBanco({
       cliente_id: clienteId || null,
       nome_grupo: nomeGrupo,
-      participantes: participantes,
+      participantes: [...PARTICIPANTES_FIXOS, ...participantesConvidados],
       link_convite: linkUrl,
       gid: grupo.gid._serialized,
     });
@@ -174,6 +213,10 @@ app.post('/api/criar-grupo', async (req, res) => {
       grupo: nomeGrupo,
       link: linkUrl,
       gid: grupo.gid._serialized,
+      convidados: participantesConvidados.length,
+      nao_adicionados: (telefoneCliente && !participantesConvidados.includes(`${telefoneCliente}@c.us`)) || 
+                       (telefoneCorretor && !participantesConvidados.includes(`${telefoneCorretor}@c.us`)) 
+                        ? 'Alguns convidados receberam o link via mensagem direta.' : null,
     });
   } catch (err) {
     console.error('❌ Erro ao criar grupo:', err);

@@ -2022,7 +2022,12 @@ async function criarGrupoWhatsApp(clienteId, clienteNome, cpf) {
     
     const data = await resp.json();
     if (data.success) {
-      mostrarToast('✅ Grupo "' + data.grupo + '" criado!');
+      const msg = '✅ Grupo "' + data.grupo + '" criado!';
+      if (data.nao_adicionados) {
+        mostrarToast(msg + ' ' + data.nao_adicionados);
+      } else {
+        mostrarToast(msg);
+      }
       if (navigator.clipboard) {
         navigator.clipboard.writeText(data.link).catch(() => {});
       }
