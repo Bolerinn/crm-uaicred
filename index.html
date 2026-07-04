@@ -1801,13 +1801,18 @@ async function adicionarCliente() {
       .select()
       .single();
 
-    if (error) { mostrarToast('Erro ao adicionar'); return; }
+    if (error) { mostrarToast('Erro ao adicionar: ' + error.message); return; }
     mostrarToast('Processo adicionado ✏️');
+    await carregarDados();
+    renderizarTudo();
     setTimeout(() => {
       const tbodyId = tabAtivo === 'andamento' ? 'tableBodyAndamento' : tabAtivo === 'emitidos' ? 'tableBodyEmitidos' : tabAtivo === 'fu' ? 'tableBodyFu' : 'tableBody';
       const row = document.querySelector(`#${tbodyId} tr[data-id="${data.id}"]`);
       if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     }, 300);
+  } catch(e) {
+    console.error('Erro em adicionarCliente:', e);
+    mostrarToast('Erro inesperado: ' + e.message);
   } finally {
     setTimeout(() => { adicionando = false; }, 2000);
   }
