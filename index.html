@@ -1991,53 +1991,67 @@ async function criarGrupoWhatsApp(clienteId, clienteNome, cpf) {
   if (!cpf) { mostrarToast('Cliente sem CPF necessário.'); return; }
   
   const c = clientes.find(x => x.id === clienteId);
-  if (!c) { mostrarToast('Cliente não encontrado'); return; }
+  if (!c) { mostrarToast('Cliente n\u00e3o encontrado'); return; }
   
   const corretorNome = c.indicacao || 'Corretor';
-  const telefoneCliente = prompt('WhatsApp do cliente (DDI+DDD+número, ex: 5571999999999):', '55');
+  const telefoneCliente = prompt('WhatsApp do cliente (DDI+DDD+n\u00famero, ex: 5571999999999):', '55');
   if (!telefoneCliente) return;
   
-  const telefoneCorretor = prompt('WhatsApp do corretor (' + corretorNome + ') (DDI+DDD+número, ex: 5571999999999):', '55');
+  const telefoneCorretor = prompt('WhatsApp do corretor (' + corretorNome + ') (DDI+DDD+n\u00famero, ex: 5571999999999):', '55');
   if (!telefoneCorretor) return;
   
-  // Nome do cliente em CAPS (primeiro nome + sobrenome)
-  var partes = (c.cliente || clienteNome || '').trim().split(/\s+/);
+  // Nome do grupo em CAPS (primeiro nome + sobrenome)
+  var partes = (c.cliente || clienteNome || '').trim().split(/\\s+/);
   var nomeCaps = partes.length >= 2 ? (partes[0] + ' ' + partes[1]).toUpperCase() : (partes[0] || 'CLIENTE').toUpperCase();
   
-  // Texto padrão para criar o grupo
-  var texto = [
-    '*REDE PRIME ASSESSORIA RMS*',
-    '',
-    'Olá! Dando início ao acompanhamento do processo de *' + nomeCaps + '*.',
-    '',
-    'Precisamos criar um grupo no WhatsApp para acompanhamento. Por favor, me adicione no grupo com os participantes abaixo:',
-    '',
-    '📋 Cliente: *' + nomeCaps + '* - ' + telefoneCliente.replace(/\D/g, ''),
-    '🏢 Corretor(a): *' + corretorNome + '* - ' + telefoneCorretor.replace(/\D/g, ''),
-    '🏠 Rede Prime: Douglas, Luana, Fernanda',
-    '',
-    'Aguardando o link do grupo! Obrigado.',
-    '',
-    '---',
-    'Mensagem gerada pelo CRM Rede Prime'
-  ].join('\n');
-  
-  var destino = telefoneCorretor.replace(/\D/g, '');
-  var url = 'whatsapp://send?phone=' + destino + '&text=' + encodeURIComponent(texto);
-  
-  mostrarToast('💬 Abrindo WhatsApp...');
-  
-  // Tentar abrir WhatsApp Desktop, fallback pro web
-  var w = window.open(url, '_blank');
-  if (!w || w.closed || typeof w.closed === 'undefined') {
-    window.open('https://wa.me/' + destino + '?text=' + encodeURIComponent(texto), '_blank');
+  try {
+    mostrarToast('\uD83E\uDD16 Criando grupo...');
+    
+    // Tentar bot local (whatsapp-web.js)
+    var resp = await fetch('http://localhost:3456/api/criar-grupo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente: telefoneCliente.replace(/\\D/g, ''),
+        corretor: telefoneCorretor.replace(/\\D/g, ''),
+        nomeCliente: c.cliente || clienteNome,
+        nomeCorretor: corretorNome,
+        clienteId: clienteId
+      })
+    });
+    
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function() { return {}; });
+      if (resp.status === 503) {
+        mostrarToast('\u26A0\uFE0F Bot WhatsApp offline. Inicie o servidor ou use o QR Code.');
+      } else {
+        mostrarToast('\u274C Erro: ' + (errData.error || resp.statusText));
+      }
+      return;
+    }
+    
+    var data = await resp.json();
+    if (data.success) {
+      var msg = '\u2705 Grupo "' + data.grupo + '" criado!';
+      if (data.nao_adicionados) {
+        mostrarToast(msg + ' ' + data.nao_adicionados);
+      } else {
+        mostrarToast(msg);
+      }
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(data.link).catch(function() {});
+      }
+      // Salvar no banco
+      await sb.from('whatsapp_grupos').insert({
+        cliente_id: clienteId, analista_id: usuarioNome ? usuarioNome.toLowerCase() : '',
+        subject: data.grupo, participantes: [telefoneCliente.replace(/\\D/g, ''), telefoneCorretor.replace(/\\D/g, '')],
+        link_convite: data.link, gid: data.gid
+      }).catch(function() {});
+    }
+  } catch (err) {
+    console.error('Erro ao criar grupo:', err);
+    mostrarToast('\u274C Bot WhatsApp offline. Execute: node whatsapp-bot/server.js e escaneie o QR.');
   }
-  
-  // Salvar tentativa no banco
-  await sb.from('whatsapp_grupos').insert({
-    cliente_id: clienteId, analista_id: usuarioNome ? usuarioNome.toLowerCase() : '',
-    subject: 'FINANCIAMENTO ' + nomeCaps, participantes: [telefoneCliente.replace(/\D/g, ''), telefoneCorretor.replace(/\D/g, '')]
-  }).catch(function() {});
 }
 
 async function notificarMudancaStatus(clienteId, clienteNome, novoStatus) {
