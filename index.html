@@ -1984,17 +1984,59 @@ async function atualizarCampo(id, campo, valor) {
 
 async function criarGrupoWhatsApp(clienteId, clienteNome, cpf) {
   if (!cpf) { mostrarToast('Cliente sem CPF necessário.'); return; }
-  const { data, error } = await sb.from('whatsapp_grupos').insert({
-    cliente_id: clienteId, analista_id: usuarioNome.toLowerCase(),
-    subject: 'Proposta — ' + clienteNome, participantes: ['557192057760']
-  }).select().single();
-  if (error) { mostrarToast('Erro ao criar grupo.'); return; }
-  await sb.from('whatsapp_mensagens').insert({
-    grupo_id: data.id, remetente: 'sistema',
-    texto: 'Grupo criado para ' + clienteNome + '.', tipo: 'sistema'
-  });
-  mostrarToast('Grupo WhatsApp criado!');
-  window.open('/whatsapp.html', '_blank');
+  
+  const c = clientes.find(x => x.id === clienteId);
+  if (!c) { mostrarToast('Cliente não encontrado'); return; }
+  
+  const corretorNome = c.indicacao || 'Corretor';
+  const telefoneCliente = prompt('WhatsApp do cliente (DDI+DDD+número, ex: 5571999999999):', '55');
+  if (!telefoneCliente) return;
+  
+  const telefoneCorretor = prompt('WhatsApp do corretor (' + corretorNome + ') (DDI+DDD+número, ex: 5571999999999):', '55');
+  if (!telefoneCorretor) return;
+  
+  try {
+    mostrarToast('📱 Criando grupo no WhatsApp...');
+    
+    const resp = await fetch('http://localhost:3456/api/criar-grupo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente: telefoneCliente.replace(/\\D/g, ''),
+        corretor: telefoneCorretor.replace(/\\D/g, ''),
+        nomeCliente: c.cliente || clienteNome,
+        nomeCorretor: corretorNome,
+        clienteId: clienteId
+      })
+    });
+    
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      if (resp.status === 503) {
+        mostrarToast('⚠️ Servidor WhatsApp offline. Escaneie o QR Code primeiro.');
+      } else {
+        mostrarToast('❌ Erro: ' + (errData.error || resp.statusText));
+      }
+      return;
+    }
+    
+    const data = await resp.json();
+    if (data.success) {
+      mostrarToast('✅ Grupo "' + data.grupo + '" criado!');
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(data.link).catch(() => {});
+      }
+      // Salvar referência no banco
+      await sb.from('whatsapp_grupos').insert({
+        cliente_id: clienteId, analista_id: usuarioNome ? usuarioNome.toLowerCase() : '',
+        subject: data.grupo, participantes: [telefoneCliente.replace(/\\D/g, ''), telefoneCorretor.replace(/\\D/g, '')],
+        link_convite: data.link, gid: data.gid
+      }).catch(() => {});
+    }
+  } catch (err) {
+    console.error('Erro ao criar grupo WhatsApp:', err);
+    mostrarToast('❌ Servidor WhatsApp não encontrado. O bot está rodando? (localhost:3456)');
+  }
 }
 
 async function notificarMudancaStatus(clienteId, clienteNome, novoStatus) {

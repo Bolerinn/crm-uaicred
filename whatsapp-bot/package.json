@@ -1,0 +1,19 @@
+{
+  "name": "whatsapp-bot",
+  "version": "1.0.0",
+  "description": "Bot WhatsApp para criação de grupos — Rede Prime Assessoria RMS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Rede Prime",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "express": "^5.2.1",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
+  }
+}
