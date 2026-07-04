@@ -1920,7 +1920,6 @@ async function atualizarCampo(id, campo, valor) {
           banco_inter: c2.banco_inter || false,
           valor_fgts: c2.valor_fgts || '', data_iq: c2.data_iq || '',
           data_matricula: c2.data_matricula || '', urgente: c2.urgente || false,
-          ultimo_andamento_data: c2.ultimo_andamento_data || '', ultimo_andamento_texto: c2.ultimo_andamento_texto || '',
           resultado: c2.resultado || '',
           resultado_caixa: c2.resultado_caixa || '', resultado_bradesco: c2.resultado_bradesco || '',
           resultado_itau: c2.resultado_itau || '', resultado_santander: c2.resultado_santander || '',
@@ -2011,8 +2010,7 @@ async function converterCliente(id, checked) {
         banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
         banco_inter: c.banco_inter || false,
         valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
-        data_matricula: c.data_matricula || '', urgente: false,
-        ultimo_andamento_data: c.ultimo_andamento_data || '', ultimo_andamento_texto: c.ultimo_andamento_texto || ''
+        data_matricula: c.data_matricula || '', urgente: false
       };
       const { data: novo, error } = await sb.from('clientes').insert(clone).select().single();
       if (!error && novo) {
@@ -2328,10 +2326,6 @@ function gerarBriefing(id) {
   mostrarToast('📄 Briefing em desenvolvimento — em breve disponível');
 }
 
-function dispararMensagemUltimoAndamento(id) {
-  mostrarToast('📱 Disparo de mensagem em desenvolvimento');
-}
-
 // ========== URGENTE ==========
 
 // ========== INDICAÇÕES (autocomplete) ==========
@@ -2475,58 +2469,41 @@ function salvarEdicaoParceiro() {
   
   const novaImobiliaria = document.getElementById('editImobiliaria').value.trim();
 
-  lista[idx].nome = novoNome;
-  lista[idx].tipo = novoTipo;
-  lista[idx].imobiliaria = novaImobiliaria;
-  
-  // If name changed and processes reference the old name, update them
-  if (novoNome !== nomeOriginal && emUso > 0) {
-    // Atualizar indicacao nos processos localmente
-    clientes.forEach(c => {
-      if ((c.indicacao || '').trim() === nomeOriginal) {
-        c.indicacao = novoNome;
-      }
-    });
-    // Atualizar no banco
-    (async () => {
-      const { error } = await sb.from('clientes').update({ indicacao: novoNome }).eq('indicacao', nomeOriginal);
-      if (!error) await carregarDados();
-    })();
+  if (novoNome !== nomeOriginal) {
+    // Name changed: update partner entry, old processes keep original name
+    lista[idx].nome = novoNome;
+    lista[idx].tipo = novoTipo;
+    lista[idx].imobiliaria = novaImobiliaria;
+    // Keep old name available by adding an alias if processes reference it
+    if (emUso > 0 && !lista.some(i => i.nome === nomeOriginal)) {
+      lista.push({ nome: nomeOriginal, tipo: novoTipo, imobiliaria: novaImobiliaria, adicionado_em: new Date().toISOString(), _legado: true });
+    }
+  } else {
+    lista[idx].tipo = novoTipo;
+    lista[idx].imobiliaria = novaImobiliaria;
   }
   
   salvarIndicacoes(lista);
   popularDatalistIndicacoes();
   fecharModalEditarParceiro();
   abrirModalParceiros(); // refresh
-  mostrarToast('✅ Parceiro atualizado');
+  mostrarToast('✅ Parceiro atualizado' + (emUso > 0 ? ` (${emUso} processos mantêm o nome original)` : ''));
 }
 
 function removerParceiro(nome) {
+  // Check if in use
   const emUso = clientes.filter(c => (c.indicacao || '').trim() === nome).length;
   const msg = emUso > 0
-    ? '"' + nome + '" está vinculado a ' + emUso + ' processo(s). A indicação será removida dos processos. Continuar?'
-    : 'Remover "' + nome + '" da lista de parceiros?';
+    ? `"${nome}" está vinculado a ${emUso} processo(s). Remover da lista de parceiros? (os processos manterão o nome)`
+    : `Remover "${nome}" da lista de parceiros?`;
+  
   if (!confirm(msg)) return;
-  
-  // Clear partner name from linked processes
-  if (emUso > 0) {
-    clientes.forEach(c => {
-      if ((c.indicacao || '').trim() === nome) {
-        c.indicacao = '';
-      }
-    });
-    // Atualizar no banco
-    (async () => {
-      await sb.from('clientes').update({ indicacao: '' }).eq('indicacao', nome);
-    })();
-  }
-  
   const lista = carregarIndicacoes();
   const novaLista = lista.filter(i => i.nome !== nome);
   salvarIndicacoes(novaLista);
   popularDatalistIndicacoes();
   abrirModalParceiros();
-  mostrarToast('🗑️ Parceiro removido' + (emUso > 0 ? ' (' + emUso + ' processos limpos)' : ''));
+  mostrarToast('🗑️ Parceiro removido da lista' + (emUso > 0 ? ` (${emUso} processos mantêm o nome)` : ''));
 }
 
 function abrirModalIndicacao() {
@@ -2788,14 +2765,8 @@ function coletarEventosCalendario() {
   doMes.forEach(c => {
     if (c.convertido === true && c.status !== 'emitido' && c.data_matricula) {
       const dt = parseDataBR(c.data_matricula);
-      if (dt) {
-        // Vencimento: Itaú = +20 dias, demais bancos = +30 dias
-        const diasVencimento = (c.banco || '').toLowerCase() === 'itaú' ? 20 : 30;
-        const vencimento = new Date(dt);
-        vencimento.setDate(vencimento.getDate() + diasVencimento);
-        if (vencimento.getMonth() + 1 === hoje.getMonth() + 1 && vencimento.getFullYear() === hoje.getFullYear()) {
-          adicionar(vencimento.getDate(), 'matricula', c.cliente || 'Sem nome');
-        }
+      if (dt && dt.getMonth() + 1 === hoje.getMonth() + 1 && dt.getFullYear() === hoje.getFullYear()) {
+        adicionar(dt.getDate(), 'matricula', c.cliente || 'Sem nome');
       }
     }
     if (c.convertido === true && c.status !== 'emitido' && c.iq && c.data_iq) {
@@ -2876,7 +2847,7 @@ function renderizarCalendarioDash(feriados) {
   html += '</div>';
 
   html += '<div class="cal-legenda">';
-  html += '<div class="cal-legenda-item"><span class="cal-legenda-dot matricula"></span> Venc. Matrícula</div>';
+  html += '<div class="cal-legenda-item"><span class="cal-legenda-dot matricula"></span> Matrícula</div>';
   html += '<div class="cal-legenda-item"><span class="cal-legenda-dot iq"></span> IQ</div>';
   html += '<div class="cal-legenda-item"><span class="cal-legenda-dot fu"></span> Follow-up</div>';
   html += '<div class="cal-legenda-item"><span class="cal-legenda-dot feriado"></span> Feriado</div>';
@@ -3358,21 +3329,12 @@ async function excluirTodosLixeira() {
   if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
   if (!confirm('ATENÇÃO: ' + checks.length + ' processo(s) serão EXCLUÍDOS PERMANENTEMENTE. Continuar?')) return;
   let count = 0;
-  let erros = 0;
   for (const cb of checks) {
     const id = parseInt(cb.value);
     const { error } = await sb.from('clientes').delete().eq('id', id);
-    if (!error) {
-      count++;
-      clientesLixeira = clientesLixeira.filter(c => c.id !== id);
-    } else {
-      erros++;
-      console.error('Falha ao excluir permanentemente id=' + id + ':', error.message);
-    }
+    if (!error) count++;
   }
-  renderizarTabelaLixeira();
-  if (count > 0) mostrarToast(count + ' processo(s) excluído(s) ✕');
-  if (erros > 0) mostrarToast('⚠️ ' + erros + ' processo(s) NÃO puderam ser excluídos (apenas o criador pode excluir permanentemente)');
+  mostrarToast(count + ' processo(s) excluído(s) ✕');
   await carregarLixeira();
 }
 
@@ -3482,7 +3444,7 @@ function renderizarMetricas() {
   const emitidos = doMes.filter(c => c.status === 'emitido').length;
 
   // ---- Dados baseados nos filtros ----
-  const analises = filtrados.filter(c => c.convertido !== true && c.follow_up !== true).length;
+  const analises = filtrados.filter(c => c.convertido !== true).length;
   const andamento = filtrados.filter(c => c.convertido === true && c.status !== 'emitido').length;
   const emit = filtrados.filter(c => c.status === 'emitido').length;
   const totalFinanciado = filtrados
@@ -3503,12 +3465,12 @@ function renderizarMetricas() {
       c.banco_bradesco === true || c.banco_itau === true || 
       c.banco_santander === true || c.banco_inter === true;
   });
-  const caixaAnalises = caixa.filter(c => c.convertido !== true && c.follow_up !== true).length;
+  const caixaAnalises = caixa.filter(c => c.convertido !== true).length;
   const caixaAndamento = caixa.filter(c => c.convertido === true && c.status !== 'emitido').length;
   const caixaEmitidos = caixa.filter(c => c.status === 'emitido').length;
   const caixaFin = caixa.filter(c => c.status === 'emitido')
     .reduce((s,c) => s + (parseFloat(String(c.valor_financiado||'').replace(/[^\d,]/g,'').replace(',','.'))||0), 0);
-  const privAnalises = privados.filter(c => c.convertido !== true && c.follow_up !== true).length;
+  const privAnalises = privados.filter(c => c.convertido !== true).length;
   const privAndamento = privados.filter(c => c.convertido === true && c.status !== 'emitido').length;
   const privEmitidos = privados.filter(c => c.status === 'emitido').length;
   const privFin = privados.filter(c => c.status === 'emitido')
@@ -4012,7 +3974,6 @@ async function converterClienteFu(id, checked) {
         banco_inter: c.banco_inter || false,
         valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
         data_matricula: c.data_matricula || '', urgente: false,
-        ultimo_andamento_data: c.ultimo_andamento_data || '', ultimo_andamento_texto: c.ultimo_andamento_texto || '',
         data: c.data || '', analista: c.analista || ''
       };
       const { error } = await sb.from('clientes').insert(clone);
@@ -4222,39 +4183,15 @@ function renderizarTabelaAndamento() {
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
       <td class="px-3 py-2.5 criado-por-col">${c.criado_por || '—'}</td>
       <td class="px-2 py-2.5 text-center">
+        <button onclick="criarGrupoWhatsApp(${c.id},'${esc(c.cliente||'')}','${c.cpf||''}')" class="text-green-600 hover:text-green-800 transition mr-1" title="Criar Grupo WhatsApp" ${!c.cpf?'disabled style="opacity:0.3;cursor:not-allowed;"':''}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </button>
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
     </tr>
     <tr class="expanded-row hidden" data-parent="${c.id}">
       <td colspan="15">
         <div class="expanded-grid">
-          <div class="expanded-item">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <label>Último andamento</label>
-              <button onclick="dispararMensagemUltimoAndamento(${c.id})" title="Disparar mensagem"
-                style="background:none;border:none;cursor:pointer;padding:0;color:#25D366;opacity:0.85;"
-                onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-                </svg>
-              </button>
-            </div>
-            <div style="display:flex;gap:4px;margin-top:4px;">
-              <input type="text" data-id="${c.id}" data-campo="ultimo_andamento_data"
-                class="editavel px-1 rounded bg-transparent border-0 text-xs"
-                oninput="mascaraDataCompleta(this)"
-                onblur="editarCampoInput(this)"
-                value="${c.ultimo_andamento_data||''}"
-                placeholder="dd/mm/aaaa" maxlength="10"
-                style="color:inherit;width:100px;">
-              <input type="text" data-id="${c.id}" data-campo="ultimo_andamento_texto"
-                class="editavel px-2 py-1 rounded bg-transparent border text-xs"
-                onblur="editarCampoInput(this)"
-                value="${esc(c.ultimo_andamento_texto||'')}"
-                placeholder="Descreva o andamento..."
-                style="color:inherit;flex:1;min-width:160px;border-color:var(--border);">
-            </div>
-          </div>
           <div class="expanded-item">
             <label style="cursor:pointer;" onclick="toggleFGTS(${c.id})">
               <input type="checkbox" ${fgts?'checked':''} onchange="toggleFGTS(${c.id})" style="accent-color:#f97316;"> FGTS
@@ -4276,15 +4213,7 @@ function renderizarTabelaAndamento() {
               <input type="checkbox" ${c.urgente?'checked':''} onchange="toggleUrgente(${c.id})" style="accent-color:#dc2626;"> 🔴 Urgente
             </label>
           </div>
-          <div class="expanded-item" style="justify-content:flex-end;display:flex;gap:6px;align-items:center;">
-            <button onclick="criarGrupoWhatsApp(${c.id},'${esc(c.cliente||'')}','${c.cpf||''}')"
-              class="text-green-600 hover:text-green-800 transition" title="Criar Grupo WhatsApp"
-              ${!c.cpf?'disabled style="opacity:0.3;cursor:not-allowed;"':''}
-              style="background:none;border:none;cursor:pointer;padding:4px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-              </svg>
-            </button>
+          <div class="expanded-item" style="justify-content:flex-end;">
             <button class="btn-briefing" onclick="gerarBriefing(${c.id})" title="Gerar Briefing (em breve)">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
               Briefing
