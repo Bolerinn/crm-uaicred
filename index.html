@@ -3339,20 +3339,25 @@ async function limparTudo() {
   
   mostrarToast('🧹 Limpando dados...');
   
-  // 1. Deletar todos os registros de clientes
-  const { data: allItems, error: fetchErr } = await sb.from('clientes').select('id');
-  if (fetchErr) { mostrarToast('Erro ao buscar registros: ' + fetchErr.message); return; }
-  
-  if (allItems && allItems.length > 0) {
-    let count = 0;
-    let erros = 0;
-    for (const item of allItems) {
-      const { error } = await sb.from('clientes').delete().eq('id', item.id);
-      if (!error) count++;
-      else erros++;
+  // 1. Tentar RPC hard_reset (SECURITY DEFINER, bypassa RLS)
+  const { error: rpcError } = await sb.rpc('hard_reset');
+  if (rpcError) {
+    console.warn('RPC hard_reset não disponível, tentando deleção individual...');
+    // Fallback: deletar um por um (só funciona para registros do próprio usuário)
+    const { data: allItems, error: fetchErr } = await sb.from('clientes').select('id');
+    if (fetchErr) { mostrarToast('Erro ao buscar registros: ' + fetchErr.message); return; }
+    
+    if (allItems && allItems.length > 0) {
+      let count = 0;
+      let erros = 0;
+      for (const item of allItems) {
+        const { error } = await sb.from('clientes').delete().eq('id', item.id);
+        if (!error) count++;
+        else erros++;
+      }
+      if (count > 0) mostrarToast(count + ' processo(s) excluído(s)');
+      if (erros > 0) mostrarToast('⚠️ ' + erros + ' processo(s) não puderam ser excluídos (rode o SQL no Supabase primeiro)');
     }
-    if (count > 0) mostrarToast(count + ' processo(s) excluído(s)');
-    if (erros > 0) mostrarToast('⚠️ ' + erros + ' processo(s) não puderam ser excluídos');
   }
   
   // 2. Limpar parceiros do localStorage
