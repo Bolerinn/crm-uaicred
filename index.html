@@ -1995,53 +1995,44 @@ async function criarGrupoWhatsApp(clienteId, clienteNome, cpf) {
   const telefoneCorretor = prompt('WhatsApp do corretor (' + corretorNome + ') (DDI+DDD+número, ex: 5571999999999):', '55');
   if (!telefoneCorretor) return;
   
-  try {
-    mostrarToast('📱 Criando grupo no WhatsApp...');
-    
-    const resp = await fetch('http://localhost:3456/api/criar-grupo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cliente: telefoneCliente.replace(/\\D/g, ''),
-        corretor: telefoneCorretor.replace(/\\D/g, ''),
-        nomeCliente: c.cliente || clienteNome,
-        nomeCorretor: corretorNome,
-        clienteId: clienteId
-      })
-    });
-    
-    if (!resp.ok) {
-      const errData = await resp.json().catch(() => ({}));
-      if (resp.status === 503) {
-        mostrarToast('⚠️ Servidor WhatsApp offline. Escaneie o QR Code primeiro.');
-      } else {
-        mostrarToast('❌ Erro: ' + (errData.error || resp.statusText));
-      }
-      return;
-    }
-    
-    const data = await resp.json();
-    if (data.success) {
-      const msg = '✅ Grupo "' + data.grupo + '" criado!';
-      if (data.nao_adicionados) {
-        mostrarToast(msg + ' ' + data.nao_adicionados);
-      } else {
-        mostrarToast(msg);
-      }
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(data.link).catch(() => {});
-      }
-      // Salvar referência no banco
-      await sb.from('whatsapp_grupos').insert({
-        cliente_id: clienteId, analista_id: usuarioNome ? usuarioNome.toLowerCase() : '',
-        subject: data.grupo, participantes: [telefoneCliente.replace(/\\D/g, ''), telefoneCorretor.replace(/\\D/g, '')],
-        link_convite: data.link, gid: data.gid
-      }).catch(() => {});
-    }
-  } catch (err) {
-    console.error('Erro ao criar grupo WhatsApp:', err);
-    mostrarToast('❌ Servidor WhatsApp não encontrado. O bot está rodando? (localhost:3456)');
+  // Nome do cliente em CAPS (primeiro nome + sobrenome)
+  var partes = (c.cliente || clienteNome || '').trim().split(/\s+/);
+  var nomeCaps = partes.length >= 2 ? (partes[0] + ' ' + partes[1]).toUpperCase() : (partes[0] || 'CLIENTE').toUpperCase();
+  
+  // Texto padrão para criar o grupo
+  var texto = [
+    '*REDE PRIME ASSESSORIA RMS*',
+    '',
+    'Olá! Dando início ao acompanhamento do processo de *' + nomeCaps + '*.',
+    '',
+    'Precisamos criar um grupo no WhatsApp para acompanhamento. Por favor, me adicione no grupo com os participantes abaixo:',
+    '',
+    '📋 Cliente: *' + nomeCaps + '* - ' + telefoneCliente.replace(/\D/g, ''),
+    '🏢 Corretor(a): *' + corretorNome + '* - ' + telefoneCorretor.replace(/\D/g, ''),
+    '🏠 Rede Prime: Douglas, Luana, Fernanda',
+    '',
+    'Aguardando o link do grupo! Obrigado.',
+    '',
+    '---',
+    'Mensagem gerada pelo CRM Rede Prime'
+  ].join('\n');
+  
+  var destino = telefoneCorretor.replace(/\D/g, '');
+  var url = 'whatsapp://send?phone=' + destino + '&text=' + encodeURIComponent(texto);
+  
+  mostrarToast('💬 Abrindo WhatsApp...');
+  
+  // Tentar abrir WhatsApp Desktop, fallback pro web
+  var w = window.open(url, '_blank');
+  if (!w || w.closed || typeof w.closed === 'undefined') {
+    window.open('https://wa.me/' + destino + '?text=' + encodeURIComponent(texto), '_blank');
   }
+  
+  // Salvar tentativa no banco
+  await sb.from('whatsapp_grupos').insert({
+    cliente_id: clienteId, analista_id: usuarioNome ? usuarioNome.toLowerCase() : '',
+    subject: 'FINANCIAMENTO ' + nomeCaps, participantes: [telefoneCliente.replace(/\D/g, ''), telefoneCorretor.replace(/\D/g, '')]
+  }).catch(function() {});
 }
 
 async function notificarMudancaStatus(clienteId, clienteNome, novoStatus) {
@@ -2401,7 +2392,48 @@ function gerarBriefing(id) {
 }
 
 function dispararMensagemUltimoAndamento(id) {
-  mostrarToast('📱 Disparo de mensagem em desenvolvimento');
+  var c = clientes.find(function(x) { return x.id === id; });
+  if (!c) { mostrarToast('Cliente não encontrado'); return; }
+  
+  var data = c.ultimo_andamento_data || '';
+  var textoAndamento = c.ultimo_andamento_texto || '';
+  
+  if (!data && !textoAndamento) {
+    mostrarToast('⚠️ Preencha a data e o texto do último andamento primeiro.');
+    return;
+  }
+  
+  var telefone = prompt('WhatsApp do cliente (' + (c.cliente || '') + ') (DDI+DDD+número, ex: 5571999999999):', '55');
+  if (!telefone) return;
+  
+  var destino = telefone.replace(/\D/g, '');
+  
+  // Nome do cliente CAPS (primeiro nome + sobrenome)
+  var partes = (c.cliente || '').trim().split(/\s+/);
+  var nomeCaps = partes.length >= 2 ? (partes[0] + ' ' + partes[1]).toUpperCase() : (partes[0] || 'CLIENTE').toUpperCase();
+  
+  var texto = [
+    '*REDE PRIME ASSESSORIA RMS*',
+    '',
+    '📌 *Atualização do processo* - ' + nomeCaps,
+    '',
+    '📅 Data: ' + (data || '—'),
+    '📝 Andamento: ' + (textoAndamento || '—'),
+    '',
+    'Segue atualização do processo. Qualquer dúvida, estamos à disposição!',
+    '',
+    '---',
+    'Mensagem gerada pelo CRM Rede Prime'
+  ].join('\n');
+  
+  var url = 'whatsapp://send?phone=' + destino + '&text=' + encodeURIComponent(texto);
+  
+  mostrarToast('💬 Abrindo WhatsApp...');
+  
+  var w = window.open(url, '_blank');
+  if (!w || w.closed || typeof w.closed === 'undefined') {
+    window.open('https://wa.me/' + destino + '?text=' + encodeURIComponent(texto), '_blank');
+  }
 }
 
 // ========== URGENTE ==========
