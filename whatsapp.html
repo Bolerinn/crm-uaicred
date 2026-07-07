@@ -126,6 +126,10 @@ html,body,#app{height:100%;width:100%;overflow:hidden;font-family:'Segoe UI',sys
       </div>
     </div>
     <div id="cph">
+      <div id="qr-area" style="margin-bottom:20px;display:none">
+        <canvas id="qr-canvas" style="background:#fff;padding:16px;border-radius:12px"></canvas>
+        <p style="font-size:13px;margin-top:12px;color:#667781">Escaneie com o WhatsApp → Aparelhos Conectados</p>
+      </div>
       <svg viewBox="0 0 303 172" width="250" height="140" fill="none"><rect x="0.5" y="0.5" width="302" height="171" rx="7.5" fill="#fff" stroke="#e9edef"/><circle cx="55" cy="48" r="20" fill="#dfe5e7"/><circle cx="151" cy="48" r="20" fill="#dfe5e7"/><circle cx="247" cy="48" r="20" fill="#dfe5e7"/><rect x="20" y="84" width="262" height="12" rx="6" fill="#dfe5e7"/><rect x="20" y="104" width="200" height="12" rx="6" fill="#dfe5e7"/><rect x="20" y="124" width="240" height="12" rx="6" fill="#dfe5e7"/></svg>
       <h2>WhatsApp Web</h2>
       <p>Selecione uma conversa à esquerda para ver as mensagens.</p>
@@ -141,14 +145,22 @@ html,body,#app{height:100%;width:100%;overflow:hidden;font-family:'Segoe UI',sys
 </div>
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
-var API='http://localhost:3456',chats=[],activeChat=null,messagesCache={},pollInterval=null;
+var API='http://localhost:3456',chats=[],activeChat=null,messagesCache={},pollTimer=null;
 
 function esc(s){if(!s)return'';var d=document.createElement('div');d.appendChild(document.createTextNode(String(s)));return d.innerHTML}
 function initN(n){if(!n)return'?';var p=String(n).trim().split(/\s+/);return p.length===1?p[0].substring(0,2).toUpperCase():(p[0].charAt(0)+p[p.length-1].charAt(0)).toUpperCase()}
 function fH(ts){if(!ts)return'';var d=new Date(ts*1000);return isNaN(d.getTime())?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 function fD(ts){if(!ts)return'';var d=new Date(ts*1000);if(isNaN(d.getTime()))return'';var m=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];var h=new Date();h.setHours(0,0,0,0);var o=new Date(h);o.setDate(o.getDate()-1);var dm=new Date(d);dm.setHours(0,0,0,0);if(dm.getTime()===h.getTime())return'Hoje';if(dm.getTime()===o.getTime())return'Ontem';return d.getDate()+' de '+m[d.getMonth()]+' de '+d.getFullYear()}
 function toast(m,t){t=t||'';var e=document.createElement('div');e.className='toast '+(t==='ok'?'ok':t==='er'?'er':'');e.textContent=m;document.getElementById('toast').appendChild(e);setTimeout(function(){if(e.parentNode)e.remove()},3600)}
+
+function showQR(qrText){
+  var area=document.getElementById('qr-area'),canvas=document.getElementById('qr-canvas');
+  area.style.display='block';
+  canvas.innerHTML='';
+  try{new QRCode(canvas,{text:qrText,width:250,height:250,colorDark:'#111b21',colorLight:'#ffffff'})}catch(e){canvas.textContent='QR: '+qrText}
+}
 
 async function checkStatus(){
   try{
@@ -158,7 +170,14 @@ async function checkStatus(){
     if(d.online){
       document.getElementById('st').className='st on';
       document.getElementById('ur').textContent='conectado';
+      document.getElementById('qr-area').style.display='none';
       return true;
+    }
+    if(d.qr){
+      document.getElementById('st').className='st off';
+      document.getElementById('ur').textContent='escaneie o QR';
+      showQR(d.qr);
+      return false;
     }
   }catch(e){}
   document.getElementById('st').className='st off';
@@ -299,7 +318,7 @@ async function poll(){
 (async function init(){
   await checkStatus();
   await loadChats();
-  pollInterval=setInterval(poll,5000);
+  pollTimer=setInterval(poll,5000);
 })();
 </script>
 </body>

@@ -37,6 +37,7 @@ function extrairNomeGrupo(nomeCompleto) {
 
 // ============ WHATSAPP CLIENT ============
 let client;
+let latestQR = '';
 
 async function initClient() {
   client = new Client({
@@ -53,16 +54,13 @@ async function initClient() {
   });
 
   client.on('qr', (qr) => {
-    console.log('\n==================== QR CODE ====================');
-    qrcode.generate(qr, { small: true });
-    console.log('Escaneie com o WhatsApp do escritório (71 9205-7760)');
-    console.log('==================================================\n');
+    latestQR = qr;
+    console.log('QR Code pronto — acesse http://localhost:' + PORTA + '/api/qr');
   });
 
   client.on('ready', () => {
-    console.log('\n✅ WhatsApp conectado!');
-    console.log(`🤖 Bot rodando em http://localhost:${PORTA}`);
-    console.log(`📱 Número: ${client.info?.wid?.user || 'desconhecido'}`);
+    latestQR = '';
+    console.log('✅ WhatsApp conectado! Número: ' + (client.info?.wid?.user || 'desconhecido'));
   });
 
   client.on('disconnected', (reason) => {
@@ -105,7 +103,14 @@ app.get('/api/status', (req, res) => {
   res.json({
     online: client.info?.wid?.user ? true : false,
     numero: client.info?.wid?.user || null,
+    qr: latestQR || null,
   });
+});
+
+// QR Code para conectar
+app.get('/api/qr', (req, res) => {
+  if (!latestQR) return res.json({ qr: null, msg: 'Já conectado ou aguardando QR...' });
+  res.json({ qr: latestQR });
 });
 
 // Criar grupo
