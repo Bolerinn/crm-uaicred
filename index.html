@@ -2037,6 +2037,7 @@ async function confirmarCriarGrupo() {
       // Salvar no banco
       await sb.from('whatsapp_grupos').insert({
         cliente_id: _grupoClienteId,
+        analista_id: usuarioLogado?.nome || 'master',
         subject: data.grupo,
         participantes: [],
         link_convite: data.link,

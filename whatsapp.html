@@ -291,13 +291,11 @@ var WhatsApp = (function(){
 
   // ── Auth ──────────────────────────────────────────────────
   function initSupabase() {
-    if (typeof supabase === 'undefined' && typeof window.supabase !== 'undefined') {
+    if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
       supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      return true;
     }
-    if (typeof supabase !== 'undefined' && supabase.createClient) {
-      supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
-    return !!supabase;
+    return false;
   }
 
   function checkAuth() {
@@ -413,12 +411,15 @@ var WhatsApp = (function(){
   function loadGrupos() {
     if (!currentUser) return;
     showSpinner();
-    supabase
+    var query = supabase
       .from('whatsapp_grupos')
       .select('*')
-      .eq('analista_id', currentUser.id)
-      .order('created_at', { ascending: false })
-      .then(function(res) {
+      .order('criado_em', { ascending: false });
+    // Master vê todos; outros só veem os seus
+    if (currentUser.perfil !== 'master') {
+      query = query.eq('analista_id', currentUser.id);
+    }
+    query.then(function(res) {
         hideSpinner();
         if (res.error) {
           toast('Erro ao carregar grupos: ' + res.error.message, 'error');
@@ -451,7 +452,7 @@ var WhatsApp = (function(){
       items[i].parentNode.removeChild(items[i]);
     }
     var lista = filtro ? grupos.filter(function(g) {
-      return (g.nome || '').toLowerCase().indexOf(filtro.toLowerCase()) !== -1;
+      return (g.subject || '').toLowerCase().indexOf(filtro.toLowerCase()) !== -1;
     }) : grupos;
 
     if (lista.length === 0) {
@@ -466,13 +467,13 @@ var WhatsApp = (function(){
       el.className = 'grupo-item' + (grupoAtivo && grupoAtivo.id === g.id ? ' active' : '');
       el.setAttribute('data-id', g.id);
       el.innerHTML =
-        '<div class="grupo-avatar">' + esc(getIniciais(g.nome)) + '</div>' +
+        '<div class="grupo-avatar">' + esc(getIniciais(g.subject)) + '</div>' +
         '<div class="grupo-info">' +
-          '<div class="grupo-nome">' + esc(g.nome || 'Sem nome') + '</div>' +
-          '<div class="grupo-ultima">' + esc(g.descricao || '') + '</div>' +
+          '<div class="grupo-nome">' + esc(g.subject || 'Sem nome') + '</div>' +
+          '<div class="grupo-ultima">' + esc(g.link_convite ? 'Grupo ativo' : '') + '</div>' +
         '</div>' +
         '<div class="grupo-meta">' +
-          '<div class="grupo-hora">' + (g.created_at ? formatHora(g.created_at) : '') + '</div>' +
+          '<div class="grupo-hora">' + (g.criado_em ? formatHora(g.criado_em) : '') + '</div>' +
         '</div>';
       el.addEventListener('click', (function(grupo) {
         return function() { selecionarGrupo(grupo); };
@@ -498,9 +499,9 @@ var WhatsApp = (function(){
     dom.chatPlaceholder.style.display = 'none';
     dom.chatMensagens.classList.add('show');
     dom.chatInputArea.classList.add('show');
-    dom.chatNome.textContent = grupo.nome || 'Sem nome';
-    dom.chatAvatar.textContent = getIniciais(grupo.nome);
-    dom.chatMembros.textContent = grupo.descricao || '';
+    dom.chatNome.textContent = grupo.subject || 'Sem nome';
+    dom.chatAvatar.textContent = getIniciais(grupo.subject);
+    dom.chatMembros.textContent = grupo.link_convite ? 'Grupo WhatsApp ativo' : '';
     dom.msgInput.disabled = false;
     dom.sendBtn.disabled = false;
     // Load messages
@@ -518,7 +519,7 @@ var WhatsApp = (function(){
       .from('whatsapp_mensagens')
       .select('*')
       .eq('grupo_id', grupoId)
-      .order('created_at', { ascending: true })
+      .order('enviada_em', { ascending: true })
       .then(function(res) {
         if (res.error) {
           toast('Erro ao carregar mensagens: ' + res.error.message, 'error');
@@ -540,7 +541,7 @@ var WhatsApp = (function(){
     var ultimaData = '';
     for (var i = 0; i < msgs.length; i++) {
       var m = msgs[i];
-      var dataAtual = formatData(m.created_at);
+      var dataAtual = formatData(m.enviada_em);
       if (dataAtual !== ultimaData) {
         ultimaData = dataAtual;
         var divider = document.createElement('div');
@@ -548,19 +549,19 @@ var WhatsApp = (function(){
         divider.innerHTML = '<span>' + esc(dataAtual) + '</span>';
         dom.chatMensagens.appendChild(divider);
       }
-      var outgoing = currentUser && m.remetente_id === currentUser.id;
+      var outgoing = m.remetente === 'sistema' ? false : (currentUser && m.remetente === (currentUser.nome || currentUser.email));
       var row = document.createElement('div');
       row.className = 'msg-row ' + (outgoing ? 'outgoing' : 'incoming');
       var senderHtml = '';
-      if (!outgoing && m.remetente_nome) {
-        senderHtml = '<div class="msg-sender">' + esc(m.remetente_nome) + '</div>';
+      if (!outgoing && m.remetente) {
+        senderHtml = '<div class="msg-sender">' + esc(m.remetente) + '</div>';
       }
       row.innerHTML =
         '<div class="msg-bubble">' +
           senderHtml +
-          '<span>' + esc(m.conteudo || '') + '</span>' +
+          '<span>' + esc(m.texto || '') + '</span>' +
           '<div class="msg-meta">' +
-            '<span class="msg-hora">' + esc(formatHora(m.created_at)) + '</span>' +
+            '<span class="msg-hora">' + esc(formatHora(m.enviada_em)) + '</span>' +
             (outgoing ? '<span class="msg-check">&#10003;&#10003;</span>' : '') +
           '</div>' +
         '</div>';
@@ -585,10 +586,9 @@ var WhatsApp = (function(){
       .from('whatsapp_mensagens')
       .insert({
         grupo_id: grupoAtivo.id,
-        remetente_id: currentUser.id,
-        remetente_nome: currentUser.nome || currentUser.email,
-        conteudo: conteudo,
-        whatsapp_number: WHATSAPP_NUMBER
+        remetente: currentUser.nome || currentUser.email,
+        texto: conteudo,
+        tipo: 'texto'
       })
       .select()
       .then(function(res) {
