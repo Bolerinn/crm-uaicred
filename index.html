@@ -632,9 +632,9 @@ Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 3px;
-    max-width: 360px;
+    max-width: 420px;
     width: 100%;
-    font-size: 12px;
+    font-size: 13px;
   }
   .cal-day-header {
     text-align: center;
@@ -987,7 +987,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-center px-3 py-3">Analista</th>
                 <th class="text-center px-3 py-3">Obs</th>
                 <th class="text-center px-3 py-3 criado-por-col" style="display:none;">Criado por</th>
-                <th class="text-center px-2 py-3 w-10"></th>
+                <th class="text-center px-2 py-3 w-10" style="font-size:0.65rem;color:var(--text-muted);font-weight:600;">Ações</th>
               </tr>
             </thead>
             <tbody id="tableBodyAndamento"></tbody>
@@ -1614,6 +1614,14 @@ async function abrirConfiguracoes() {
       <p class="font-semibold text-sm mb-3" style="color:#ef4444;">🧹 Área de Risco</p>
       <p class="text-xs mb-3" style="color:var(--text-muted);">Exclui PERMANENTEMENTE todos os processos e parceiros. Irreversível.</p>
       <button onclick="limparTudo()" class="w-full text-xs font-semibold py-2.5 rounded-lg transition" style="background:#dc2626;color:#fff;border:none;cursor:pointer;">🗑️ ZERAR BANCO DE DADOS</button>
+    </div>`;
+
+    html += `<div class="rounded-xl p-4 mt-4 border" style="background:var(--bg-card);border-color:#ef4444;">
+      <div class="flex items-center justify-between mb-2">
+        <span class="font-semibold text-sm" style="color:#ef4444;">⚠️ Zona de Perigo</span>
+      </div>
+      <p class="text-xs mb-3" style="color:var(--text-muted);">Remove TODOS os clientes de todas as abas e TODOS os parceiros. Esta ação é irreversível.</p>
+      <button onclick="zerarBancoDeDados()" class="w-full py-2.5 rounded-xl text-sm font-bold text-white" style="background:#ef4444;">🗑️ ZERAR BANCO DE DADOS</button>
     </div>`;
   }
 
@@ -2270,7 +2278,7 @@ function getFiltrados(sourceClientes, tab) {
       if (filtroBancoEmitidos !== 'todos') passaStatus = passaStatus && c.banco === filtroBancoEmitidos;
       else if (filtroEmitidos !== 'todos') passaStatus = passaStatus && (c.produto === filtroEmitidos || c.indicacao === filtroEmitidos);
     } else if (t === 'fu') {
-      passaStatus = c.follow_up === true && c.convertido !== true && c.status !== 'emitido' && (c.mes_referencia || '') === (mesSelecionadoFu || mesSelecionado);
+      passaStatus = c.follow_up === true && c.convertido !== true && c.convertido_fu !== true && c.status !== 'emitido' && (c.mes_referencia || '') === (mesSelecionadoFu || mesSelecionado);
       if (filtroProdutoFu !== 'todos') passaStatus = passaStatus && c.produto === filtroProdutoFu;
       if (filtroResultadoFu !== 'todos') passaStatus = passaStatus && c.resultado === filtroResultadoFu;
       if (filtroBancoFu !== 'todos') passaStatus = passaStatus && c['resultado_' + filtroBancoFu.toLowerCase()] === 'aprovado';
@@ -2654,6 +2662,7 @@ function removerParceiro(nome) {
 
 function abrirModalIndicacao() {
   document.getElementById('modalIndicacao').classList.remove('hidden');
+  document.getElementById('indTipo').value = 'Corretor';
   document.getElementById('indNome').focus();
   document.getElementById('indTipo').dispatchEvent(new Event('change'));
 }
@@ -2661,6 +2670,8 @@ function abrirModalIndicacao() {
 function fecharModalIndicacao() {
   document.getElementById('modalIndicacao').classList.add('hidden');
   document.getElementById('indNome').value = '';
+  document.getElementById('indTipo').value = 'Corretor';
+  document.getElementById('indTipo').dispatchEvent(new Event('change'));
   const imo = document.getElementById('indImobiliaria');
   if (imo) imo.value = '';
   const grp = document.getElementById('indImobiliariaGroup');
@@ -3561,6 +3572,37 @@ async function excluirTodosLixeira() {
   } catch(e) {
     console.error('Erro em excluirTodosLixeira:', e);
     mostrarToast('Erro inesperado. Recarregue a página.');
+  }
+}
+
+async function zerarBancoDeDados() {
+  if (!isMaster()) return;
+  if (!confirm('⚠️ ATENÇÃO: Esta ação irá EXCLUIR PERMANENTEMENTE TODOS os clientes de TODAS as abas e TODOS os parceiros.\n\nEsta ação é IRREVERSÍVEL.\n\nClique OK para continuar:')) return;
+  
+  const confirmacao = prompt('Digite ZERAR para confirmar a exclusão total:');
+  if (confirmacao !== 'ZERAR') {
+    mostrarToast('❌ Operação cancelada');
+    return;
+  }
+
+  try {
+    const { error } = await sb.from('clientes').delete().not('id', 'is', null);
+    if (error) {
+      mostrarToast('Erro ao zerar banco: ' + error.message);
+      return;
+    }
+
+    localStorage.removeItem('crm_indicacoes');
+    clientes = [];
+    await carregarDados();
+    popularDatalistIndicacoes();
+    renderizarTudo();
+    
+    fecharConfig();
+    mostrarToast('✅ Banco de dados zerado com sucesso. Todos os clientes e parceiros foram removidos.');
+  } catch (e) {
+    console.error('zerarBancoDeDados:', e);
+    mostrarToast('❌ Erro inesperado ao zerar banco de dados');
   }
 }
 
