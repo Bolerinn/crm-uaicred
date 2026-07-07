@@ -600,12 +600,19 @@ var WhatsApp = (function(){
           toast('Erro ao enviar mensagem: ' + res.error.message, 'error');
           return;
         }
-        // Inserted message will come via realtime, but also add locally
         if (res.data && res.data.length > 0) {
           var groupId = grupoAtivo.id;
           if (!mensagensCache[groupId]) mensagensCache[groupId] = [];
           mensagensCache[groupId].push(res.data[0]);
           renderMensagens(mensagensCache[groupId], groupId);
+        }
+        // Enviar via bot local (se disponível)
+        if (grupoAtivo && grupoAtivo.gid) {
+          fetch('http://localhost:3456/api/enviar-mensagem-grupo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gid: grupoAtivo.gid, mensagem: conteudo })
+          }).catch(function() {});
         }
       });
   }

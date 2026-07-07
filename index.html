@@ -853,6 +853,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
       <a href="whatsapp.html" data-tab="whatsapp" class="nav-master" target="_blank" rel="noopener noreferrer">
         <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
         <span class="nav-text">WHATSAPP</span>
+        <span id="botStatus" class="text-xs" style="margin-left:4px;font-size:0.6rem;"></span>
       </a>
     </nav>
 
@@ -1987,70 +1988,67 @@ async function atualizarCampo(id, campo, valor) {
   }
 }
 
-async function criarGrupoWhatsApp(clienteId, clienteNome, cpf) {
-  if (!cpf) { mostrarToast('Cliente sem CPF necessário.'); return; }
-  
+let _grupoClienteId = null;
+let _grupoClienteNome = '';
+let _grupoCorretorNome = '';
+
+function criarGrupoWhatsApp(clienteId, clienteNome, cpf) {
   const c = clientes.find(x => x.id === clienteId);
-  if (!c) { mostrarToast('Cliente n\u00e3o encontrado'); return; }
-  
-  const corretorNome = c.indicacao || 'Corretor';
-  const telefoneCliente = prompt('WhatsApp do cliente (DDI+DDD+n\u00famero, ex: 5571999999999):', '55');
-  if (!telefoneCliente) return;
-  
-  const telefoneCorretor = prompt('WhatsApp do corretor (' + corretorNome + ') (DDI+DDD+n\u00famero, ex: 5571999999999):', '55');
-  if (!telefoneCorretor) return;
-  
-  // Nome do grupo em CAPS (primeiro nome + sobrenome)
-  var partes = (c.cliente || clienteNome || '').trim().split(/\\s+/);
-  var nomeCaps = partes.length >= 2 ? (partes[0] + ' ' + partes[1]).toUpperCase() : (partes[0] || 'CLIENTE').toUpperCase();
-  
+  if (!c) return;
+
+  _grupoClienteId = clienteId;
+  _grupoClienteNome = c.cliente || clienteNome;
+  _grupoCorretorNome = c.indicacao || 'Corretor';
+
+  document.getElementById('modalGrupoNome').textContent = 'FINANCIAMENTO ' + _grupoClienteNome.toUpperCase();
+  document.getElementById('modalCorretorTel').value = '';
+  document.getElementById('modalClienteTel').value = '';
+  document.getElementById('modalCriarGrupo').classList.remove('hidden');
+}
+
+function fecharModalCriarGrupo() {
+  document.getElementById('modalCriarGrupo').classList.add('hidden');
+}
+
+async function confirmarCriarGrupo() {
+  const corretorTel = document.getElementById('modalCorretorTel').value.trim();
+  const clienteTel = document.getElementById('modalClienteTel').value.trim();
+
+  fecharModalCriarGrupo();
+  mostrarToast('📱 Criando grupo...');
+
   try {
-    mostrarToast('\uD83E\uDD16 Criando grupo...');
-    
-    // Tentar bot local (whatsapp-web.js)
-    var resp = await fetch('http://localhost:3456/api/criar-grupo', {
+    const resp = await fetch('http://localhost:3456/api/criar-grupo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        cliente: telefoneCliente.replace(/\\D/g, ''),
-        corretor: telefoneCorretor.replace(/\\D/g, ''),
-        nomeCliente: c.cliente || clienteNome,
-        nomeCorretor: corretorNome,
-        clienteId: clienteId
+        cliente: clienteTel || undefined,
+        corretor: corretorTel || undefined,
+        nomeCliente: _grupoClienteNome,
+        nomeCorretor: _grupoCorretorNome,
+        clienteId: _grupoClienteId
       })
     });
-    
-    if (!resp.ok) {
-      var errData = await resp.json().catch(function() { return {}; });
-      if (resp.status === 503) {
-        mostrarToast('\u26A0\uFE0F Bot WhatsApp offline. Inicie o servidor ou use o QR Code.');
-      } else {
-        mostrarToast('\u274C Erro: ' + (errData.error || resp.statusText));
-      }
-      return;
-    }
-    
-    var data = await resp.json();
+
+    const data = await resp.json();
     if (data.success) {
-      var msg = '\u2705 Grupo "' + data.grupo + '" criado!';
-      if (data.nao_adicionados) {
-        mostrarToast(msg + ' ' + data.nao_adicionados);
-      } else {
-        mostrarToast(msg);
-      }
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(data.link).catch(function() {});
-      }
+      mostrarToast('✅ Grupo criado! Link copiado.');
+      if (navigator.clipboard) navigator.clipboard.writeText(data.link).catch(function(){});
       // Salvar no banco
       await sb.from('whatsapp_grupos').insert({
-        cliente_id: clienteId, analista_id: usuarioNome ? usuarioNome.toLowerCase() : '',
-        subject: data.grupo, participantes: [telefoneCliente.replace(/\\D/g, ''), telefoneCorretor.replace(/\\D/g, '')],
-        link_convite: data.link, gid: data.gid
-      }).catch(function() {});
+        cliente_id: _grupoClienteId,
+        subject: data.grupo,
+        participantes: [],
+        link_convite: data.link,
+        gid: data.gid,
+        criado_em: new Date().toISOString()
+      }).catch(function(){});
+    } else {
+      mostrarToast('❌ ' + (data.error || 'Erro ao criar grupo'));
     }
   } catch (err) {
     console.error('Erro ao criar grupo:', err);
-    mostrarToast('\u274C Bot WhatsApp offline. Execute: node whatsapp-bot/server.js e escaneie o QR.');
+    mostrarToast('❌ Bot WhatsApp offline. Execute: node whatsapp-bot/server.js');
   }
 }
 
@@ -2064,6 +2062,23 @@ async function notificarMudancaStatus(clienteId, clienteNome, novoStatus) {
     await sb.from('whatsapp_mensagens').insert({ grupo_id: grupo.id, remetente: 'sistema', texto: texto, tipo: 'sistema' });
   } catch (e) { console.error('[WhatsApp Bot]', e); }
 }
+
+// Status do bot WhatsApp na sidebar
+async function verificarStatusBot() {
+  var el = document.getElementById('botStatus');
+  if (!el || !isMaster()) return;
+  try {
+    var resp = await fetch('http://localhost:3456/api/status');
+    var data = await resp.json();
+    el.innerHTML = data.online
+      ? '<span style="color:#25D366;">🟢</span>'
+      : '<span style="color:#ef4444;">🔴</span>';
+  } catch(e) {
+    el.innerHTML = '<span style="color:#ef4444;">🔴</span>';
+  }
+}
+setInterval(verificarStatusBot, 30000);
+setTimeout(verificarStatusBot, 2000);
 
 async function converterCliente(id, checked) {
   try {
@@ -2410,31 +2425,25 @@ function gerarBriefing(id) {
   mostrarToast('📄 Briefing em desenvolvimento — em breve disponível');
 }
 
-function dispararMensagemUltimoAndamento(id) {
+async function dispararMensagemUltimoAndamento(id) {
   var c = clientes.find(function(x) { return x.id === id; });
   if (!c) { mostrarToast('Cliente não encontrado'); return; }
-  
+
   var data = c.ultimo_andamento_data || '';
   var textoAndamento = c.ultimo_andamento_texto || '';
-  
+
   if (!data && !textoAndamento) {
     mostrarToast('⚠️ Preencha a data e o texto do último andamento primeiro.');
     return;
   }
-  
-  var telefone = prompt('WhatsApp do cliente (' + (c.cliente || '') + ') (DDI+DDD+número, ex: 5571999999999):', '55');
-  if (!telefone) return;
-  
-  var destino = telefone.replace(/\D/g, '');
-  
-  // Nome do cliente CAPS (primeiro nome + sobrenome)
-  var partes = (c.cliente || '').trim().split(/\s+/);
+
+  var partes = (c.cliente || '').trim().split(/\\s+/);
   var nomeCaps = partes.length >= 2 ? (partes[0] + ' ' + partes[1]).toUpperCase() : (partes[0] || 'CLIENTE').toUpperCase();
-  
+
   var texto = [
     '*REDE PRIME ASSESSORIA RMS*',
     '',
-    '📌 *Atualização do processo* - ' + nomeCaps,
+    '📌 *Atualização do processo* — ' + nomeCaps,
     '',
     '📅 Data: ' + (data || '—'),
     '📝 Andamento: ' + (textoAndamento || '—'),
@@ -2442,16 +2451,45 @@ function dispararMensagemUltimoAndamento(id) {
     'Segue atualização do processo. Qualquer dúvida, estamos à disposição!',
     '',
     '---',
-    'Mensagem gerada pelo CRM Rede Prime'
-  ].join('\n');
-  
-  var url = 'whatsapp://send?phone=' + destino + '&text=' + encodeURIComponent(texto);
-  
-  mostrarToast('💬 Abrindo WhatsApp...');
-  
-  var w = window.open(url, '_blank');
-  if (!w || w.closed || typeof w.closed === 'undefined') {
-    window.open('https://wa.me/' + destino + '?text=' + encodeURIComponent(texto), '_blank');
+    'Mensagem enviada pelo CRM Rede Prime'
+  ].join('\\n');
+
+  // 1. Buscar grupo do cliente no Supabase
+  var linkGrupo = null;
+  try {
+    var { data: grupos, error } = await sb
+      .from('whatsapp_grupos')
+      .select('link_convite')
+      .eq('cliente_id', id)
+      .not('link_convite', 'is', null)
+      .order('criado_em', { ascending: false })
+      .limit(1);
+
+    if (!error && grupos && grupos.length > 0) {
+      linkGrupo = grupos[0].link_convite;
+    }
+  } catch(e) {
+    console.log('Erro ao buscar grupo:', e);
+  }
+
+  // 2. Copiar texto pro clipboard
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch(e) {
+    // fallback silencioso
+  }
+
+  // 3. Abrir grupo (se existir) ou chat direto
+  if (linkGrupo) {
+    window.open(linkGrupo, '_blank');
+    mostrarToast('📋 Texto copiado! Abrindo grupo... ✨');
+  } else {
+    var telefone = prompt('WhatsApp do cliente (' + (c.cliente || '') + ') (DDI+DDD+número, ex: 5571999999999):', '55');
+    if (!telefone) return;
+    var destino = telefone.replace(/\\D/g, '');
+    var url = 'whatsapp://send?phone=' + destino + '&text=' + encodeURIComponent(texto);
+    mostrarToast('💬 Abrindo WhatsApp...');
+    window.open(url, '_blank');
   }
 }
 
@@ -4674,5 +4712,27 @@ function filtrarBancoAndamento(banco, btn) {
   }
 })();
 </script>
+
+<!-- MODAL: Criar Grupo WhatsApp -->
+<div id="modalCriarGrupo" class="modal-overlay hidden" style="z-index:120;" onclick="if(event.target===this)fecharModalCriarGrupo()">
+  <div class="modal-box" style="max-width:420px;" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-sm">📱 Criar Grupo WhatsApp</h3>
+      <button onclick="fecharModalCriarGrupo()" class="text-lg" style="color:var(--text-muted);">&times;</button>
+    </div>
+    <p class="text-xs mb-3" style="color:var(--text-muted);">Grupo: <strong id="modalGrupoNome" style="color:var(--text);"></strong></p>
+    <div class="mb-3">
+      <label class="text-xs mb-1 block" style="color:var(--text-muted);">WhatsApp do Corretor <span style="color:var(--text-muted);">(opcional)</span></label>
+      <input type="text" id="modalCorretorTel" placeholder="55 DDD + número" class="w-full px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);">
+    </div>
+    <div class="mb-4">
+      <label class="text-xs mb-1 block" style="color:var(--text-muted);">WhatsApp do Cliente <span style="color:var(--text-muted);">(opcional)</span></label>
+      <input type="text" id="modalClienteTel" placeholder="55 DDD + número" class="w-full px-3 py-2 rounded-lg border text-sm" style="border-color:var(--border);background:var(--bg-input);color:var(--text);">
+    </div>
+    <p class="text-xs mb-3" style="color:var(--text-muted);">👥 Douglas, Luana e Fernanda são adicionados automaticamente.</p>
+    <button onclick="confirmarCriarGrupo()" class="w-full py-2.5 rounded-xl text-sm font-bold text-white" style="background:linear-gradient(135deg,#25D366,#128C7E);">Criar Grupo</button>
+  </div>
+</div>
+
 </body>
 </html>

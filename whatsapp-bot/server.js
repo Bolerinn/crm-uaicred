@@ -91,20 +91,16 @@ app.get('/api/status', (req, res) => {
 app.post('/api/criar-grupo', async (req, res) => {
   const { cliente, corretor, nomeCliente, nomeCorretor, clienteId } = req.body;
 
-  if (!cliente || !corretor) {
-    return res.status(400).json({ error: 'Telefone do cliente e corretor obrigatórios' });
-  }
+  // Telefones são opcionais — se não informados, grupo só com os fixos
+  const temCorretor = corretor && String(corretor).replace(/\D/g, '').length >= 10;
+  const temCliente = cliente && String(cliente).replace(/\D/g, '').length >= 10;
 
   if (!client.info?.wid?.user) {
     return res.status(503).json({ error: 'WhatsApp não conectado. Escaneie o QR Code primeiro.' });
   }
 
-  const telefoneCliente = String(cliente).replace(/\D/g, '');
-  const telefoneCorretor = String(corretor).replace(/\D/g, '');
-
-  if (telefoneCliente.length < 10 || telefoneCorretor.length < 10) {
-    return res.status(400).json({ error: 'Telefone inválido. Use DDI+DDD+número (ex: 5571999999999)' });
-  }
+  const telefoneCliente = cliente ? String(cliente).replace(/\D/g, '') : '';
+  const telefoneCorretor = corretor ? String(corretor).replace(/\D/g, '') : '';
 
   try {
     // Nome do grupo: FINANCIAMENTO + PRIMEIRO NOME + SOBRENOME (caixa alta)
@@ -132,59 +128,63 @@ app.post('/api/criar-grupo', async (req, res) => {
     const linkUrl = `https://chat.whatsapp.com/${inviteCode}`;
     console.log(`🔗 Link: ${linkUrl}`);
 
-    // 4. Tentar adicionar corretor ao grupo
-    try {
-      await grupo.addParticipants([`${telefoneCorretor}@c.us`]);
-      console.log(`✅ Corretor (${nomeCorretor}) adicionado ao grupo`);
-      participantesConvidados.push(`${telefoneCorretor}@c.us`);
-    } catch (corretorErr) {
-      console.log(`⚠️ Corretor (${nomeCorretor}) não pode ser adicionado. Enviando link por DM...`);
-      // Abrir conversa com corretor e enviar convite
-      const msgCorretor = [
-        `*REDE PRIME ASSESSORIA RMS*`,
-        ``,
-        `Olá *${nomeCorretor || 'Corretor'}*! 👋`,
-        ``,
-        `O grupo de financiamento do cliente *${extrairNomeGrupo(nomeCliente)}* foi criado!`,
-        `Como você não está na lista de contatos da PRIME, não foi possível adicioná-lo automaticamente.`,
-        ``,
-        `👉 *Compartilhe o link abaixo com o cliente* para que ele entre no grupo:`,
-        `${linkUrl}`,
-        ``,
-        `🔗 *Link do grupo:* ${linkUrl}`,
-        ``,
-        `Atenciosamente,`,
-        `Rede Prime Assessoria RMS`,
-      ].join('\n');
-      await client.sendMessage(`${telefoneCorretor}@c.us`, msgCorretor);
-      console.log(`✅ Mensagem de convite enviada para corretor (${telefoneCorretor})`);
+    // 4. Tentar adicionar corretor ao grupo (se informado)
+    if (temCorretor) {
+      try {
+        await grupo.addParticipants([`${telefoneCorretor}@c.us`]);
+        console.log(`✅ Corretor (${nomeCorretor}) adicionado ao grupo`);
+        participantesConvidados.push(`${telefoneCorretor}@c.us`);
+      } catch (corretorErr) {
+        console.log(`⚠️ Corretor (${nomeCorretor}) não pode ser adicionado. Enviando link por DM...`);
+        const msgCorretor = [
+          `*REDE PRIME ASSESSORIA RMS*`,
+          ``,
+          `Olá *${nomeCorretor || 'Corretor'}*! 👋`,
+          ``,
+          `O grupo de financiamento do cliente *${extrairNomeGrupo(nomeCliente)}* foi criado!`,
+          `Como você não está na lista de contatos da PRIME, não foi possível adicioná-lo automaticamente.`,
+          ``,
+          `👉 *Compartilhe o link abaixo com o cliente* para que ele entre no grupo:`,
+          `${linkUrl}`,
+          ``,
+          `🔗 *Link do grupo:* ${linkUrl}`,
+          ``,
+          `Atenciosamente,`,
+          `Rede Prime Assessoria RMS`,
+        ].join('\\n');
+        await client.sendMessage(`${telefoneCorretor}@c.us`, msgCorretor);
+        console.log(`✅ Mensagem de convite enviada para corretor (${telefoneCorretor})`);
+      }
     }
 
-    // 5. Tentar adicionar cliente ao grupo
-    try {
-      await grupo.addParticipants([`${telefoneCliente}@c.us`]);
-      console.log(`✅ Cliente (${nomeCliente}) adicionado ao grupo`);
-      participantesConvidados.push(`${telefoneCliente}@c.us`);
-    } catch (clienteErr) {
-      console.log(`⚠️ Cliente (${nomeCliente}) não pode ser adicionado. Enviando link por DM para o corretor...`);
-      // Se corretor já foi adicionado, enviar DM pedindo pra ele compartilhar com o cliente
-      const msgConvite = [
-        `*REDE PRIME ASSESSORIA RMS*`,
-        ``,
-        `Olá *${nomeCorretor || 'Corretor'}*! 👋`,
-        ``,
-        `O cliente *${extrairNomeGrupo(nomeCliente)}* não pôde ser adicionado automaticamente ao grupo de financiamento, pois não tem o contato da PRIME salvo.`,
-        ``,
-        `👉 *Por favor, compartilhe o link abaixo com ele:*`,
-        `${linkUrl}`,
-        ``,
-        `🔗 *Link do grupo:* ${linkUrl}`,
-        ``,
-        `Desde já, obrigado!`,
-        `Rede Prime Assessoria RMS`,
-      ].join('\n');
-      await client.sendMessage(`${telefoneCorretor}@c.us`, msgConvite);
-      console.log(`✅ Mensagem com link enviada para corretor (${telefoneCorretor}) compartilhar com cliente`);
+    // 5. Tentar adicionar cliente ao grupo (se informado)
+    if (temCliente) {
+      try {
+        await grupo.addParticipants([`${telefoneCliente}@c.us`]);
+        console.log(`✅ Cliente (${nomeCliente}) adicionado ao grupo`);
+        participantesConvidados.push(`${telefoneCliente}@c.us`);
+      } catch (clienteErr) {
+        console.log(`⚠️ Cliente (${nomeCliente}) não pode ser adicionado. Enviando link por DM para o corretor...`);
+        const msgConvite = [
+          `*REDE PRIME ASSESSORIA RMS*`,
+          ``,
+          `Olá *${nomeCorretor || 'Corretor'}*! 👋`,
+          ``,
+          `O cliente *${extrairNomeGrupo(nomeCliente)}* não pôde ser adicionado automaticamente ao grupo de financiamento, pois não tem o contato da PRIME salvo.`,
+          ``,
+          `👉 *Por favor, compartilhe o link abaixo com ele:*`,
+          `${linkUrl}`,
+          ``,
+          `🔗 *Link do grupo:* ${linkUrl}`,
+          ``,
+          `Desde já, obrigado!`,
+          `Rede Prime Assessoria RMS`,
+        ].join('\\n');
+        if (temCorretor && telefoneCorretor.length >= 10) {
+          await client.sendMessage(`${telefoneCorretor}@c.us`, msgConvite);
+          console.log(`✅ Mensagem com link enviada para corretor (${telefoneCorretor}) compartilhar com cliente`);
+        }
+      }
     }
 
     // 6. Mensagem de boas-vindas no grupo
@@ -242,6 +242,28 @@ app.post('/api/enviar-mensagem', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('Erro ao enviar mensagem:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Enviar mensagem para grupo (via gid)
+app.post('/api/enviar-mensagem-grupo', async (req, res) => {
+  const { gid, mensagem } = req.body;
+
+  if (!gid || !mensagem) {
+    return res.status(400).json({ error: 'gid e mensagem obrigatórios' });
+  }
+
+  if (!client.info?.wid?.user) {
+    return res.status(503).json({ error: 'WhatsApp não conectado' });
+  }
+
+  try {
+    const chat = await client.getChatById(gid);
+    await chat.sendMessage(mensagem);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao enviar mensagem para grupo:', err);
     res.status(500).json({ error: err.message });
   }
 });
