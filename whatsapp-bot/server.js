@@ -289,13 +289,73 @@ app.post('/api/enviar-mensagem-grupo', async (req, res) => {
   }
 });
 
+// ============ API READ-ONLY (visualização) ============
+
+// Listar todos os chats (grupos + conversas)
+app.get('/api/chats', async (req, res) => {
+  if (!client.info?.wid?.user) {
+    return res.status(503).json({ error: 'WhatsApp não conectado' });
+  }
+  try {
+    const chats = await client.getChats();
+    const result = chats.map(c => ({
+      id: c.id._serialized,
+      name: c.name || c.id.user || 'Desconhecido',
+      isGroup: c.isGroup,
+      timestamp: c.timestamp,
+      unreadCount: c.unreadCount || 0,
+      lastMessage: c.lastMessage?.body || null,
+    }));
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Buscar mensagens de um chat
+app.get('/api/messages/:chatId', async (req, res) => {
+  if (!client.info?.wid?.user) {
+    return res.status(503).json({ error: 'WhatsApp não conectado' });
+  }
+  try {
+    const chat = await client.getChatById(req.params.chatId);
+    const messages = await chat.fetchMessages({ limit: 100 });
+    const result = messages.map(m => ({
+      id: m.id._serialized,
+      body: m.body,
+      from: m.from,
+      fromMe: m.fromMe,
+      author: m.author || null,
+      timestamp: m.timestamp,
+      hasMedia: m.hasMedia,
+      type: m.type,
+    }));
+    res.json(result.reverse());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Enviar mensagem manual
+app.post('/api/send', async (req, res) => {
+  const { chatId, message } = req.body;
+  if (!chatId || !message) return res.status(400).json({ error: 'chatId e message obrigatórios' });
+  if (!client.info?.wid?.user) return res.status(503).json({ error: 'WhatsApp não conectado' });
+  try {
+    const chat = await client.getChatById(chatId);
+    const msg = await chat.sendMessage(message);
+    res.json({ success: true, id: msg.id._serialized });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============ INICIAR SERVIDOR ============
 app.listen(PORTA, () => {
-  console.log(`\n🚀 Servidor WhatsApp Bot rodando`);
-  console.log(`   URL: http://localhost:${PORTA}`);
-  console.log(`   Endpoints:`);
-  console.log(`   GET  /api/status        — status da conexão`);
-  console.log(`   POST /api/criar-grupo   — criar grupo + convite`);
-  console.log(`   POST /api/enviar-mensagem — enviar mensagem`);
-  console.log(`\n📱 Escaneie o QR Code acima para conectar.\n`);
+  console.log(`\n🚀 Servidor WhatsApp rodando em http://localhost:${PORTA}`);
+  console.log(`   GET  /api/status          — status da conexão`);
+  console.log(`   GET  /api/chats           — listar conversas`);
+  console.log(`   GET  /api/messages/:id    — mensagens do chat`);
+  console.log(`   POST /api/send            — enviar mensagem (manual)`);
+  console.log(`   POST /api/criar-grupo     — criar grupo`);
 });
