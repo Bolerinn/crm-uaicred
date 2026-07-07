@@ -1615,14 +1615,6 @@ async function abrirConfiguracoes() {
       <p class="text-xs mb-3" style="color:var(--text-muted);">Exclui PERMANENTEMENTE todos os processos e parceiros. Irreversível.</p>
       <button onclick="limparTudo()" class="w-full text-xs font-semibold py-2.5 rounded-lg transition" style="background:#dc2626;color:#fff;border:none;cursor:pointer;">🗑️ ZERAR BANCO DE DADOS</button>
     </div>`;
-
-    html += `<div class="rounded-xl p-4 mt-4 border" style="background:var(--bg-card);border-color:#ef4444;">
-      <div class="flex items-center justify-between mb-2">
-        <span class="font-semibold text-sm" style="color:#ef4444;">⚠️ Zona de Perigo</span>
-      </div>
-      <p class="text-xs mb-3" style="color:var(--text-muted);">Remove TODOS os clientes de todas as abas e TODOS os parceiros. Esta ação é irreversível.</p>
-      <button onclick="zerarBancoDeDados()" class="w-full py-2.5 rounded-xl text-sm font-bold text-white" style="background:#ef4444;">🗑️ ZERAR BANCO DE DADOS</button>
-    </div>`;
   }
 
   html += `
@@ -3510,8 +3502,7 @@ async function limparTudo() {
   }
   
   // 2. Limpar parceiros do localStorage
-  localStorage.removeItem('rede_prime_indicacoes');
-  localStorage.removeItem('indicacoes');
+  localStorage.removeItem('crm_indicacoes');
   
   mostrarToast('✅ Dados limpos! Recarregando...');
   setTimeout(() => location.reload(), 1500);
@@ -3572,37 +3563,6 @@ async function excluirTodosLixeira() {
   } catch(e) {
     console.error('Erro em excluirTodosLixeira:', e);
     mostrarToast('Erro inesperado. Recarregue a página.');
-  }
-}
-
-async function zerarBancoDeDados() {
-  if (!isMaster()) return;
-  if (!confirm('⚠️ ATENÇÃO: Esta ação irá EXCLUIR PERMANENTEMENTE TODOS os clientes de TODAS as abas e TODOS os parceiros.\n\nEsta ação é IRREVERSÍVEL.\n\nClique OK para continuar:')) return;
-  
-  const confirmacao = prompt('Digite ZERAR para confirmar a exclusão total:');
-  if (confirmacao !== 'ZERAR') {
-    mostrarToast('❌ Operação cancelada');
-    return;
-  }
-
-  try {
-    const { error } = await sb.from('clientes').delete().not('id', 'is', null);
-    if (error) {
-      mostrarToast('Erro ao zerar banco: ' + error.message);
-      return;
-    }
-
-    localStorage.removeItem('crm_indicacoes');
-    clientes = [];
-    await carregarDados();
-    popularDatalistIndicacoes();
-    renderizarTudo();
-    
-    fecharConfig();
-    mostrarToast('✅ Banco de dados zerado com sucesso. Todos os clientes e parceiros foram removidos.');
-  } catch (e) {
-    console.error('zerarBancoDeDados:', e);
-    mostrarToast('❌ Erro inesperado ao zerar banco de dados');
   }
 }
 
