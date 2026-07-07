@@ -987,7 +987,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-center px-3 py-3">Analista</th>
                 <th class="text-center px-3 py-3">Obs</th>
                 <th class="text-center px-3 py-3 criado-por-col" style="display:none;">Criado por</th>
-                <th class="text-center px-2 py-3" style="font-size:0.65rem;color:var(--text-muted);font-weight:600;min-width:90px;">Ações</th>
+                <th class="text-center px-2 py-3 w-10" style="font-size:0.65rem;color:var(--text-muted);font-weight:600;">Ações</th>
               </tr>
             </thead>
             <tbody id="tableBodyAndamento"></tbody>
@@ -4457,17 +4457,7 @@ function renderizarTabelaAndamento() {
       <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.obs||'')}</span></td>
       <td class="px-3 py-2.5 criado-por-col">${esc(c.criado_por || '—')}</td>
       <td class="px-2 py-2.5 text-center">
-        <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
-          <button onclick="dispararMensagemUltimoAndamento(${c.id})" class="btn-briefing" style="font-size:0.7rem;padding:4px 8px;" title="Disparar mensagem de andamento para o cliente">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-            Disparar
-          </button>
-          <button onclick="criarGrupoWhatsApp(${c.id},'${esc(c.cliente||'')}','${c.cpf||''}')" ${!c.cpf?'disabled':''} class="btn-briefing" style="font-size:0.7rem;padding:4px 8px;background:linear-gradient(135deg,#25D366,#128C7E);${!c.cpf?'opacity:0.3;cursor:not-allowed;':''}" title="Criar grupo WhatsApp">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Grupo
-          </button>
-          <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir" style="background:none;border:none;cursor:pointer;font-size:0.75rem;">🗑️</button>
-        </div>
+        <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
     </tr>
     <tr class="expanded-row hidden" data-parent="${c.id}">
@@ -4476,12 +4466,11 @@ function renderizarTabelaAndamento() {
           <div class="expanded-item">
             <div style="display:flex;align-items:center;gap:6px;">
               <label>Último andamento</label>
-              <button onclick="dispararMensagemUltimoAndamento(${c.id})" title="Disparar mensagem"
-                style="background:none;border:none;cursor:pointer;padding:0;color:#25D366;opacity:0.85;"
-                onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
+              <button class="btn-briefing" onclick="dispararMensagemUltimoAndamento(${c.id})" title="Disparar mensagem de andamento" style="font-size:0.75rem;padding:5px 10px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                 </svg>
+                Disparar
               </button>
             </div>
             <div style="display:flex;gap:4px;margin-top:4px;">
@@ -4522,13 +4511,13 @@ function renderizarTabelaAndamento() {
             </label>
           </div>
           <div class="expanded-item" style="justify-content:flex-end;display:flex;gap:6px;align-items:center;">
-            <button onclick="criarGrupoWhatsApp(${c.id},'${esc(c.cliente||'')}','${c.cpf||''}')"
-              class="text-green-600 hover:text-green-800 transition" title="Criar Grupo WhatsApp"
-              ${!c.cpf?'disabled style="opacity:0.3;cursor:not-allowed;"':''}
-              style="background:none;border:none;cursor:pointer;padding:4px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="btn-briefing" onclick="criarGrupoWhatsApp(${c.id},'${esc(c.cliente||'')}','${c.cpf||''}')" title="Criar Grupo WhatsApp"
+              style="font-size:0.75rem;padding:5px 10px;background:linear-gradient(135deg,#25D366,#128C7E);${!c.cpf?'opacity:0.3;cursor:not-allowed;':''}"
+              ${!c.cpf?'disabled':''}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
               </svg>
+              Criar Grupo
             </button>
             <button class="btn-briefing" onclick="gerarBriefing(${c.id})" title="Gerar Briefing (em breve)">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
