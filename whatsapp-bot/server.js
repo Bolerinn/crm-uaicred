@@ -3,22 +3,32 @@ const express = require('express');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
 const fs = require('fs');
+const puppeteer = require('puppeteer');
 
 const app = express();
 app.use(express.json());
+
+// CORS — permite acesso do CRM local e Vercel
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
 
 // ============ CONFIG ============
 const PORTA = 3456;
 const FOTO_GRUPO = path.join(__dirname, '..', 'logo-p.png');
 const PARTICIPANTES_FIXOS = [
-  '557199745617@c.us',  // Douglas — 71 9974-5617
+  '5571999745617@c.us',  // Douglas — 71 9974-5617
   '557193299300@c.us',  // Luana — 71 9932-9300
-  '557199246791@c.us',  // Fernanda — 71 9924-67911
+  '557192467911@c.us',  // Fernanda — 71 9246-7911
 ];
 
 // Extrair primeiro nome + sobrenome de um nome completo
 function extrairNomeGrupo(nomeCompleto) {
-  const partes = (nomeCompleto || '').trim().split(/\s+/);
+  const partes = (nomeCompleto || '').trim().split(/\\s+/);
   if (partes.length >= 2) {
     return (partes[0] + ' ' + partes[1]).toUpperCase();
   }
@@ -26,34 +36,45 @@ function extrairNomeGrupo(nomeCompleto) {
 }
 
 // ============ WHATSAPP CLIENT ============
-const client = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: {
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-  },
-});
+let client;
 
-client.on('qr', (qr) => {
-  console.log('\n==================== QR CODE ====================');
-  qrcode.generate(qr, { small: true });
-  console.log('Escaneie com o WhatsApp do escritório (71 9205-7760)');
-  console.log('==================================================\n');
-});
+async function initClient() {
+  client = new Client({
+    authStrategy: new LocalAuth(),
+    puppeteer: {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+      ],
+    },
+  });
 
-client.on('ready', () => {
-  console.log('\n✅ WhatsApp conectado!');
-  console.log(`🤖 Bot rodando em http://localhost:${PORTA}`);
-  console.log(`📱 Número: ${client.info?.wid?.user || 'desconhecido'}`);
-});
+  client.on('qr', (qr) => {
+    console.log('\n==================== QR CODE ====================');
+    qrcode.generate(qr, { small: true });
+    console.log('Escaneie com o WhatsApp do escritório (71 9205-7760)');
+    console.log('==================================================\n');
+  });
 
-client.on('disconnected', (reason) => {
-  console.log('❌ WhatsApp desconectado:', reason);
-  console.log('Reiniciando em 5 segundos...');
-  setTimeout(() => client.initialize(), 5000);
-});
+  client.on('ready', () => {
+    console.log('\n✅ WhatsApp conectado!');
+    console.log(`🤖 Bot rodando em http://localhost:${PORTA}`);
+    console.log(`📱 Número: ${client.info?.wid?.user || 'desconhecido'}`);
+  });
 
-client.initialize();
+  client.on('disconnected', (reason) => {
+    console.log('❌ WhatsApp desconectado:', reason);
+    console.log('Reiniciando em 5 segundos...');
+    setTimeout(() => client.initialize(), 5000);
+  });
+
+  client.initialize();
+}
+
+initClient();
 
 // ============ SUPABASE HELPER ============
 const SUPABASE_URL = 'https://dztiktcvueorlafiocdf.supabase.co';

@@ -1,20 +1,13 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "logo-p.png",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static"
-    }
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "whatsapp.html", "use": "@vercel/static" },
+    { "src": "logo-p.png", "use": "@vercel/static" },
+    { "src": "package.json", "use": "@vercel/static" }
   ],
   "routes": [
+    { "src": "/whatsapp\\.html", "dest": "/whatsapp.html" },
     { "src": "/logo-p\\.png", "dest": "/logo-p.png" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
@@ -22,22 +15,10 @@
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdn.sheetjs.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdn.jsdelivr.net; connect-src 'self' https://dztiktcvueorlafiocdf.supabase.co https://brasilapi.com.br; img-src 'self' data:; font-src 'self' data:; frame-ancestors 'none'"
-        }
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdn.sheetjs.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdn.jsdelivr.net; connect-src 'self' https://dztiktcvueorlafiocdf.supabase.co https://brasilapi.com.br http://localhost:3456; img-src 'self' data:; font-src 'self' data:; frame-ancestors 'none'" }
       ]
     }
   ]
