@@ -1,10 +1,10 @@
 {
-  "name": "crm-uaicred",
+  "name": "crm-prime",
   "version": "1.0.0",
-  "description": "CRM UaiCred — Correspondente Caixa Aqui",
+  "description": "CRM Prime — Rede Prime Assessoria RMS",
   "scripts": {
     "dev": "npx serve .",
-    "build": "cp -r public/* ."
+    "build": ""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
