@@ -387,7 +387,6 @@ function renderizarSidebar() {
     html += `<div class="chat-item${active?' active':''}" data-chat-id="${esc(c.id)}">
       <div class="chat-avatar" style="background:${isGroup?'#005c4b':'#374045'}">
         ${isGroup ? '👥' : esc(initial)}
-        ${isGroup ? '<span class="group-badge">👥</span>' : ''}
       </div>
       <div class="chat-info">
         <div class="chat-name">${esc(c.name || c.id)}</div>
