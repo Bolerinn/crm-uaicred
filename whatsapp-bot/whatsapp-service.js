@@ -146,15 +146,21 @@ class WhatsAppService {
   async _fetchGroupMetadata() {
     if (!this.sock) return;
     try {
-      // Baileys v7: groupFetchAllParticipating retorna todos os grupos
       const groups = await this.sock.groupFetchAllParticipating();
       if (groups) {
         for (const [id, g] of Object.entries(groups)) {
-          this._chatUpsert(id, {
-            name: g.subject,
-            isGroup: true,
-            timestamp: g.creation * 1000 || this._chats.get(id)?.timestamp || Date.now(),
-          });
+          // Debug: primeiras 2 entradas
+          if (Object.keys(groups).indexOf(id) < 2) {
+            console.log('[Debug] Grupo:', JSON.stringify({ id, subject: g.subject, name: g.name, title: g.title }).slice(0, 200));
+          }
+          const nome = g.subject || g.name || g.title;
+          if (nome) {
+            this._chatUpsert(id, {
+              name: nome,
+              isGroup: true,
+              timestamp: g.creation * 1000 || this._chats.get(id)?.timestamp || Date.now(),
+            });
+          }
         }
         console.log(`[Baileys] ${Object.keys(groups).length} grupos carregados`);
       }
