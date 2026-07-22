@@ -131,6 +131,7 @@ body{background:#111b21;color:#e9edef;font-family:system-ui,-apple-system,sans-s
       <div id="chat-content" style="display:none;flex-direction:column;flex:1">
         <div class="chat-header">
           <button class="back-btn" id="back-btn">←</button>
+          <div id="chat-header-avatar" class="chat-avatar" style="width:40px;height:40px;font-size:18px;"></div>
           <div class="chat-header-info">
             <div class="chat-header-name" id="chat-header-name"></div>
             <div class="chat-header-sub" id="chat-header-sub"></div>
@@ -176,6 +177,7 @@ const newChatBtn = document.getElementById('new-chat-btn');
 const emptyState = document.getElementById('empty-state');
 const chatContent = document.getElementById('chat-content');
 const chatHeaderName = document.getElementById('chat-header-name');
+const chatHeaderAvatar = document.getElementById('chat-header-avatar');
 const chatHeaderSub = document.getElementById('chat-header-sub');
 const messagesArea = document.getElementById('messages-area');
 const msgInput = document.getElementById('msg-input');
@@ -356,7 +358,14 @@ async function carregarChats() {
     // Atualizar chatAtivo se o chat foi modificado (ex: virou grupo)
     if (chatAtivoId && chatAtivo) {
       const atualizado = chats.find(c => c.id === chatAtivoId);
-      if (atualizado) chatAtivo = atualizado;
+      if (atualizado) {
+        chatAtivo = atualizado;
+        chatHeaderName.textContent = chatAtivo.name || chatAtivo.id;
+        chatHeaderSub.textContent = chatAtivo.isGroup ? '👥 Grupo' : '💬 Conversa';
+        chatHeaderAvatar.innerHTML = chatAtivo.avatarUrl
+          ? `<img src="${escAttr(chatAtivo.avatarUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+          : (chatAtivo.isGroup ? '👥' : esc((chatAtivo.name || chatAtivo.id || '?')[0].toUpperCase()));
+      }
     }
     renderizarSidebar();
   } catch(e) {
@@ -386,7 +395,7 @@ function renderizarSidebar() {
     const unread = c.unreadCount || 0;
     html += `<div class="chat-item${active?' active':''}" data-chat-id="${esc(c.id)}">
       <div class="chat-avatar" style="background:${isGroup?'#005c4b':'#374045'}">
-        ${isGroup ? '👥' : esc(initial)}
+        ${c.avatarUrl ? `<img src="${escAttr(c.avatarUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (isGroup ? '👥' : esc(initial))}
       </div>
       <div class="chat-info">
         <div class="chat-name">${esc(c.name || c.id)}</div>
@@ -428,6 +437,10 @@ function abrirChat(chatId) {
   // Update header
   chatHeaderName.textContent = chatAtivo.name || chatAtivo.id;
   chatHeaderSub.textContent = chatAtivo.isGroup ? '👥 Grupo' : '💬 Conversa';
+  chatHeaderAvatar.innerHTML = chatAtivo.avatarUrl
+    ? `<img src="${escAttr(chatAtivo.avatarUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+    : (chatAtivo.isGroup ? '👥' : esc((chatAtivo.name || chatAtivo.id || '?')[0].toUpperCase()));
+  chatHeaderAvatar.style.background = chatAtivo.isGroup ? '#005c4b' : '#374045';
 
   emptyState.style.display = 'none';
   chatContent.style.display = 'flex';
@@ -497,7 +510,9 @@ function renderizarMensagens(msgs, isPoll=false) {
     // Media rendering
     if (hasMedia && media && media.dataUrl && !media.tooLarge) {
       const mm = media.mimetype || '';
-      if (mm.startsWith('image/') || mm === 'image') {
+      if (type === 'stickerMessage' || mm === 'image/webp') {
+        html += `<div class="message-bubble"><img src="${escAttr(media.dataUrl)}" style="max-width:160px;max-height:160px;border-radius:6px;display:block;margin-bottom:4px;" onerror="this.outerHTML='😀 Figurinha'"><span class="message-time">${timeStr}</span></div>`;
+      } else if (mm.startsWith('image/') || mm === 'image') {
         html += `<div class="message-bubble"><img src="${escAttr(media.dataUrl)}" style="max-width:260px;max-height:260px;border-radius:6px;display:block;margin-bottom:4px;" onerror="this.style.display='none'"><span class="message-time">${timeStr}</span></div>`;
       } else if (mm.startsWith('video/') || mm === 'video') {
         html += `<div class="message-bubble"><video controls style="max-width:260px;max-height:260px;border-radius:6px;display:block;margin-bottom:4px;" preload="metadata"><source src="${escAttr(media.dataUrl)}" type="${escAttr(mm)}"></video><span class="message-time">${timeStr}</span></div>`;

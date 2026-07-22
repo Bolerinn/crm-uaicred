@@ -18,6 +18,8 @@ class WhatsAppService {
     this._chats = new Map();
     this._messages = new Map();
     this._contacts = {}; // jid → {name, notify, verifiedName}
+    this._avatars = {};  // jid → profile picture url
+    this._pnByLid = {};  // lid jid → phone jid
   }
 
   async connect() {
@@ -91,35 +93,40 @@ class WhatsAppService {
 
         // Atualizar chat
         const pushName = msg.pushName || null;
+        const resolvedJid = await this._resolveLidToPN(jid);
         const updates = {
           timestamp: ts,
           lastMessage: body?.slice(0, 80) || (hasMedia ? this._mediaLabel(Object.keys(msg.message||{})[0]) : null),
           unreadCount: msg.key.fromMe ? undefined : (this._chats.get(jid)?.unreadCount || 0) + 1,
         };
-        // Usar pushName como nome do chat se ainda não tiver nome real
-        if (pushName && !msg.key.fromMe) {
-          const existing = this._chats.get(jid);
-          if (!existing || !existing.name || existing.name.match(/^\d{5,}$/)) {
-            updates.name = pushName;
-          }
-        }
+        const contactName = this._contactName(resolvedJid || jid);
+        if (!msg.key.fromMe && contactName && !this._isNumericName(contactName)) updates.name = contactName;
+        else if (pushName && !msg.key.fromMe) updates.name = pushName;
         this._chatUpsert(jid, updates);
+        this._ensureAvatar(jid);
 
         // Callback
         if (this.onMessage) try { this.onMessage(msg); } catch (e) {}
       }
     });
 
-    // contacts.upsert → guardar nomes
-    this.sock.ev.on('contacts.upsert', contacts => {
+    // contacts.upsert/update → guardar nomes
+    const ingestContacts = async (contacts) => {
       for (const c of contacts) {
-        this._contacts[c.id] = { name: c.name, notify: c.notify, verifiedName: c.verifiedName };
-        this._chatUpsert(c.id, {
-          name: c.name || c.notify || c.verifiedName || this._chats.get(c.id)?.name,
-          isGroup: false,
-        });
+        const name = c.name || c.notify || c.verifiedName || c.shortName || c.pushName;
+        const ids = [c.id, c.lid, c.jid].filter(Boolean);
+        for (const id of ids) {
+          this._contacts[id] = { name, notify: c.notify, verifiedName: c.verifiedName, shortName: c.shortName };
+        }
+        if (c.id && c.lid) { this._pnByLid[c.lid] = c.id; this._pnByLid[c.id] = c.lid; }
+        if (c.id) {
+          this._chatUpsert(c.id, { name, isGroup: false });
+          this._ensureAvatar(c.id);
+        }
       }
-    });
+    };
+    this.sock.ev.on('contacts.upsert', ingestContacts);
+    this.sock.ev.on('contacts.update', ingestContacts);
 
     // groups.upsert / groups.update (v7 pode usar nomes diferentes)
     this.sock.ev.on('groups.upsert', groups => {
@@ -169,6 +176,7 @@ class WhatsAppService {
               isGroup: true,
               timestamp: g.creation * 1000 || this._chats.get(id)?.timestamp || Date.now(),
             });
+            this._ensureAvatar(id);
           }
         }
         console.log(`[Baileys] ${Object.keys(groups).length} grupos carregados`);
@@ -178,19 +186,51 @@ class WhatsAppService {
     }
   }
 
-  _chatUpsert(jid, updates) {
-    const existing = this._chats.get(jid) || { id: jid, name: this._jidToName(jid), isGroup: jid.endsWith('@g.us'), timestamp: 0, unreadCount: 0, lastMessage: null };
-    // Só sobrescreve name se o update trouxer um nome não-JID
-    if (updates.name && !updates.name.match(/^\d+(@|$)/) && updates.name !== jid.split('@')[0]) {
-      existing.name = updates.name;
-    }
-    Object.assign(existing, updates);
+  _chatUpsert(jid, updates = {}) {
+    const existing = this._chats.get(jid) || { id: jid, name: this._jidToName(jid), isGroup: jid.endsWith('@g.us'), timestamp: 0, unreadCount: 0, lastMessage: null, avatarUrl: null };
+    const { name, ...rest } = updates;
+    Object.assign(existing, rest);
     existing.id = jid;
-    // Garantir que o nome nunca fique como JID cru
-    if (!existing.name || existing.name.match(/^\d{10,}@/)) {
-      existing.name = this._jidToName(jid);
+
+    if (name && !this._isNumericName(name) && name !== jid.split('@')[0]) {
+      existing.name = name;
     }
+    if (!existing.name || existing.name.includes('@')) existing.name = this._jidToName(jid);
+    if (this._avatars[jid]) existing.avatarUrl = this._avatars[jid];
     this._chats.set(jid, existing);
+  }
+
+  _isNumericName(name) {
+    return /^\d{5,}$/.test(String(name || '').replace(/\D/g, '')) && !/[A-Za-zÀ-ÿ]/.test(String(name || ''));
+  }
+
+  async _resolveLidToPN(jid) {
+    if (!jid || !jid.endsWith('@lid')) return jid;
+    if (this._pnByLid[jid]) return this._pnByLid[jid];
+    try {
+      const pn = await this.sock?.signalRepository?.lidMapping?.getPNForLID?.(jid);
+      if (pn) {
+        const normalized = pn.replace(/:\d+@/, '@');
+        this._pnByLid[jid] = normalized;
+        this._pnByLid[normalized] = jid;
+        return normalized;
+      }
+    } catch (e) {}
+    return jid;
+  }
+
+  async _ensureAvatar(jid) {
+    if (!this.sock || !jid || this._avatars[jid]) return;
+    try {
+      const resolved = await this._resolveLidToPN(jid);
+      const url = await this.sock.profilePictureUrl(resolved || jid, 'preview', 3000).catch(() => null)
+        || await this.sock.profilePictureUrl(jid, 'preview', 3000).catch(() => null);
+      if (url) {
+        this._avatars[jid] = url;
+        const c = this._chats.get(jid);
+        if (c) { c.avatarUrl = url; this._chats.set(jid, c); }
+      }
+    } catch(e) {}
   }
 
   _jidToName(jid) {
@@ -202,9 +242,10 @@ class WhatsAppService {
   }
 
   _contactName(jid) {
-    const c = this._contacts[jid];
-    if (c) return c.name || c.notify || c.verifiedName || jid.split('@')[0];
-    return jid.split('@')[0];
+    const mapped = this._pnByLid[jid] || jid;
+    const c = this._contacts[jid] || this._contacts[mapped];
+    if (c) return c.name || c.notify || c.verifiedName || c.shortName || this._jidToName(mapped);
+    return this._jidToName(mapped);
   }
 
   _extractText(msg) {
