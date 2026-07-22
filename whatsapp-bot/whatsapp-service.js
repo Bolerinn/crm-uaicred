@@ -39,6 +39,8 @@ class WhatsAppService {
         this.qr = null; this.connected = true;
         this.numero = this.sock.user?.id?.split(':')[0] || null;
         console.log('[Baileys] ✅ Conectado!', this.numero);
+        // Buscar metadados de grupos após conectar
+        setTimeout(() => this._fetchGroupMetadata(), 3000);
       }
       if (connection === 'close') {
         const sc = lastDisconnect?.error?.output?.statusCode;
@@ -141,6 +143,26 @@ class WhatsAppService {
   }
 
   // ===== HELPERS =====
+  async _fetchGroupMetadata() {
+    if (!this.sock) return;
+    try {
+      // Baileys v7: groupFetchAllParticipating retorna todos os grupos
+      const groups = await this.sock.groupFetchAllParticipating();
+      if (groups) {
+        for (const [id, g] of Object.entries(groups)) {
+          this._chatUpsert(id, {
+            name: g.subject,
+            isGroup: true,
+            timestamp: g.creation * 1000 || this._chats.get(id)?.timestamp || Date.now(),
+          });
+        }
+        console.log(`[Baileys] ${Object.keys(groups).length} grupos carregados`);
+      }
+    } catch (e) {
+      console.log('[Baileys] Erro ao buscar grupos:', e.message);
+    }
+  }
+
   _chatUpsert(jid, updates) {
     const existing = this._chats.get(jid) || { id: jid, name: jid.split('@')[0], isGroup: jid.endsWith('@g.us'), timestamp: 0, unreadCount: 0, lastMessage: null };
     Object.assign(existing, updates, { id: jid });

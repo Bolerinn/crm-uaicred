@@ -381,7 +381,7 @@ function renderizarSidebar() {
     const isGroup = !!c.isGroup;
     const active = c.id === chatAtivoId;
     const initial = (c.name || c.id || '?')[0].toUpperCase();
-    const preview = truncate(c.lastMessage || c.name || '', 60);
+    const preview = truncate(c.lastMessage || '', 60) || (c.isGroup ? '👥 Grupo' : '💬 Conversa');
     const timeStr = fmtDate(c.timestamp);
     const unread = c.unreadCount || 0;
     html += `<div class="chat-item${active?' active':''}" data-chat-id="${esc(c.id)}">
