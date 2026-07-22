@@ -185,10 +185,11 @@ const backBtn = document.getElementById('back-btn');
 const sidebar = document.getElementById('sidebar');
 
 // ===== HELPERS =====
+// Cache para esc() — evita criar DOM a cada chamada
+const _escDiv = document.createElement('div');
 function esc(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
+  _escDiv.textContent = str;
+  return _escDiv.innerHTML;
 }
 
 function escAttr(str) {
@@ -450,19 +451,34 @@ function abrirChat(chatId) {
   pollChatInterval = setInterval(() => carregarMensagens(chatId, true), 3000);
 }
 
+// Hash simples das últimas mensagens para evitar re-render sem mudanças
+let _lastMsgHash = '';
+
 async function carregarMensagens(chatId, isPoll=false) {
   if (!chatId) return;
   try {
     const data = await apiGet('/api/messages/' + encodeURIComponent(chatId));
     const msgs = Array.isArray(data) ? data : [];
+    // Só re-renderiza se as mensagens mudaram (evita flicker)
+    const hash = msgs.length + '|' + (msgs.length > 0 ? (msgs[msgs.length-1].id || '') + (msgs[0].id || '') : '');
+    if (isPoll && hash === _lastMsgHash) return;
+    _lastMsgHash = hash;
     renderizarMensagens(msgs, isPoll);
   } catch(e) {
     console.error('Erro ao carregar mensagens:', e);
+    if (!isPoll) {
+      messagesArea.innerHTML = '<div style="text-align:center;padding:32px;color:#ef4444;">❌ Erro ao carregar mensagens</div>';
+    }
   }
 }
 
 function renderizarMensagens(msgs, isPoll=false) {
   const wasAtBottom = isPoll && messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight < 80;
+
+  if (!msgs || msgs.length === 0) {
+    messagesArea.innerHTML = '<div style="text-align:center;padding:48px 16px;color:#8696a0;font-size:14px;">📭 Nenhuma mensagem ainda. Envie a primeira!</div>';
+    return;
+  }
 
   let html = '';
   for (const m of msgs) {
@@ -526,6 +542,12 @@ async function enviarMensagem() {
   const text = msgInput.value.trim();
   if (!text) return;
   if (sending) return;
+  if (!online) {
+    sendError.textContent = '⚠️ WhatsApp desconectado. Aguarde reconexão.';
+    sendError.style.display = 'inline';
+    setTimeout(() => { sendError.style.display = 'none'; }, 3000);
+    return;
+  }
 
   sending = true;
   sendBtn.disabled = true;
@@ -540,19 +562,17 @@ async function enviarMensagem() {
     const data = await r.json();
     if (data.success) {
       msgInput.value = '';
-      // Reload messages immediately
       await carregarMensagens(chatAtivoId);
-      // Also refresh chat list to show last message update
       carregarChats();
     } else {
-      sendError.textContent = '❌ Erro ao enviar';
+      sendError.textContent = '❌ ' + (data.error || 'Erro ao enviar');
       sendError.style.display = 'inline';
-      setTimeout(() => { sendError.style.display = 'none'; }, 3000);
+      setTimeout(() => { sendError.style.display = 'none'; }, 4000);
     }
   } catch(e) {
-    sendError.textContent = '❌ Erro ao enviar';
+    sendError.textContent = '❌ Servidor offline. Verifique se o bot está rodando.';
     sendError.style.display = 'inline';
-    setTimeout(() => { sendError.style.display = 'none'; }, 3000);
+    setTimeout(() => { sendError.style.display = 'none'; }, 4000);
   } finally {
     sending = false;
     sendBtn.disabled = false;
@@ -579,28 +599,35 @@ function novaConversa() {
 
 // ===== ONLINE POLLING =====
 function startOnlinePolling() {
-  // Poll chats every 10s
-  if (pollChatsInterval) clearInterval(pollChatsInterval);
+  // Always clear existing intervals first
+  if (pollChatsInterval) { clearInterval(pollChatsInterval); pollChatsInterval = null; }
+  if (pollStatusInterval) { clearInterval(pollStatusInterval); pollStatusInterval = null; }
+
   pollChatsInterval = setInterval(carregarChats, 10000);
 
-  // Also check status periodically to detect disconnection
-  if (pollStatusInterval) {
-    clearInterval(pollStatusInterval);
-    pollStatusInterval = null;
-  }
   pollStatusInterval = setInterval(async () => {
     try {
       const data = await apiGet('/api/status');
       if (!data.online && online) {
         online = false;
-        // Disconnected — go back to QR screen
+        // Clean up online polling
         if (pollChatsInterval) { clearInterval(pollChatsInterval); pollChatsInterval = null; }
         if (pollChatInterval) { clearInterval(pollChatInterval); pollChatInterval = null; }
         if (pollStatusInterval) { clearInterval(pollStatusInterval); pollStatusInterval = null; }
-        checkStatus();
+        // Go back to connection screen — do NOT restart checkStatus loop
+        // checkStatus will start its own 5s poll via showError/showQR branches
+        showError('WhatsApp desconectado. Reconectando...');
+        pollStatusInterval = setInterval(checkStatus, 5000);
       }
     } catch(e) {
-      // ignore
+      if (online) {
+        online = false;
+        if (pollChatsInterval) { clearInterval(pollChatsInterval); pollChatsInterval = null; }
+        if (pollChatInterval) { clearInterval(pollChatInterval); pollChatInterval = null; }
+        if (pollStatusInterval) { clearInterval(pollStatusInterval); pollStatusInterval = null; }
+        showError('Servidor offline. Verifique se o WhatsApp bot está rodando.');
+        pollStatusInterval = setInterval(checkStatus, 5000);
+      }
     }
   }, 15000);
 }
