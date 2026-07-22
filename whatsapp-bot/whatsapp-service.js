@@ -90,11 +90,20 @@ class WhatsAppService {
         if (arr.length > 300) arr.shift();
 
         // Atualizar chat
-        this._chatUpsert(jid, {
+        const pushName = msg.pushName || null;
+        const updates = {
           timestamp: ts,
           lastMessage: body?.slice(0, 80) || (hasMedia ? this._mediaLabel(Object.keys(msg.message||{})[0]) : null),
           unreadCount: msg.key.fromMe ? undefined : (this._chats.get(jid)?.unreadCount || 0) + 1,
-        });
+        };
+        // Usar pushName como nome do chat se ainda não tiver nome real
+        if (pushName && !msg.key.fromMe) {
+          const existing = this._chats.get(jid);
+          if (!existing || !existing.name || existing.name.match(/^\d{5,}$/)) {
+            updates.name = pushName;
+          }
+        }
+        this._chatUpsert(jid, updates);
 
         // Callback
         if (this.onMessage) try { this.onMessage(msg); } catch (e) {}
@@ -170,9 +179,26 @@ class WhatsAppService {
   }
 
   _chatUpsert(jid, updates) {
-    const existing = this._chats.get(jid) || { id: jid, name: jid.split('@')[0], isGroup: jid.endsWith('@g.us'), timestamp: 0, unreadCount: 0, lastMessage: null };
-    Object.assign(existing, updates, { id: jid });
+    const existing = this._chats.get(jid) || { id: jid, name: this._jidToName(jid), isGroup: jid.endsWith('@g.us'), timestamp: 0, unreadCount: 0, lastMessage: null };
+    // Só sobrescreve name se o update trouxer um nome não-JID
+    if (updates.name && !updates.name.match(/^\d+(@|$)/) && updates.name !== jid.split('@')[0]) {
+      existing.name = updates.name;
+    }
+    Object.assign(existing, updates);
+    existing.id = jid;
+    // Garantir que o nome nunca fique como JID cru
+    if (!existing.name || existing.name.match(/^\d{10,}@/)) {
+      existing.name = this._jidToName(jid);
+    }
     this._chats.set(jid, existing);
+  }
+
+  _jidToName(jid) {
+    if (!jid) return 'Desconhecido';
+    if (jid.endsWith('@g.us')) return 'Grupo';
+    if (jid.endsWith('@s.whatsapp.net')) return jid.split('@')[0];
+    if (jid.endsWith('@lid')) return jid.split('@')[0];
+    return jid.split('@')[0];
   }
 
   _contactName(jid) {
