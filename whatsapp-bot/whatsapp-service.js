@@ -110,10 +110,32 @@ class WhatsAppService {
       }
     });
 
-    // groups.upsert
+    // groups.upsert / groups.update (v7 pode usar nomes diferentes)
     this.sock.ev.on('groups.upsert', groups => {
       for (const g of groups) {
         this._chatUpsert(g.id, { name: g.subject, isGroup: true });
+      }
+    });
+    this.sock.ev.on('groups.update', groups => {
+      for (const g of groups) {
+        this._chatUpsert(g.id, { name: g.subject, isGroup: true });
+      }
+    });
+    // chats.upsert — carrega metadados de chats existentes
+    this.sock.ev.on('chats.upsert', chats => {
+      for (const c of chats) {
+        this._chatUpsert(c.id, {
+          name: c.name || this._chats.get(c.id)?.name,
+          isGroup: c.id.endsWith('@g.us'),
+        });
+      }
+    });
+    this.sock.ev.on('chats.update', chats => {
+      for (const c of chats) {
+        this._chatUpsert(c.id, {
+          name: c.name || this._chats.get(c.id)?.name,
+          isGroup: c.id.endsWith('@g.us'),
+        });
       }
     });
   }
