@@ -1,5 +1,5 @@
 // whatsapp-service.js — Baileys v7 com store + mídia + nomes
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, makeInMemoryStore, delay } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, makeInMemoryStore, delay, normalizeMessageContent, getContentType, jidNormalizedUser } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const path = require('path');
 
@@ -30,6 +30,7 @@ class WhatsAppService {
 
     this.sock = makeWASocket({
       auth: state, logger: pino({ level: 'silent' }), printQRInTerminal: false,
+      syncFullHistory: true,
     });
 
     if (this.store) this.store.bind(this.sock.ev);
@@ -156,6 +157,88 @@ class WhatsAppService {
         });
       }
     });
+
+    // 🔥 messaging-history.set — HISTÓRICO COMPLETO ao conectar
+    this.sock.ev.on('messaging-history.set', async ({ chats: histChats, contacts: histContacts, messages: histMessages, lidPnMappings, progress, isLatest, syncType }) => {
+      console.log(`[Baileys] 📜 Histórico: ${(histChats||[]).length} chats, ${(histContacts||[]).length} contatos, ${(histMessages||[]).length} msgs, progress=${progress}, type=${syncType}, latest=${isLatest}`);
+      
+      // LID→PN mappings
+      if (lidPnMappings) {
+        for (const { lid, pn } of lidPnMappings) {
+          if (lid && pn) { this._pnByLid[lid] = pn; this._pnByLid[pn] = lid; }
+        }
+      }
+
+      // Contatos do histórico
+      if (histContacts) {
+        for (const c of histContacts) {
+          const name = c.name || c.notify || c.verifiedName || c.shortName || c.pushName;
+          if (c.id) {
+            this._contacts[c.id] = { name, notify: c.notify, verifiedName: c.verifiedName, shortName: c.shortName };
+            if (name) this._chatUpsert(c.id, { name, isGroup: false });
+          }
+        }
+      }
+
+      // Chats do histórico
+      if (histChats) {
+        for (const c of histChats) {
+          this._chatUpsert(c.id, {
+            name: c.name,
+            isGroup: c.id.endsWith('@g.us'),
+            timestamp: c.conversationTimestamp || c.t || 0,
+            unreadCount: c.unreadCount || 0,
+            lastMessage: c.lastMessage?.message ? (c.lastMessage.message.conversation || c.lastMessage.message.extendedTextMessage?.text || c.lastMessage.message.imageMessage?.caption || '').slice(0, 80) : null,
+          });
+        }
+      }
+
+      // Mensagens do histórico
+      if (histMessages) {
+        for (const msg of histMessages) {
+          if (!msg.key?.remoteJid) continue;
+          const jid = msg.key.remoteJid;
+          const body = this._extractText(msg.message);
+          const ts = (msg.messageTimestamp || 0) * 1000;
+          const hasMedia = this._hasMedia(msg.message);
+          const type = Object.keys(msg.message || {})[0] || 'unknown';
+
+          if (!this._messages.has(jid)) this._messages.set(jid, []);
+          const arr = this._messages.get(jid);
+          // Evitar duplicatas
+          if (!arr.some(m => m.id === msg.key.id)) {
+            arr.push({
+              id: msg.key.id, body, from: jid, fromMe: !!msg.key.fromMe,
+              author: msg.key.participant || null,
+              authorName: msg.key.participant ? this._contactName(msg.key.participant) : null,
+              timestamp: ts, hasMedia, type,
+            });
+            if (arr.length > 300) arr.shift();
+          }
+        }
+      }
+
+      // Atualizar chat timestamps baseado nas mensagens recebidas
+      if (histMessages) {
+        const chatLatest = {};
+        for (const msg of histMessages) {
+          const jid = msg.key?.remoteJid;
+          if (!jid) continue;
+          const ts = (msg.messageTimestamp || 0) * 1000;
+          if (!chatLatest[jid] || ts > chatLatest[jid]) chatLatest[jid] = ts;
+        }
+        for (const [jid, ts] of Object.entries(chatLatest)) {
+          const c = this._chats.get(jid);
+          if (c && (!c.timestamp || ts > c.timestamp)) c.timestamp = ts;
+        }
+      }
+
+      // Quando o sync terminar, buscar metadados de grupos
+      if (progress === 100 || isLatest) {
+        console.log('[Baileys] ✅ Histórico completo!');
+        this._fetchGroupMetadata();
+      }
+    });
   }
 
   // ===== HELPERS =====
@@ -171,10 +254,11 @@ class WhatsAppService {
           }
           const nome = g.subject || g.name || g.title;
           if (nome) {
+            const existing = this._chats.get(id);
             this._chatUpsert(id, {
               name: nome,
               isGroup: true,
-              timestamp: g.creation * 1000 || this._chats.get(id)?.timestamp || Date.now(),
+              timestamp: existing?.timestamp || g.creation * 1000 || Date.now(),
             });
             this._ensureAvatar(id);
           }
@@ -248,13 +332,25 @@ class WhatsAppService {
     return this._jidToName(mapped);
   }
 
-  _extractText(msg) {
-    if (!msg) return null;
-    return msg.conversation || msg.extendedTextMessage?.text || msg.imageMessage?.caption || msg.videoMessage?.caption || msg.documentMessage?.caption || '';
+  _extractText(raw) {
+    if (!raw) return null;
+    try {
+      const msg = normalizeMessageContent(raw);
+      return msg?.conversation || msg?.extendedTextMessage?.text
+        || msg?.imageMessage?.caption || msg?.videoMessage?.caption
+        || msg?.documentMessage?.caption || msg?.buttonsMessage?.contentText
+        || msg?.templateButtonReplyMessage?.selectedDisplayText
+        || msg?.listResponseMessage?.singleSelectReply?.selectedRowId || '';
+    } catch(e) { return null; }
   }
 
-  _hasMedia(msg) {
-    return !!(msg?.imageMessage || msg?.videoMessage || msg?.audioMessage || msg?.documentMessage || msg?.stickerMessage);
+  _hasMedia(raw) {
+    if (!raw) return false;
+    try {
+      const msg = normalizeMessageContent(raw);
+      const type = getContentType(msg);
+      return !!type && type !== 'extendedTextMessage' && type !== 'conversation' && type !== 'buttonsMessage' && type !== 'templateButtonReplyMessage' && type !== 'listResponseMessage';
+    } catch(e) { return false; }
   }
 
   _mediaMime(msg) {

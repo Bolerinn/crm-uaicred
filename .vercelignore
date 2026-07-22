@@ -1,2 +1,4 @@
 whatsapp-bot/.wwebjs_auth
 whatsapp-bot/node_modules
+whatsapp-bot/auth/
+whatsapp-bot/.wwebjs_auth/
