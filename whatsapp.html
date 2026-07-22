@@ -191,6 +191,10 @@ function esc(str) {
   return d.innerHTML;
 }
 
+function escAttr(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 function fmtTime(ts) {
   if (!ts) return '';
   const d = new Date(ts);
@@ -271,10 +275,15 @@ function showQR(dataUrl) {
   stateScreen.style.display = 'flex';
   appEl.style.display = 'none';
   stateSpinner.style.display = 'none';
-  stateQrWrap.style.display = 'block';
-  stateSub.style.display = 'block';
-  stateError.style.display = 'none';
-  qrImg.src = dataUrl;
+  stateQrWrap.style.display = dataUrl ? 'block' : 'none';
+  stateSub.style.display = dataUrl ? 'block' : 'none';
+  stateError.style.display = dataUrl ? 'none' : 'block';
+  if (dataUrl) {
+    qrImg.src = dataUrl;
+    stateError.textContent = '';
+  } else {
+    stateError.textContent = '⏳ QR Code sendo gerado...';
+  }
   stateDesc.textContent = '📱 WhatsApp — Rede Prime';
   stateDesc.style.color = '#e9edef';
 }
@@ -314,20 +323,18 @@ async function checkStatus() {
       }
     } else {
       online = false;
-      if (data.qr) {
-        showQR(data.qr);
-      } else {
-        // Fetch QR separately
-        try {
-          const qrData = await apiGetText('/api/qr');
-          if (qrData && qrData.startsWith('data:')) {
-            showQR(qrData);
-          } else {
-            showQR('data:image/png;base64,' + btoa(qrData || ''));
-          }
-        } catch(e) {
+      // Fetch QR as data URL via /api/qr
+      try {
+        const qrData = await apiGetText('/api/qr');
+        if (qrData && qrData.startsWith('data:')) {
+          showQR(qrData);
+        } else if (data.qr) {
+          showQR(null);
+        } else {
           showQR(null);
         }
+      } catch(e) {
+        showQR(null);
       }
       // Keep polling for status change
       if (!pollStatusInterval) {
@@ -463,10 +470,11 @@ function renderizarMensagens(msgs, isPoll=false) {
   let html = '';
   for (const m of msgs) {
     const fromMe = !!m.fromMe;
-    const authorName = m.author || '';
+    const authorName = m.authorName || m.author || '';
     const body = esc(m.body || '');
     const timeStr = fmtTime(m.timestamp);
     const hasMedia = !!m.hasMedia;
+    const media = m.media || null;
     const type = m.type || 'chat';
 
     html += `<div class="message-row ${fromMe ? 'sent' : 'received'}">`;
@@ -474,11 +482,28 @@ function renderizarMensagens(msgs, isPoll=false) {
     if (chatAtivo && chatAtivo.isGroup && !fromMe && authorName) {
       html += `<div class="message-author">${esc(authorName)}</div>`;
     }
-    // Media indicator
-    if (hasMedia || type === 'image' || type === 'video' || type === 'document' || type === 'ptt' || type === 'audio') {
-      const typeLabels = { image:'📷 Foto', video:'🎬 Vídeo', document:'📄 Documento', ptt:'🎤 Áudio', audio:'🎵 Áudio' };
-      const label = typeLabels[type] || '📎 Mídia';
-      html += `<div class="message-bubble">${label}<span class="message-time">${timeStr}</span></div>`;
+    // Media rendering
+    if (hasMedia && media && media.dataUrl && !media.tooLarge) {
+      const mm = media.mimetype || '';
+      if (mm.startsWith('image/') || mm === 'image') {
+        html += `<div class="message-bubble"><img src="${escAttr(media.dataUrl)}" style="max-width:260px;max-height:260px;border-radius:6px;display:block;margin-bottom:4px;" onerror="this.style.display='none'"><span class="message-time">${timeStr}</span></div>`;
+      } else if (mm.startsWith('video/') || mm === 'video') {
+        html += `<div class="message-bubble"><video controls style="max-width:260px;max-height:260px;border-radius:6px;display:block;margin-bottom:4px;" preload="metadata"><source src="${escAttr(media.dataUrl)}" type="${escAttr(mm)}"></video><span class="message-time">${timeStr}</span></div>`;
+      } else if (mm.startsWith('audio/')) {
+        html += `<div class="message-bubble"><audio controls style="max-width:260px;display:block;margin-bottom:4px;" preload="metadata"><source src="${escAttr(media.dataUrl)}" type="${escAttr(mm)}"></audio><span class="message-time">${timeStr}</span></div>`;
+      } else {
+        html += `<div class="message-bubble"><a href="${escAttr(media.dataUrl)}" download style="color:#00a884;text-decoration:underline;word-break:break-all;">📎 Baixar arquivo</a><span class="message-time">${timeStr}</span></div>`;
+      }
+      // Caption
+      if (body) {
+        html += `<div class="message-bubble" style="margin-top:2px;">${body}<span class="message-time">${timeStr}</span></div>`;
+      }
+    } else if (hasMedia && media && media.tooLarge) {
+      const label = type === 'stickerMessage' ? '😀 Figurinha' : '📎 Arquivo grande';
+      html += `<div class="message-bubble">${label} (muito grande para pré-visualização)<span class="message-time">${timeStr}</span></div>`;
+    } else if (hasMedia) {
+      const labels = { imageMessage:'📷 Imagem', videoMessage:'🎬 Vídeo', audioMessage:'🎤 Áudio', documentMessage:'📄 Documento', stickerMessage:'😀 Figurinha' };
+      html += `<div class="message-bubble">${labels[type] || '📎 Mídia'}<span class="message-time">${timeStr}</span></div>`;
     } else if (body) {
       html += `<div class="message-bubble">${body}<span class="message-time">${timeStr}</span></div>`;
     } else {

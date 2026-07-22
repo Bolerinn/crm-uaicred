@@ -2485,10 +2485,11 @@ async function dispararMensagemUltimoAndamento(id) {
 
   // 1. Buscar grupo do cliente no Supabase
   var linkGrupo = null;
+  var gidGrupo = null;
   try {
     var { data: grupos, error } = await sb
       .from('whatsapp_grupos')
-      .select('link_convite')
+      .select('link_convite, gid')
       .eq('cliente_id', id)
       .not('link_convite', 'is', null)
       .order('criado_em', { ascending: false })
@@ -2496,34 +2497,55 @@ async function dispararMensagemUltimoAndamento(id) {
 
     if (!error && grupos && grupos.length > 0) {
       linkGrupo = grupos[0].link_convite;
+      gidGrupo = grupos[0].gid || null;
     }
   } catch(e) {
     console.log('Erro ao buscar grupo:', e);
   }
 
-  // 2. Copiar texto pro clipboard
+  // 2. Tentar enviar via servidor local (se conectado e com gid)
+  var enviadoPeloBot = false;
+  if (gidGrupo) {
+    try {
+      var respBot = await fetch('http://localhost:3456/api/enviar-mensagem-grupo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gid: gidGrupo, mensagem: texto })
+      });
+      if (respBot.ok) {
+        enviadoPeloBot = true;
+        mostrarToast('✅ Mensagem enviada ao grupo!');
+      }
+    } catch(e) {
+      console.log('Bot offline — fallback manual:', e.message);
+    }
+  }
+
+  // 3. Copiar texto pro clipboard (sempre, como backup)
   try { await navigator.clipboard.writeText(texto); } catch(e) {}
 
-  // 3. Abrir — prioridade: grupo > chat individual
-  if (linkGrupo) {
-    mostrarToast('💬 Abrindo grupo no WhatsApp...');
-    window.open(linkGrupo, '_blank');
-    setTimeout(function() {
-      mostrarToast('📋 Texto copiado! Cole (Ctrl+V) no grupo.');
-    }, 800);
-  } else {
-    // Fallback: chat individual
-    var whatsapp = c.whatsapp || '';
-    if (whatsapp) {
-      var destino = whatsapp.replace(/\D/g, '');
-      window.open('whatsapp://send?phone=' + destino + '&text=' + encodeURIComponent(texto), '_blank');
-      mostrarToast('💬 Abrindo WhatsApp...');
+  // 4. Abrir — prioridade: grupo > chat individual (só se NÃO enviou pelo bot)
+  if (!enviadoPeloBot) {
+    if (linkGrupo) {
+      mostrarToast('💬 Abrindo grupo no WhatsApp...');
+      window.open(linkGrupo, '_blank');
+      setTimeout(function() {
+        mostrarToast('📋 Texto copiado! Cole (Ctrl+V) no grupo.');
+      }, 800);
     } else {
-      var tel = prompt('WhatsApp do cliente (' + (c.cliente || '') + ') (DDI+DDD+número):', '55');
-      if (!tel) return;
-      var d2 = tel.replace(/\D/g, '');
-      window.open('whatsapp://send?phone=' + d2 + '&text=' + encodeURIComponent(texto), '_blank');
-      mostrarToast('💬 Abrindo WhatsApp...');
+      // Fallback: chat individual
+      var whatsapp = c.whatsapp || '';
+      if (whatsapp) {
+        var destino = whatsapp.replace(/\D/g, '');
+        window.open('whatsapp://send?phone=' + destino + '&text=' + encodeURIComponent(texto), '_blank');
+        mostrarToast('💬 Abrindo WhatsApp...');
+      } else {
+        var tel = prompt('WhatsApp do cliente (' + (c.cliente || '') + ') (DDI+DDD+número):', '55');
+        if (!tel) return;
+        var d2 = tel.replace(/\D/g, '');
+        window.open('whatsapp://send?phone=' + d2 + '&text=' + encodeURIComponent(texto), '_blank');
+        mostrarToast('💬 Abrindo WhatsApp...');
+      }
     }
   }
 }
