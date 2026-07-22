@@ -8,7 +8,7 @@ const puppeteer = require('puppeteer');
 const app = express();
 app.use(express.json());
 
-// CORS — permite acesso do CRM local e Vercel
+// CORS
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -107,11 +107,7 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// QR Code para conectar
-app.get('/api/qr', (req, res) => {
-  if (!latestQR) return res.json({ qr: null, msg: 'Já conectado ou aguardando QR...' });
-  res.json({ qr: latestQR });
-});
+
 
 // Criar grupo
 app.post('/api/criar-grupo', async (req, res) => {
@@ -355,10 +351,32 @@ app.post('/api/send', async (req, res) => {
   }
 });
 
+// QR Code como data URL (para o frontend whatsapp.html)
+app.get('/api/qr', async (req, res) => {
+  if (!latestQR) return res.status(404).json({ error: 'QR não disponível' });
+  try {
+    const QRCode = require('qrcode');
+    const dataUrl = await QRCode.toDataURL(latestQR, {
+      width: 300,
+      margin: 2,
+      errorCorrectionLevel: 'L',
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+    res.set('Content-Type', 'text/plain');
+    res.send(dataUrl);
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao gerar QR' });
+  }
+});
+
+// Servir arquivos estáticos (whatsapp.html, logo-p.png, etc.)
+app.use(express.static(path.join(__dirname, '..')));
+
 // ============ INICIAR SERVIDOR ============
 app.listen(PORTA, () => {
   console.log(`\n🚀 Servidor WhatsApp rodando em http://localhost:${PORTA}`);
   console.log(`   GET  /api/status          — status da conexão`);
+  console.log(`   GET  /api/qr              — QR Code como data URL`);
   console.log(`   GET  /api/chats           — listar conversas`);
   console.log(`   GET  /api/messages/:id    — mensagens do chat`);
   console.log(`   POST /api/send            — enviar mensagem (manual)`);

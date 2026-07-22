@@ -3,323 +3,626 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp - Rede Prime</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={theme:{extend:{colors:{accent:'#f97316',gold:'#b8860b',sidebar:'#111b21','sidebar-hover':'#202c33','sidebar-active':'#2a3942','header-bg':'#f0f2f5'}}}}</script>
+<title>WhatsApp — Rede Prime</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body,#app{height:100%;width:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif}
-#sidebar{width:380px;min-width:320px;background:#111b21;display:flex;flex-direction:column;border-right:1px solid #222d34}
-#sidebar .hdr{background:#202c33;padding:10px 16px;display:flex;align-items:center;gap:12px;min-height:60px}
-#sidebar .hdr .av{width:42px;height:42px;border-radius:50%;background:#f97316;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:16px;flex-shrink:0}
-#sidebar .hdr .inf{flex:1;min-width:0}
-#sidebar .hdr .nm{color:#e9edef;font-size:16px;font-weight:500}
-#sidebar .hdr .rl{color:#8696a0;font-size:13px}
-#sidebar .hdr .st{width:12px;height:12px;border-radius:50%;flex-shrink:0}
-#sidebar .hdr .st.on{background:#22c55e}
-#sidebar .hdr .st.off{background:#ef4444}
-.srch{padding:8px 12px;background:#111b21}
-.srch .si{background:#202c33;border-radius:8px;display:flex;align-items:center;padding:0 12px;height:38px}
-.srch .si svg{color:#8696a0;flex-shrink:0}
-.srch .si input{flex:1;background:transparent;border:none;outline:none;color:#d1d7db;font-size:14px;padding:0 16px 0 12px;height:100%}
-.srch .si input::placeholder{color:#8696a0}
-#glist{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#374045 #111b21}
-#glist::-webkit-scrollbar{width:6px}
-#glist::-webkit-scrollbar-track{background:#111b21}
-#glist::-webkit-scrollbar-thumb{background:#374045;border-radius:3px}
-.gi{display:flex;align-items:center;padding:12px 16px;cursor:pointer;border-bottom:1px solid #182229;transition:background .15s;gap:12px}
-.gi:hover{background:#202c33}
-.gi.active{background:#2a3942}
-.gi .ga{width:49px;height:49px;border-radius:50%;background:#374045;display:flex;align-items:center;justify-content:center;color:#d1d7db;font-weight:500;font-size:18px;flex-shrink:0}
-.gi .gf{flex:1;min-width:0}
-.gi .gn{color:#e9edef;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gi .gu{color:#8696a0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.gi .gm{text-align:right;flex-shrink:0}
-.gi .gh{color:#8696a0;font-size:11px}
-.gi .gb{background:#f97316;color:#fff;font-size:11px;font-weight:600;padding:2px 6px;border-radius:10px;min-width:20px;text-align:center;margin-top:4px;display:inline-block}
-#empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#8696a0;padding:24px;text-align:center}
-#empty svg{margin-bottom:16px;opacity:.5}
-#empty p{font-size:14px}
-#empty button{margin-top:16px;background:#f97316;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer}
-#empty button:hover{background:#ea580c}
-#loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#8696a0}
-.spin{width:32px;height:32px;border:3px solid #374045;border-top-color:#f97316;border-radius:50%;animation:sp .8s linear infinite;margin:20px auto}
-@keyframes sp{to{transform:rotate(360deg)}}
-#chat{flex:1;display:flex;flex-direction:column;background:#efeae2;position:relative;overflow:hidden}
-#chat::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h400v400H0z' fill='%23efeae2'/%3E%3Cpath d='M200 200c-40 0-72.5 32.5-72.5 72.5S160 345 200 345s72.5-32.5 72.5-72.5S240 200 200 200z' fill='%23d4c8b6' opacity='.08'/%3E%3C/svg%3E") repeat;pointer-events:none}
-.ch{background:#f0f2f5;padding:10px 16px;display:flex;align-items:center;gap:12px;min-height:60px;z-index:1;border-bottom:1px solid #d1d7db}
-.ch .ca{width:42px;height:42px;border-radius:50%;background:#dfe5e7;display:flex;align-items:center;justify-content:center;color:#54656f;font-weight:600;font-size:18px;flex-shrink:0}
-.ch .ci{flex:1;min-width:0}
-.ch .cn{font-size:17px;font-weight:500;color:#111b21}
-.ch .cm{font-size:13px;color:#667781}
-.ch .bb{color:#54656f;cursor:pointer;padding:8px;border-radius:50%;font-size:20px}
-#cph{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1;color:#667781;text-align:center;padding:24px}
-#cph svg{margin-bottom:20px;opacity:.6}
-#cph h2{font-size:24px;font-weight:300;color:#41525d;margin-bottom:12px}
-#cph p{font-size:14px;max-width:500px;line-height:1.6}
-#cmsg{flex:1;overflow-y:auto;padding:20px 50px;display:none;flex-direction:column;gap:6px;z-index:1;scrollbar-width:thin;scrollbar-color:#c1c1c1 transparent}
-#cmsg.show{display:flex}
-#cmsg::-webkit-scrollbar{width:6px}
-#cmsg::-webkit-scrollbar-thumb{background:#c1c1c1;border-radius:3px}
-.mr{display:flex;margin-bottom:2px}
-.mr.out{justify-content:flex-end}
-.mb{max-width:65%;padding:6px 12px 6px 9px;border-radius:8px;position:relative;font-size:14.2px;line-height:1.4;word-wrap:break-word;white-space:pre-wrap;box-shadow:0 1px 1px rgba(0,0,0,.08)}
-.mr.in .mb{background:#fff;border-radius:0 8px 8px 8px}
-.mr.out .mb{background:#d9fdd3;border-radius:8px 0 8px 8px}
-.mm{display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:2px;font-size:11px;color:#667781}
-.mr.out .mm{color:#53bdeb}
-.mm .mh{font-size:11px}
-.ms{font-size:12.5px;font-weight:600;color:#f97316;margin-bottom:2px}
-.md{text-align:center;margin:12px 0;z-index:1}
-.md span{background:#e1f2fb;color:#54656f;font-size:12.5px;padding:5px 12px;border-radius:5px;box-shadow:0 1px 1px rgba(0,0,0,.08)}
-#cinp{background:#f0f2f5;padding:8px 12px;display:none;align-items:center;gap:10px;z-index:1;border-top:1px solid #d1d7db}
-#cinp.show{display:flex}
-#cinp textarea{flex:1;background:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:15px;resize:none;outline:none;max-height:100px;min-height:42px;font-family:inherit;line-height:1.4}
-#cinp .sb{width:42px;height:42px;border-radius:50%;background:#f97316;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;color:#fff;flex-shrink:0}
-#cinp .sb:hover{background:#ea580c}
-#cinp .sb:disabled{background:#8696a0;cursor:not-allowed}
-#toast{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{background:#333;color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.25);animation:ti .3s ease,to .3s ease 3.2s forwards;max-width:360px;pointer-events:auto}
-.toast.ok{border-left:4px solid #22c55e}
-.toast.er{border-left:4px solid #ef4444}
-@keyframes ti{from{opacity:0;transform:translateX(50px)}to{opacity:1;transform:translateX(0)}}
-@keyframes to{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(50px)}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#111b21;color:#e9edef;font-family:system-ui,-apple-system,sans-serif;height:100vh;overflow:hidden}
+
+/* ===== Loading / QR / Error states ===== */
+#state-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:12px;padding:24px;text-align:center}
+#state-screen h1{color:#f97316;font-size:26px;font-weight:700}
+#state-screen p{color:#8696a0;font-size:15px;max-width:400px;line-height:1.5}
+#state-screen img{background:#fff;padding:14px;border-radius:14px;max-width:280px;max-height:280px;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+#state-screen .spinner{width:40px;height:40px;border:4px solid #2a3942;border-top-color:#f97316;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#state-screen .qr-sub{font-size:13px;color:#667781;margin-top:-4px}
+#state-screen .error-detail{color:#ef4444;font-size:13px;background:#1a1a1a;padding:10px 16px;border-radius:8px}
+
+/* ===== Main app layout ===== */
+#app{display:none;height:100vh;width:100vw}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#202c33;border-bottom:1px solid #313d45;height:56px;flex-shrink:0}
+.app-header .title{font-size:16px;font-weight:600}
+.app-header .status{display:flex;align-items:center;gap:6px;font-size:12px;color:#00a884}
+.app-header .status .dot{width:8px;height:8px;border-radius:50%;background:#00a884}
+.app-wrapper{display:flex;height:calc(100vh - 56px)}
+
+/* ===== Sidebar ===== */
+.sidebar{width:320px;min-width:320px;background:#111b21;border-right:1px solid #313d45;display:flex;flex-direction:column;overflow:hidden}
+.sidebar-top{display:flex;align-items:center;padding:8px 12px;gap:8px;border-bottom:1px solid #313d45}
+.sidebar-top input{flex:1;background:#2a3942;border:none;border-radius:8px;padding:8px 12px;color:#e9edef;font-size:14px;outline:none}
+.sidebar-top input::placeholder{color:#8696a0}
+.sidebar-top .new-chat-btn{background:#f97316;border:none;border-radius:50%;width:36px;height:36px;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.sidebar-top .new-chat-btn:hover{background:#ea6a0b}
+.chat-list{flex:1;overflow-y:auto;overflow-x:hidden}
+.chat-list::-webkit-scrollbar{width:6px}
+.chat-list::-webkit-scrollbar-thumb{background:#374045;border-radius:3px}
+.chat-item{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;border-bottom:1px solid #1f2a30;transition:background .1s}
+.chat-item:hover{background:#202c33}
+.chat-item.active{background:#2a3942}
+.chat-avatar{width:48px;height:48px;border-radius:50%;background:#374045;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;overflow:hidden;position:relative}
+.chat-avatar .group-badge{position:absolute;bottom:-2px;right:-2px;font-size:14px}
+.chat-info{flex:1;min-width:0}
+.chat-name{font-size:16px;font-weight:400;color:#e9edef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-preview{font-size:13px;color:#8696a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.chat-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.chat-time{font-size:11px;color:#8696a0;white-space:nowrap}
+.chat-unread{background:#00a884;color:#111b21;font-size:11px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+
+/* ===== Chat panel ===== */
+.chat-panel{flex:1;display:flex;flex-direction:column;background:#0b141a;position:relative;overflow:hidden}
+.chat-panel .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:8px;color:#8696a0;font-size:15px}
+.chat-panel .empty-state .icon{font-size:48px;margin-bottom:8px}
+.chat-panel .chat-header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#202c33;border-bottom:1px solid #313d45;min-height:56px}
+.chat-panel .chat-header .back-btn{display:none;background:none;border:none;color:#e9edef;font-size:20px;cursor:pointer;padding:4px}
+.chat-panel .chat-header .chat-header-info{flex:1;min-width:0}
+.chat-panel .chat-header .chat-header-name{font-size:16px;font-weight:500}
+.chat-panel .chat-header .chat-header-sub{font-size:12px;color:#8696a0;margin-top:1px}
+.messages-area{flex:1;overflow-y:auto;padding:16px 48px;display:flex;flex-direction:column;gap:4px}
+.messages-area::-webkit-scrollbar{width:6px}
+.messages-area::-webkit-scrollbar-thumb{background:#374045;border-radius:3px}
+.message-row{display:flex;flex-direction:column;max-width:65%;margin-bottom:2px}
+.message-row.sent{align-self:flex-end;align-items:flex-end}
+.message-row.received{align-self:flex-start;align-items:flex-start}
+.message-author{font-size:11px;color:#00a884;font-weight:500;margin:0 8px 2px 8px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.message-bubble{padding:6px 8px 6px 8px;border-radius:6px;font-size:14px;line-height:1.45;word-wrap:break-word;white-space:pre-wrap;position:relative}
+.message-row.sent .message-bubble{background:#005c4b;color:#e9edef;border-top-right-radius:2px}
+.message-row.received .message-bubble{background:#202c33;color:#e9edef;border-top-left-radius:2px}
+.message-time{font-size:11px;color:#8696a0;margin-left:6px;white-space:nowrap;float:right;margin-top:2px}
+.message-row.sent .message-time{color:#ffffff80}
+
+/* Input area */
+.input-area{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#202c33;border-top:1px solid #313d45}
+.input-area input{flex:1;background:#2a3942;border:none;border-radius:8px;padding:10px 14px;color:#e9edef;font-size:15px;outline:none}
+.input-area input::placeholder{color:#8696a0}
+.input-area .send-btn{background:#f97316;border:none;border-radius:50%;width:42px;height:42px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.input-area .send-btn:hover{background:#ea6a0b}
+.input-area .send-btn:disabled{background:#374045;color:#667781;cursor:not-allowed}
+.input-area .error-msg{color:#ef4444;font-size:12px;flex-shrink:0}
+
+/* ===== Responsive ===== */
 @media(max-width:768px){
-  #sidebar{width:100%;min-width:100%;position:absolute;left:0;top:0;bottom:0;z-index:10;transition:transform .3s}
-  #sidebar.hm{transform:translateX(-100%)}
-  #chat{position:absolute;left:0;top:0;right:0;bottom:0}
-  .ch .bb{display:block}
-  #cmsg{padding:15px 12px}
+  .sidebar{position:fixed;left:0;top:56px;bottom:0;z-index:10;width:100%;min-width:100%;display:none}
+  .sidebar.open{display:flex}
+  .chat-panel .chat-header .back-btn{display:block}
+  .messages-area{padding:12px 12px}
+  .message-row{max-width:85%}
 }
+
+/* ===== Scroll anchor ===== */
+#scroll-anchor{height:1px}
 </style>
 </head>
 <body>
 
-<div id="app" style="display:flex;height:100%">
-  <div id="sidebar">
-    <div class="hdr">
-      <div class="av">WA</div>
-      <div class="inf">
-        <div class="nm" id="un">WhatsApp</div>
-        <div class="rl" id="ur">conectando...</div>
-      </div>
-      <div class="st off" id="st"></div>
-    </div>
-    <div class="srch">
-      <div class="si">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M15.9 14.3H15l-.3-.3c1-1.1 1.6-2.7 1.6-4.3 0-3.7-3-6.7-6.7-6.7S3 6 3 9.7s3 6.7 6.7 6.7c1.6 0 3.2-.6 4.3-1.6l.3.3v.8l5.1 5.1 1.5-1.5-5-5.2zm-6.2 0c-2.6 0-4.6-2.1-4.6-4.6 0-2.6 2.1-4.6 4.6-4.6 2.6 0 4.6 2.1 4.6 4.6 0 2.6-2 4.6-4.6 4.6z"/></svg>
-        <input type="text" id="si" placeholder="Pesquisar conversas..." oninput="filterChats()">
-      </div>
-    </div>
-    <div id="glist">
-      <div id="loading"><div class="spin"></div><p>Conectando ao WhatsApp...</p></div>
-    </div>
+<!-- ========== STATE SCREEN (loading / qr / error) ========== -->
+<div id="state-screen">
+  <div class="spinner" id="state-spinner"></div>
+  <h1 id="state-title">WhatsApp — Rede Prime</h1>
+  <p id="state-desc">⏳ Conectando ao servidor WhatsApp...</p>
+  <div id="state-qr-wrap" style="display:none">
+    <img id="qr-img" src="" alt="QR Code">
   </div>
+  <p id="state-sub" class="qr-sub" style="display:none">Escaneie o QR Code com o WhatsApp do escritório</p>
+  <div id="state-error" class="error-detail" style="display:none"></div>
+</div>
 
-  <div id="chat">
-    <div class="ch" id="chh" style="display:none">
-      <div class="bb" id="bb" onclick="backToList()">←</div>
-      <div class="ca" id="cav">G</div>
-      <div class="ci">
-        <div class="cn" id="cnm">Selecione uma conversa</div>
-        <div class="cm" id="cmb"></div>
+<!-- ========== MAIN APP ========== -->
+<div id="app">
+  <div class="app-header">
+    <div class="title">WhatsApp — Rede Prime</div>
+    <div class="status"><span class="dot"></span> ONLINE</div>
+  </div>
+  <div class="app-wrapper">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <input type="text" id="search-input" placeholder="🔍 Buscar conversa..." autocomplete="off">
+        <button class="new-chat-btn" id="new-chat-btn" title="Nova conversa">+</button>
       </div>
+      <div class="chat-list" id="chat-list"></div>
     </div>
-    <div id="cph">
-      <div id="qr-area" style="margin-bottom:20px;display:none">
-        <canvas id="qr-canvas" style="background:#fff;padding:16px;border-radius:12px"></canvas>
-        <p style="font-size:13px;margin-top:12px;color:#667781">Escaneie com o WhatsApp → Aparelhos Conectados</p>
+    <!-- Chat panel -->
+    <div class="chat-panel" id="chat-panel">
+      <div class="empty-state" id="empty-state">
+        <div class="icon">💬</div>
+        <div>Selecione uma conversa</div>
+        <div style="font-size:13px">ou clique em + para iniciar uma nova</div>
       </div>
-      <svg viewBox="0 0 303 172" width="250" height="140" fill="none"><rect x="0.5" y="0.5" width="302" height="171" rx="7.5" fill="#fff" stroke="#e9edef"/><circle cx="55" cy="48" r="20" fill="#dfe5e7"/><circle cx="151" cy="48" r="20" fill="#dfe5e7"/><circle cx="247" cy="48" r="20" fill="#dfe5e7"/><rect x="20" y="84" width="262" height="12" rx="6" fill="#dfe5e7"/><rect x="20" y="104" width="200" height="12" rx="6" fill="#dfe5e7"/><rect x="20" y="124" width="240" height="12" rx="6" fill="#dfe5e7"/></svg>
-      <h2>WhatsApp Web</h2>
-      <p>Selecione uma conversa à esquerda para ver as mensagens.</p>
-    </div>
-    <div id="cmsg"></div>
-    <div id="cinp">
-      <textarea id="mi" rows="1" placeholder="Digite uma mensagem..." disabled oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
-      <button class="sb" id="sb" disabled onclick="sendMsg()">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-      </button>
+      <div id="chat-content" style="display:none;flex-direction:column;flex:1">
+        <div class="chat-header">
+          <button class="back-btn" id="back-btn">←</button>
+          <div class="chat-header-info">
+            <div class="chat-header-name" id="chat-header-name"></div>
+            <div class="chat-header-sub" id="chat-header-sub"></div>
+          </div>
+        </div>
+        <div class="messages-area" id="messages-area">
+          <div id="scroll-anchor"></div>
+        </div>
+        <div class="input-area">
+          <input type="text" id="msg-input" placeholder="📝 Digite sua mensagem..." autocomplete="off">
+          <button class="send-btn" id="send-btn">➤</button>
+          <span id="send-error" class="error-msg" style="display:none"></span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-<div id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
-var API='http://localhost:3456',chats=[],activeChat=null,messagesCache={},pollTimer=null;
+// ===== STATE =====
+let chats = [];
+let chatAtivo = null;
+let chatAtivoId = null;
+let pollChatInterval = null;
+let pollChatsInterval = null;
+let pollStatusInterval = null;
+let online = false;
+let sending = false;
 
-function esc(s){if(!s)return'';var d=document.createElement('div');d.appendChild(document.createTextNode(String(s)));return d.innerHTML}
-function initN(n){if(!n)return'?';var p=String(n).trim().split(/\s+/);return p.length===1?p[0].substring(0,2).toUpperCase():(p[0].charAt(0)+p[p.length-1].charAt(0)).toUpperCase()}
-function fH(ts){if(!ts)return'';var d=new Date(ts*1000);return isNaN(d.getTime())?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
-function fD(ts){if(!ts)return'';var d=new Date(ts*1000);if(isNaN(d.getTime()))return'';var m=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];var h=new Date();h.setHours(0,0,0,0);var o=new Date(h);o.setDate(o.getDate()-1);var dm=new Date(d);dm.setHours(0,0,0,0);if(dm.getTime()===h.getTime())return'Hoje';if(dm.getTime()===o.getTime())return'Ontem';return d.getDate()+' de '+m[d.getMonth()]+' de '+d.getFullYear()}
-function toast(m,t){t=t||'';var e=document.createElement('div');e.className='toast '+(t==='ok'?'ok':t==='er'?'er':'');e.textContent=m;document.getElementById('toast').appendChild(e);setTimeout(function(){if(e.parentNode)e.remove()},3600)}
+// ===== DOM refs =====
+const stateScreen = document.getElementById('state-screen');
+const appEl = document.getElementById('app');
+const stateSpinner = document.getElementById('state-spinner');
+const stateTitle = document.getElementById('state-title');
+const stateDesc = document.getElementById('state-desc');
+const stateQrWrap = document.getElementById('state-qr-wrap');
+const qrImg = document.getElementById('qr-img');
+const stateSub = document.getElementById('state-sub');
+const stateError = document.getElementById('state-error');
+const chatList = document.getElementById('chat-list');
+const searchInput = document.getElementById('search-input');
+const newChatBtn = document.getElementById('new-chat-btn');
+const emptyState = document.getElementById('empty-state');
+const chatContent = document.getElementById('chat-content');
+const chatHeaderName = document.getElementById('chat-header-name');
+const chatHeaderSub = document.getElementById('chat-header-sub');
+const messagesArea = document.getElementById('messages-area');
+const msgInput = document.getElementById('msg-input');
+const sendBtn = document.getElementById('send-btn');
+const sendError = document.getElementById('send-error');
+const backBtn = document.getElementById('back-btn');
+const sidebar = document.getElementById('sidebar');
 
-function showQR(qrText){
-  var area=document.getElementById('qr-area'),canvas=document.getElementById('qr-canvas');
-  area.style.display='block';
-  canvas.innerHTML='';
-  try{new QRCode(canvas,{text:qrText,width:250,height:250,colorDark:'#111b21',colorLight:'#ffffff'})}catch(e){canvas.textContent='QR: '+qrText}
+// ===== HELPERS =====
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
 }
 
-async function checkStatus(){
-  try{
-    var r=await fetch(API+'/api/status');
-    if(!r.ok)throw new Error('offline');
-    var d=await r.json();
-    if(d.online){
-      document.getElementById('st').className='st on';
-      document.getElementById('ur').textContent='conectado';
-      document.getElementById('qr-area').style.display='none';
-      return true;
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) {
+    // Try as unix seconds
+    const n = Number(ts);
+    if (!isNaN(n) && n > 1e8) {
+      const d2 = new Date(n * 1000);
+      if (!isNaN(d2.getTime())) {
+        return d2.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+      }
     }
-    if(d.qr){
-      document.getElementById('st').className='st off';
-      document.getElementById('ur').textContent='escaneie o QR';
-      showQR(d.qr);
-      return false;
+    return '';
+  }
+  return d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+}
+
+function fmtDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) {
+    const n = Number(ts);
+    if (!isNaN(n) && n > 1e8) {
+      const d2 = new Date(n * 1000);
+      if (!isNaN(d2.getTime())) return fmtDate(d2.toISOString());
     }
-  }catch(e){}
-  document.getElementById('st').className='st off';
-  document.getElementById('ur').textContent='desconectado';
-  return false;
+    return '';
+  }
+  const now = new Date();
+  const sameDay = d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate()-1);
+  const isYesterday = d.getFullYear()===yesterday.getFullYear() && d.getMonth()===yesterday.getMonth() && d.getDate()===yesterday.getDate();
+  if (sameDay) return d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+  if (isYesterday) return 'Ontem';
+  return d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
 }
 
-async function loadChats(){
-  try{
-    var r=await fetch(API+'/api/chats');
-    if(!r.ok)throw new Error('erro');
-    chats=await r.json();
-    renderChatList();
-    document.getElementById('loading').style.display='none';
-  }catch(e){
-    document.getElementById('loading').innerHTML='<div id="empty" style="display:flex"><svg viewBox="0 0 24 24" width="60" height="60" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg><p>Servidor WhatsApp não encontrado</p><p style="font-size:12px;margin-top:4px">Inicie o servidor com: cd whatsapp-bot && node server.js</p></div>';
+function truncate(str, len) {
+  if (!str) return '';
+  return str.length > len ? str.substring(0, len) + '…' : str;
+}
+
+// ===== FETCH =====
+async function apiGet(path) {
+  try {
+    const r = await fetch(path, {cache:'no-cache'});
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    return await r.json();
+  } catch(e) {
+    throw e;
   }
 }
 
-function renderChatList(filter){
-  var c=document.getElementById('glist'),its=c.querySelectorAll('.gi');
-  for(var i=0;i<its.length;i++)its[i].remove();
-  var empty=document.getElementById('empty');if(empty)empty.style.display='none';
-  var lst=filter?chats.filter(function(g){return(g.name||'').toLowerCase().indexOf(filter.toLowerCase())!==-1}):chats;
-  if(lst.length===0){
-    var dv=document.createElement('div');dv.id='empty';dv.innerHTML='<p>Nenhuma conversa encontrada</p>';c.appendChild(dv);
-    return
-  }
-  for(var j=0;j<lst.length;j++){
-    var g=lst[j],el=document.createElement('div');
-    el.className='gi'+(activeChat&&activeChat.id===g.id?' active':'');
-    el.setAttribute('data-id',g.id);
-    el.innerHTML='<div class="ga">'+esc(initN(g.name))+'</div><div class="gf"><div class="gn">'+esc(g.name||'Desconhecido')+'</div><div class="gu">'+(g.lastMessage?esc(g.lastMessage.substring(0,40)):g.isGroup?'Grupo':'')+'</div></div><div class="gm"><div class="gh">'+(g.timestamp?fH(g.timestamp):'')+'</div>'+(g.unreadCount>0?'<div class="gb">'+g.unreadCount+'</div>':'')+'</div>';
-    el.addEventListener('click',(function(gr){return function(){selectChat(gr)}})(g));
-    c.appendChild(el)
+async function apiGetText(path) {
+  try {
+    const r = await fetch(path, {cache:'no-cache'});
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    return await r.text();
+  } catch(e) {
+    throw e;
   }
 }
 
-function filterChats(){
-  var q=document.getElementById('si').value.trim().toLowerCase();
-  renderChatList(q)
+// ===== RENDER QR / LOADING / ERROR =====
+function showLoading() {
+  stateScreen.style.display = 'flex';
+  appEl.style.display = 'none';
+  stateSpinner.style.display = 'block';
+  stateQrWrap.style.display = 'none';
+  stateSub.style.display = 'none';
+  stateError.style.display = 'none';
+  stateDesc.textContent = '⏳ Conectando ao servidor WhatsApp...';
+  stateDesc.style.color = '#8696a0';
 }
 
-function selectChat(g){
-  activeChat=g;
-  var its=document.getElementById('glist').querySelectorAll('.gi');
-  for(var i=0;i<its.length;i++)its[i].classList.toggle('active',its[i].getAttribute('data-id')===String(g.id));
-  document.getElementById('chh').style.display='flex';
-  document.getElementById('cph').style.display='none';
-  document.getElementById('cmsg').classList.add('show');
-  document.getElementById('cinp').classList.add('show');
-  document.getElementById('cnm').textContent=g.name||'Desconhecido';
-  document.getElementById('cav').textContent=initN(g.name);
-  document.getElementById('cmb').textContent=g.isGroup?'Grupo':'';
-  document.getElementById('mi').disabled=false;
-  document.getElementById('sb').disabled=false;
-  loadMessages(g.id);
-  if(window.innerWidth<=768)document.getElementById('sidebar').classList.add('hm')
+function showQR(dataUrl) {
+  stateScreen.style.display = 'flex';
+  appEl.style.display = 'none';
+  stateSpinner.style.display = 'none';
+  stateQrWrap.style.display = 'block';
+  stateSub.style.display = 'block';
+  stateError.style.display = 'none';
+  qrImg.src = dataUrl;
+  stateDesc.textContent = '📱 WhatsApp — Rede Prime';
+  stateDesc.style.color = '#e9edef';
 }
 
-async function loadMessages(chatId){
-  document.getElementById('cmsg').innerHTML='<div class="spin"></div>';
-  try{
-    var r=await fetch(API+'/api/messages/'+encodeURIComponent(chatId));
-    if(!r.ok)throw new Error('erro');
-    var ms=await r.json();
-    messagesCache[chatId]=ms;
-    renderMessages(ms,chatId)
-  }catch(e){
-    document.getElementById('cmsg').innerHTML='<div style="text-align:center;color:#667781;padding:40px">Erro ao carregar mensagens.</div>'
+function showError(msg) {
+  stateScreen.style.display = 'flex';
+  appEl.style.display = 'none';
+  stateSpinner.style.display = 'none';
+  stateQrWrap.style.display = 'none';
+  stateSub.style.display = 'none';
+  stateError.style.display = 'block';
+  stateError.textContent = '⚠ ' + msg;
+  stateDesc.textContent = '📱 WhatsApp — Rede Prime';
+  stateDesc.style.color = '#e9edef';
+}
+
+function showApp() {
+  stateScreen.style.display = 'none';
+  appEl.style.display = 'flex';
+  // Clean up QR polling
+  if (pollStatusInterval) {
+    clearInterval(pollStatusInterval);
+    pollStatusInterval = null;
   }
 }
 
-function renderMessages(ms,chatId){
-  if(!activeChat||activeChat.id!==chatId)return;
-  document.getElementById('cmsg').innerHTML='';
-  if(ms.length===0){document.getElementById('cmsg').innerHTML='<div style="text-align:center;color:#667781;padding:40px">Nenhuma mensagem.</div>';return}
-  var ld='';
-  for(var i=0;i<ms.length;i++){
-    var m=ms[i],da=fD(m.timestamp);
-    if(da!==ld){ld=da;var dv=document.createElement('div');dv.className='md';dv.innerHTML='<span>'+esc(da)+'</span>';document.getElementById('cmsg').appendChild(dv)}
-    var out=m.fromMe,row=document.createElement('div');
-    row.className='mr '+(out?'out':'in');
-    var sh='';
-    if(!out&&m.author)sh='<div class="ms">'+esc(m.author)+'</div>';
-    row.innerHTML='<div class="mb">'+sh+'<span>'+(m.body?esc(m.body):m.hasMedia?'📎 Mídia':'')+'</span><div class="mm"><span class="mh">'+esc(fH(m.timestamp))+'</span></div></div>';
-    document.getElementById('cmsg').appendChild(row)
+// ===== STATUS / QR POLL =====
+async function checkStatus() {
+  try {
+    const data = await apiGet('/api/status');
+    if (data.online) {
+      if (!online) {
+        online = true;
+        showApp();
+        startOnlinePolling();
+        carregarChats();
+      }
+    } else {
+      online = false;
+      if (data.qr) {
+        showQR(data.qr);
+      } else {
+        // Fetch QR separately
+        try {
+          const qrData = await apiGetText('/api/qr');
+          if (qrData && qrData.startsWith('data:')) {
+            showQR(qrData);
+          } else {
+            showQR('data:image/png;base64,' + btoa(qrData || ''));
+          }
+        } catch(e) {
+          showQR(null);
+        }
+      }
+      // Keep polling for status change
+      if (!pollStatusInterval) {
+        pollStatusInterval = setInterval(checkStatus, 5000);
+      }
+    }
+  } catch(e) {
+    // Server unreachable
+    if (online) {
+      online = false;
+      showError('Servidor offline. Verifique se o WhatsApp bot está rodando.');
+    } else {
+      showError('Servidor offline. Verifique se o WhatsApp bot está rodando.');
+    }
+    if (!pollStatusInterval) {
+      pollStatusInterval = setInterval(checkStatus, 5000);
+    }
   }
-  document.getElementById('cmsg').scrollTop=document.getElementById('cmsg').scrollHeight
 }
 
-async function sendMsg(){
-  if(!activeChat)return;
-  var t=document.getElementById('mi').value.trim();
-  if(!t)return;
-  document.getElementById('sb').disabled=true;
-  document.getElementById('mi').disabled=true;
-  try{
-    var r=await fetch(API+'/api/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId:activeChat.id,message:t})});
-    document.getElementById('sb').disabled=false;
-    document.getElementById('mi').disabled=false;
-    document.getElementById('mi').value='';
-    document.getElementById('mi').focus();
-    if(!r.ok){var e=await r.json();toast(e.error||'Erro ao enviar','er');return}
-    await loadMessages(activeChat.id)
-  }catch(e){
-    document.getElementById('sb').disabled=false;
-    document.getElementById('mi').disabled=false;
-    toast('Erro de conexão com o servidor','er')
+// ===== CHATS =====
+async function carregarChats() {
+  try {
+    const data = await apiGet('/api/chats');
+    chats = Array.isArray(data) ? data : [];
+    renderizarSidebar();
+  } catch(e) {
+    console.error('Erro ao carregar chats:', e);
   }
 }
 
-function backToList(){
-  activeChat=null;
-  document.getElementById('chh').style.display='none';
-  document.getElementById('cph').style.display='flex';
-  document.getElementById('cmsg').classList.remove('show');
-  document.getElementById('cinp').classList.remove('show');
-  document.getElementById('mi').value='';
-  var its=document.getElementById('glist').querySelectorAll('.gi');
-  for(var i=0;i<its.length;i++)its[i].classList.remove('active');
-  if(window.innerWidth<=768)document.getElementById('sidebar').classList.remove('hm')
+function renderizarSidebar() {
+  const termo = searchInput.value.toLowerCase().trim();
+  let filtered = chats;
+  if (termo) {
+    filtered = chats.filter(c => (c.name||'').toLowerCase().includes(termo) || (c.id||'').toLowerCase().includes(termo));
+  }
+  if (filtered.length === 0) {
+    chatList.innerHTML = `<div style="text-align:center;padding:32px 16px;color:#8696a0;font-size:14px">${
+      termo ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa ainda'
+    }</div>`;
+    return;
+  }
+  let html = '';
+  for (const c of filtered) {
+    const isGroup = !!c.isGroup;
+    const active = c.id === chatAtivoId;
+    const initial = (c.name || c.id || '?')[0].toUpperCase();
+    const preview = truncate(c.lastMessage || c.name || '', 60);
+    const timeStr = fmtDate(c.timestamp);
+    const unread = c.unreadCount || 0;
+    html += `<div class="chat-item${active?' active':''}" data-chat-id="${esc(c.id)}">
+      <div class="chat-avatar" style="background:${isGroup?'#005c4b':'#374045'}">
+        ${isGroup ? '👥' : esc(initial)}
+        ${isGroup ? '<span class="group-badge">👥</span>' : ''}
+      </div>
+      <div class="chat-info">
+        <div class="chat-name">${esc(c.name || c.id)}</div>
+        <div class="chat-preview">${esc(preview)}</div>
+      </div>
+      <div class="chat-meta">
+        <div class="chat-time">${timeStr}</div>
+        ${unread > 0 ? `<div class="chat-unread">${unread > 99 ? '99+' : unread}</div>` : ''}
+      </div>
+    </div>`;
+  }
+  chatList.innerHTML = html;
+
+  // Click handlers
+  chatList.querySelectorAll('.chat-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const chatId = el.dataset.chatId;
+      abrirChat(chatId);
+      // On mobile, close sidebar
+      if (window.innerWidth <= 768) {
+        sidebar.classList.remove('open');
+      }
+    });
+  });
 }
 
-document.getElementById('mi').addEventListener('keydown',function(e){
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg()}
+// ===== OPEN CHAT =====
+function abrirChat(chatId) {
+  // Clear old polling
+  if (pollChatInterval) {
+    clearInterval(pollChatInterval);
+    pollChatInterval = null;
+  }
+
+  chatAtivoId = chatId;
+  const chat = chats.find(c => c.id === chatId);
+  chatAtivo = chat || { id: chatId, name: chatId, isGroup: false };
+
+  // Update header
+  chatHeaderName.textContent = chatAtivo.name || chatAtivo.id;
+  chatHeaderSub.textContent = chatAtivo.isGroup ? '👥 Grupo' : '💬 Conversa';
+
+  emptyState.style.display = 'none';
+  chatContent.style.display = 'flex';
+
+  // Update sidebar active state
+  chatList.querySelectorAll('.chat-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.chatId === chatId);
+  });
+
+  // Enable input
+  msgInput.disabled = false;
+  msgInput.placeholder = '📝 Digite sua mensagem...';
+  sendBtn.disabled = false;
+  msgInput.focus();
+
+  // Load messages
+  carregarMensagens(chatId);
+
+  // Start polling messages every 3s
+  pollChatInterval = setInterval(() => carregarMensagens(chatId, true), 3000);
+}
+
+async function carregarMensagens(chatId, isPoll=false) {
+  if (!chatId) return;
+  try {
+    const data = await apiGet('/api/messages/' + encodeURIComponent(chatId));
+    const msgs = Array.isArray(data) ? data : [];
+    renderizarMensagens(msgs, isPoll);
+  } catch(e) {
+    console.error('Erro ao carregar mensagens:', e);
+  }
+}
+
+function renderizarMensagens(msgs, isPoll=false) {
+  const wasAtBottom = isPoll && messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight < 80;
+
+  let html = '';
+  for (const m of msgs) {
+    const fromMe = !!m.fromMe;
+    const authorName = m.author || '';
+    const body = esc(m.body || '');
+    const timeStr = fmtTime(m.timestamp);
+    const hasMedia = !!m.hasMedia;
+    const type = m.type || 'chat';
+
+    html += `<div class="message-row ${fromMe ? 'sent' : 'received'}">`;
+    // Author name for groups (received messages)
+    if (chatAtivo && chatAtivo.isGroup && !fromMe && authorName) {
+      html += `<div class="message-author">${esc(authorName)}</div>`;
+    }
+    // Media indicator
+    if (hasMedia || type === 'image' || type === 'video' || type === 'document' || type === 'ptt' || type === 'audio') {
+      const typeLabels = { image:'📷 Foto', video:'🎬 Vídeo', document:'📄 Documento', ptt:'🎤 Áudio', audio:'🎵 Áudio' };
+      const label = typeLabels[type] || '📎 Mídia';
+      html += `<div class="message-bubble">${label}<span class="message-time">${timeStr}</span></div>`;
+    } else if (body) {
+      html += `<div class="message-bubble">${body}<span class="message-time">${timeStr}</span></div>`;
+    } else {
+      html += `<div class="message-bubble"><em style="color:#8696a0">Mídia sem suporte</em><span class="message-time">${timeStr}</span></div>`;
+    }
+    html += `</div>`;
+  }
+  messagesArea.innerHTML = html + '<div id="scroll-anchor"></div>';
+
+  if (wasAtBottom || !isPoll) {
+    scrollToBottom();
+  }
+}
+
+function scrollToBottom() {
+  const anchor = document.getElementById('scroll-anchor');
+  if (anchor) anchor.scrollIntoView({behavior:'auto'});
+}
+
+// ===== SEND MESSAGE =====
+async function enviarMensagem() {
+  if (!chatAtivoId) return;
+  const text = msgInput.value.trim();
+  if (!text) return;
+  if (sending) return;
+
+  sending = true;
+  sendBtn.disabled = true;
+  sendError.style.display = 'none';
+
+  try {
+    const r = await fetch('/api/send', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chatId:chatAtivoId, message:text})
+    });
+    const data = await r.json();
+    if (data.success) {
+      msgInput.value = '';
+      // Reload messages immediately
+      await carregarMensagens(chatAtivoId);
+      // Also refresh chat list to show last message update
+      carregarChats();
+    } else {
+      sendError.textContent = '❌ Erro ao enviar';
+      sendError.style.display = 'inline';
+      setTimeout(() => { sendError.style.display = 'none'; }, 3000);
+    }
+  } catch(e) {
+    sendError.textContent = '❌ Erro ao enviar';
+    sendError.style.display = 'inline';
+    setTimeout(() => { sendError.style.display = 'none'; }, 3000);
+  } finally {
+    sending = false;
+    sendBtn.disabled = false;
+  }
+}
+
+// ===== NEW CHAT =====
+function novaConversa() {
+  const numero = prompt('Digite o número do WhatsApp no formato 55DDNNNNNNNN:');
+  if (!numero) return;
+  const cleaned = numero.replace(/[^0-9]/g, '');
+  if (cleaned.length < 10 || cleaned.length > 15) {
+    alert('Número inválido. Use o formato 55DDNNNNNNNN (ex: 5511999999999)');
+    return;
+  }
+  const chatId = cleaned.includes('@') ? cleaned : cleaned + '@c.us';
+  // Open it directly (it'll be a virtual chat until first message)
+  abrirChat(chatId);
+  // On mobile, close sidebar
+  if (window.innerWidth <= 768) {
+    sidebar.classList.remove('open');
+  }
+}
+
+// ===== ONLINE POLLING =====
+function startOnlinePolling() {
+  // Poll chats every 10s
+  if (pollChatsInterval) clearInterval(pollChatsInterval);
+  pollChatsInterval = setInterval(carregarChats, 10000);
+
+  // Also check status periodically to detect disconnection
+  if (pollStatusInterval) {
+    clearInterval(pollStatusInterval);
+    pollStatusInterval = null;
+  }
+  pollStatusInterval = setInterval(async () => {
+    try {
+      const data = await apiGet('/api/status');
+      if (!data.online && online) {
+        online = false;
+        // Disconnected — go back to QR screen
+        if (pollChatsInterval) { clearInterval(pollChatsInterval); pollChatsInterval = null; }
+        if (pollChatInterval) { clearInterval(pollChatInterval); pollChatInterval = null; }
+        if (pollStatusInterval) { clearInterval(pollStatusInterval); pollStatusInterval = null; }
+        checkStatus();
+      }
+    } catch(e) {
+      // ignore
+    }
+  }, 15000);
+}
+
+// ===== EVENT LISTENERS =====
+// Send on Enter
+msgInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    enviarMensagem();
+  }
 });
-window.addEventListener('resize',function(){if(window.innerWidth>768)document.getElementById('sidebar').classList.remove('hm')});
 
-// Poll for status changes and new messages
-async function poll(){
-  var ok=await checkStatus();
-  if(ok&&!chats.length)await loadChats();
-  if(ok&&activeChat)await loadMessages(activeChat.id);
+// Send button
+sendBtn.addEventListener('click', enviarMensagem);
+
+// Search
+searchInput.addEventListener('input', renderizarSidebar);
+
+// New chat
+newChatBtn.addEventListener('click', novaConversa);
+
+// Back button (mobile)
+backBtn.addEventListener('click', () => {
+  sidebar.classList.add('open');
+});
+
+// Sidebar toggle on mobile — swipe or click open via back button handled above
+// Also click outside sidebar on mobile to close
+document.addEventListener('click', (e) => {
+  if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+    if (!sidebar.contains(e.target) && !backBtn.contains(e.target)) {
+      sidebar.classList.remove('open');
+    }
+  }
+});
+
+// ===== INIT =====
+function init() {
+  showLoading();
+  checkStatus();
 }
 
-// Start
-(async function init(){
-  await checkStatus();
-  await loadChats();
-  pollTimer=setInterval(poll,5000);
-})();
+init();
 </script>
 </body>
 </html>

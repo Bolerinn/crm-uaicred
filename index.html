@@ -1468,6 +1468,19 @@ async function entrar() {
     }
   })();
 
+  // WhatsApp link — abrir via localhost, não Vercel
+  (function() {
+    var waLink = document.querySelector('a[data-tab="whatsapp"]');
+    if (waLink) {
+      var novoLink = waLink.cloneNode(true);
+      waLink.parentNode.replaceChild(novoLink, waLink);
+      novoLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        window.open('http://localhost:3456/whatsapp.html', '_blank');
+      });
+    }
+  })();
+
   if (precisaTrocar) {
     document.getElementById('pwChangeScreen').classList.remove('hidden');
     return;
@@ -2013,36 +2026,58 @@ function fecharModalCriarGrupo() {
 async function confirmarCriarGrupo() {
   const corretorTel = document.getElementById('modalCorretorTel').value.trim();
   const clienteTel = document.getElementById('modalClienteTel').value.trim();
-
   fecharModalCriarGrupo();
 
-  var nome = _grupoClienteNome.toUpperCase();
-  var texto = [
-    '*REDE PRIME ASSESSORIA RMS*',
-    '',
-    '👋 Olá! Vamos criar o grupo de financiamento do cliente *' + nome + '*.',
-    '',
-    '📌 Cliente: ' + _grupoClienteNome,
-    '👤 Corretor: ' + (_grupoCorretorNome || '—'),
-    '',
-    'Por favor, crie o grupo no WhatsApp e adicione:',
-    '• Cliente: ' + (clienteTel || '(informar)'),
-    '• Equipe Prime: Douglas (71 9974-5617), Luana (71 9932-9300), Fernanda (71 9246-7911)',
-    '',
-    'Após criar, compartilhe o link do grupo para registro.',
-  ].join('\n');
+  mostrarToast('⏳ Criando grupo no WhatsApp...');
 
-  // Abrir chat com quem tem telefone informado
-  var destino = corretorTel || clienteTel;
-  if (destino) {
-    var d = destino.replace(/\D/g, '');
-    if (navigator.clipboard) navigator.clipboard.writeText(texto).catch(function(){});
-    mostrarToast('💬 Abrindo WhatsApp...');
-    window.open('whatsapp://send?phone=' + d + '&text=' + encodeURIComponent(texto), '_blank');
-  } else {
-    if (navigator.clipboard) navigator.clipboard.writeText(texto).catch(function(){});
-    mostrarToast('📋 Texto copiado! Abra o WhatsApp e cole.');
-    window.open('whatsapp://', '_blank');
+  try {
+    const resp = await fetch('http://localhost:3456/api/criar-grupo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente: clienteTel || undefined,
+        corretor: corretorTel || undefined,
+        nomeCliente: _grupoClienteNome,
+        nomeCorretor: _grupoCorretorNome || 'Corretor',
+        clienteId: _grupoClienteId
+      })
+    });
+
+    var data = await resp.json();
+
+    if (data.success) {
+      mostrarToast('✅ Grupo criado: ' + data.grupo);
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(data.link).catch(function(){});
+      }
+      setTimeout(function() {
+        window.open(data.link, '_blank');
+      }, 600);
+    } else {
+      mostrarToast('❌ ' + (data.error || 'Erro ao criar grupo'));
+    }
+  } catch(e) {
+    console.error('[Criar Grupo] Servidor offline:', e);
+    // Fallback manual
+    var nome = (_grupoClienteNome || '').toUpperCase();
+    var texto = [
+      '*REDE PRIME ASSESSORIA RMS*',
+      '',
+      '👋 Grupo de financiamento do cliente *' + nome + '*.',
+      '👤 Corretor: ' + (_grupoCorretorNome || '—'),
+      '',
+      'Adicione: Douglas (71 9974-5617), Luana (71 9932-9300), Fernanda (71 9246-7911)',
+    ].join('\n');
+    var destino = corretorTel || clienteTel;
+    if (destino) {
+      var d = destino.replace(/\D/g, '');
+      if (navigator.clipboard) navigator.clipboard.writeText(texto).catch(function(){});
+      window.open('whatsapp://send?phone=' + d + '&text=' + encodeURIComponent(texto), '_blank');
+      mostrarToast('⚠️ Servidor offline — modo manual');
+    } else {
+      if (navigator.clipboard) navigator.clipboard.writeText(texto).catch(function(){});
+      mostrarToast('⚠️ Servidor offline — texto copiado');
+    }
   }
 }
 
@@ -2467,27 +2502,29 @@ async function dispararMensagemUltimoAndamento(id) {
   }
 
   // 2. Copiar texto pro clipboard
-  try {
-    await navigator.clipboard.writeText(texto);
-  } catch(e) {}
+  try { await navigator.clipboard.writeText(texto); } catch(e) {}
 
-  // 3. Abrir WhatsApp com o contato do cliente
-  var whatsapp = c.whatsapp || '';
-  if (!whatsapp && c.cpf) {
-    // Tentar buscar telefone via CPF (placeholder)
-    whatsapp = '';
-  }
-  if (whatsapp) {
-    var destino = whatsapp.replace(/\D/g, '');
-    var url = 'whatsapp://send?phone=' + destino + '&text=' + encodeURIComponent(texto);
-    mostrarToast('💬 Abrindo WhatsApp...');
-    window.open(url, '_blank');
+  // 3. Abrir — prioridade: grupo > chat individual
+  if (linkGrupo) {
+    mostrarToast('💬 Abrindo grupo no WhatsApp...');
+    window.open(linkGrupo, '_blank');
+    setTimeout(function() {
+      mostrarToast('📋 Texto copiado! Cole (Ctrl+V) no grupo.');
+    }, 800);
   } else {
-    var tel = prompt('WhatsApp do cliente (' + (c.cliente || '') + ') (DDI+DDD+número):', '55');
-    if (!tel) return;
-    var d2 = tel.replace(/\D/g, '');
-    window.open('whatsapp://send?phone=' + d2 + '&text=' + encodeURIComponent(texto), '_blank');
-    mostrarToast('💬 Abrindo WhatsApp...');
+    // Fallback: chat individual
+    var whatsapp = c.whatsapp || '';
+    if (whatsapp) {
+      var destino = whatsapp.replace(/\D/g, '');
+      window.open('whatsapp://send?phone=' + destino + '&text=' + encodeURIComponent(texto), '_blank');
+      mostrarToast('💬 Abrindo WhatsApp...');
+    } else {
+      var tel = prompt('WhatsApp do cliente (' + (c.cliente || '') + ') (DDI+DDD+número):', '55');
+      if (!tel) return;
+      var d2 = tel.replace(/\D/g, '');
+      window.open('whatsapp://send?phone=' + d2 + '&text=' + encodeURIComponent(texto), '_blank');
+      mostrarToast('💬 Abrindo WhatsApp...');
+    }
   }
 }
 
@@ -4691,6 +4728,19 @@ function filtrarBancoAndamento(banco, btn) {
       if (h && h.startsWith('#tab-')) {
         const t = h.replace('#tab-', '');
         if (t && t !== 'whatsapp') mudarTab(t);
+      }
+    })();
+
+    // WhatsApp link — abrir via localhost, não Vercel
+    (function() {
+      var waLink = document.querySelector('a[data-tab="whatsapp"]');
+      if (waLink) {
+        var novoLink = waLink.cloneNode(true);
+        waLink.parentNode.replaceChild(novoLink, waLink);
+        novoLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.open('http://localhost:3456/whatsapp.html', '_blank');
+        });
       }
     })();
 
