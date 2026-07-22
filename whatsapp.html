@@ -19,7 +19,7 @@ body{background:#111b21;color:#e9edef;font-family:system-ui,-apple-system,sans-s
 #state-screen .error-detail{color:#ef4444;font-size:13px;background:#1a1a1a;padding:10px 16px;border-radius:8px}
 
 /* ===== Main app layout ===== */
-#app{display:none;height:100vh;width:100vw}
+#app{display:none;height:100vh;width:100vw;flex-direction:column}
 .app-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#202c33;border-bottom:1px solid #313d45;height:56px;flex-shrink:0}
 .app-header .title{font-size:16px;font-weight:600}
 .app-header .status{display:flex;align-items:center;gap:6px;font-size:12px;color:#00a884}
@@ -197,18 +197,10 @@ function escAttr(str) {
 
 function fmtTime(ts) {
   if (!ts) return '';
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) {
-    // Try as unix seconds
-    const n = Number(ts);
-    if (!isNaN(n) && n > 1e8) {
-      const d2 = new Date(n * 1000);
-      if (!isNaN(d2.getTime())) {
-        return d2.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
-      }
-    }
-    return '';
-  }
+  // Detect unix seconds (less than year 2001 as ms)
+  const ms = ts < 1e12 ? ts * 1000 : ts;
+  const d = new Date(ms);
+  if (isNaN(d.getTime())) return '';
   return d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
 }
 
@@ -360,6 +352,11 @@ async function carregarChats() {
   try {
     const data = await apiGet('/api/chats');
     chats = Array.isArray(data) ? data : [];
+    // Atualizar chatAtivo se o chat foi modificado (ex: virou grupo)
+    if (chatAtivoId && chatAtivo) {
+      const atualizado = chats.find(c => c.id === chatAtivoId);
+      if (atualizado) chatAtivo = atualizado;
+    }
     renderizarSidebar();
   } catch(e) {
     console.error('Erro ao carregar chats:', e);
