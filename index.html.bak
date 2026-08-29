@@ -632,9 +632,9 @@ Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 3px;
-    max-width: 360px;
+    max-width: 420px;
     width: 100%;
-    font-size: 12px;
+    font-size: 13px;
   }
   .cal-day-header {
     text-align: center;
@@ -850,10 +850,6 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
         <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
         <span class="nav-text">LIXEIRA</span>
       </a>
-      <a href="whatsapp.html" data-tab="whatsapp" class="nav-master" target="_blank" rel="noopener noreferrer">
-        <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
-        <span class="nav-text">WHATSAPP</span>
-      </a>
     </nav>
 
     <div class="sidebar-footer">
@@ -987,7 +983,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_jsQh5PSYqwvGcJeS2CRWRw_jhhO59PK';
                 <th class="text-center px-3 py-3">Analista</th>
                 <th class="text-center px-3 py-3">Obs</th>
                 <th class="text-center px-3 py-3 criado-por-col" style="display:none;">Criado por</th>
-                <th class="text-center px-2 py-3 w-10"></th>
+                <th class="text-center px-2 py-3 w-10" style="font-size:0.65rem;color:var(--text-muted);font-weight:600;">Ações</th>
               </tr>
             </thead>
             <tbody id="tableBodyAndamento"></tbody>
@@ -1361,7 +1357,6 @@ const deletedIds = new Set(); // mantido para compatibilidade com realtime
 
 // ========== TAB SWITCHING ==========
 function mudarTab(tab) {
-  if (tab === 'whatsapp') return;
   if (location.hash !== '#tab-' + tab) { history.replaceState(null, '', '#tab-' + tab); }
   tabAtivo = tab;
 
@@ -1454,7 +1449,6 @@ async function entrar() {
   document.getElementById('sidebar').addEventListener('click', function(e) {
     const link = e.target.closest('a[data-tab]');
     if (!link) return;
-    if (link.getAttribute('data-tab') === 'whatsapp') return;
     e.preventDefault();
     mudarTab(link.getAttribute('data-tab'));
   });
@@ -1463,7 +1457,7 @@ async function entrar() {
     const h = location.hash;
     if (h && h.startsWith('#tab-')) {
       const t = h.replace('#tab-', '');
-      if (t && t !== 'whatsapp') mudarTab(t);
+      if (t) mudarTab(t);
     }
   })();
 
@@ -1609,6 +1603,11 @@ async function abrirConfiguracoes() {
         <span class="font-semibold text-sm" style="color:var(--text);">Usuários do CRM</span>
       </div>
       <div id="usersList" class="p-2 text-sm" style="color:var(--text-muted);">Carregando...</div>
+    </div>
+    <div class="mt-4 rounded-xl p-4 border border-red-800/40" style="background:var(--bg-card);">
+      <p class="font-semibold text-sm mb-3" style="color:#ef4444;">🧹 Área de Risco</p>
+      <p class="text-xs mb-3" style="color:var(--text-muted);">Exclui PERMANENTEMENTE todos os processos e parceiros. Irreversível.</p>
+      <button onclick="limparTudo()" class="w-full text-xs font-semibold py-2.5 rounded-lg transition" style="background:#dc2626;color:#fff;border:none;cursor:pointer;">🗑️ ZERAR BANCO DE DADOS</button>
     </div>`;
   }
 
@@ -1707,7 +1706,7 @@ async function carregarListaUsuarios() {
     }
     let html = '<table class="w-full text-xs"><thead><tr class="text-center text-gray-500 uppercase"><th class="px-2 py-1">Nome</th><th class="px-2 py-1">Email</th><th class="px-2 py-1">Tipo</th></tr></thead><tbody>';
     for (const p of data) {
-      html += `<tr style="border-top:1px solid var(--border);"><td class="px-2 py-1" style="color:var(--text-secondary);">${p.nome}</td><td class="px-2 py-1" style="color:var(--text-secondary);">${p.email}</td><td class="px-2 py-1">${p.tipo === 'master' ? '👑 Master' : 'Usuário'}</td></tr>`;
+      html += `<tr style="border-top:1px solid var(--border);"><td class="px-2 py-1" style="color:var(--text-secondary);">${esc(p.nome)}</td><td class="px-2 py-1" style="color:var(--text-secondary);">${p.email}</td><td class="px-2 py-1">${p.tipo === 'master' ? '👑 Master' : 'Usuário'}</td></tr>`;
     }
     html += '</tbody></table>';
     el.innerHTML = html;
@@ -1718,43 +1717,48 @@ async function carregarListaUsuarios() {
 
 // ========== CRUD ==========
 async function carregarDados() {
-  const { data, error } = await sb.from('clientes').select('*').is('deleted_at', null).order('id');
-  if (!error) {
-    clientes = data || [];
-    clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
+  try {
+    const { data, error } = await sb.from('clientes').select('*').is('deleted_at', null).order('id');
+    if (!error) {
+      clientes = data || [];
+      clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
 
-    // Limpeza: reverter follow_up em originais que têm clone na FU (dados sujos do bug antigo)
-    const fuRecords = clientes.filter(c => c.follow_up === true && !c.deleted_at);
-    for (const r of fuRecords) {
-      const temCloneMaisNovo = fuRecords.some(x =>
-        x.cliente === r.cliente && x.id > r.id &&
-        x.mes_referencia === r.mes_referencia
-      );
-      if (temCloneMaisNovo) {
-        // Este é o original — reverter follow_up (o clone fica com follow_up = true)
-        r.follow_up = false;
-        sb.from('clientes').update({ follow_up: false }).eq('id', r.id).then(() => {});
+      // Limpeza: reverter follow_up em originais que têm clone na FU (dados sujos do bug antigo)
+      const fuRecords = clientes.filter(c => c.follow_up === true && !c.deleted_at);
+      for (const r of fuRecords) {
+        const temCloneMaisNovo = fuRecords.some(x =>
+          x.cliente === r.cliente && x.id > r.id &&
+          x.mes_referencia === r.mes_referencia
+        );
+        if (temCloneMaisNovo) {
+          // Este é o original — reverter follow_up (o clone fica com follow_up = true)
+          r.follow_up = false;
+          sb.from('clientes').update({ follow_up: false }).eq('id', r.id).then(() => {});
+        }
+      }
+    } else {
+      // Fallback via RPC
+      const { data: d2, error: e2 } = await sb.rpc('get_clientes');
+      if (!e2) {
+        clientes = (d2 || []).filter(c => !c.deleted_at);
+      } else {
+        mostrarToast('Erro ao carregar dados'); return;
       }
     }
-  } else {
-    // Fallback via RPC
-    const { data: d2, error: e2 } = await sb.rpc('get_clientes');
-    if (!e2) {
-      clientes = (d2 || []).filter(c => !c.deleted_at);
-    } else {
-      mostrarToast('Erro ao carregar dados'); return;
+
+  // Save old value on focus for indicação validation
+  document.addEventListener('focusin', function(e) {
+    if (e.target.dataset && e.target.dataset.campo === 'indicacao') {
+      e.target.dataset.oldValue = e.target.value;
     }
-  }
+  });
 
-// Save old value on focus for indicação validation
-document.addEventListener('focusin', function(e) {
-  if (e.target.dataset && e.target.dataset.campo === 'indicacao') {
-    e.target.dataset.oldValue = e.target.value;
+    popularDatalistIndicacoes();
+    renderizarTudo();
+  } catch(e) {
+    console.error('Erro em carregarDados:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
   }
-});
-
-  popularDatalistIndicacoes();
-  renderizarTudo();
 }
 
 async function adicionarCliente() {
@@ -1791,13 +1795,18 @@ async function adicionarCliente() {
       .select()
       .single();
 
-    if (error) { mostrarToast('Erro ao adicionar'); return; }
+    if (error) { mostrarToast('Erro ao adicionar: ' + error.message); return; }
     mostrarToast('Processo adicionado ✏️');
+    await carregarDados();
+    renderizarTudo();
     setTimeout(() => {
       const tbodyId = tabAtivo === 'andamento' ? 'tableBodyAndamento' : tabAtivo === 'emitidos' ? 'tableBodyEmitidos' : tabAtivo === 'fu' ? 'tableBodyFu' : 'tableBody';
       const row = document.querySelector(`#${tbodyId} tr[data-id="${data.id}"]`);
       if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     }, 300);
+  } catch(e) {
+    console.error('Erro em adicionarCliente:', e);
+    mostrarToast('Erro inesperado: ' + e.message);
   } finally {
     setTimeout(() => { adicionando = false; }, 2000);
   }
@@ -1806,33 +1815,38 @@ async function adicionarCliente() {
 let ultimoExcluido = null; // para desfazer
 
 async function excluirCliente(id) {
-  if (!confirm('Excluir este cliente?')) return;
-  const c = clientes.find(c => c.id === id);
-  if (!c) return;
-  // Emitidos: só master pode excluir
-  if (c.status === 'emitido' && !isMaster()) {
-    mostrarToast('Apenas o master pode excluir processos emitidos');
-    return;
-  }
-  // Soft-delete: marca deleted_at (nunca remove do banco)
-  const analista = usuarioNome || (await sb.auth.getUser()).data?.user?.email?.split('@')[0] || '—';
-  const { error } = await sb.from('clientes').update({ deleted_at: new Date().toISOString(), deleted_by: analista }).eq('id', id);
-  if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
-  ultimoExcluido = { id, cliente: c.cliente, timer: setTimeout(() => { ultimoExcluido = null; }, 8000) };
-  // Se deletou um registro com follow_up, reverter follow_up no original (evita que ele reapareça na FU)
-  if (c.follow_up === true) {
-    const igual = clientes.find(x =>
-      x.cliente === c.cliente && x.id !== c.id &&
-      x.follow_up === true && x.mes_referencia === c.mes_referencia && !x.deleted_at
-    );
-    if (igual) {
-      igual.follow_up = false;
-      sb.from('clientes').update({ follow_up: false }).eq('id', igual.id).then(() => {});
+  try {
+    if (!confirm('Excluir este cliente?')) return;
+    const c = clientes.find(c => c.id === id);
+    if (!c) return;
+    // Emitidos: só master pode excluir
+    if (c.status === 'emitido' && !isMaster()) {
+      mostrarToast('Apenas o master pode excluir processos emitidos');
+      return;
     }
+    // Soft-delete: marca deleted_at (nunca remove do banco)
+    const analista = usuarioNome || (await sb.auth.getUser()).data?.user?.email?.split('@')[0] || '—';
+    const { error } = await sb.from('clientes').update({ deleted_at: new Date().toISOString(), deleted_by: analista }).eq('id', id);
+    if (error) { mostrarToast('Erro ao excluir: ' + error.message); return; }
+    ultimoExcluido = { id, cliente: c.cliente, timer: setTimeout(() => { ultimoExcluido = null; }, 8000) };
+    // Se deletou um registro com follow_up, reverter follow_up no original (evita que ele reapareça na FU)
+    if (c.follow_up === true) {
+      const igual = clientes.find(x =>
+        x.cliente === c.cliente && x.id !== c.id &&
+        x.follow_up === true && x.mes_referencia === c.mes_referencia && !x.deleted_at
+      );
+      if (igual) {
+        igual.follow_up = false;
+        sb.from('clientes').update({ follow_up: false }).eq('id', igual.id).then(() => {});
+      }
+    }
+    clientes = clientes.filter(c => c.id !== id);
+    renderizarTabelas();
+    mostrarToastDesfazer(c.cliente, id);
+  } catch(e) {
+    console.error('Erro em excluirCliente:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
   }
-  clientes = clientes.filter(c => c.id !== id);
-  renderizarTabelas();
-  mostrarToastDesfazer(c.cliente, id);
 }
 
 async function restaurarCliente(id) {
@@ -1861,176 +1875,161 @@ function mostrarToastDesfazer(nome, id) {
 }
 
 async function atualizarCampo(id, campo, valor) {
-  ultimaEdicao = { id, campo, ts: Date.now() };
-  const { error } = await sb
-    .from('clientes')
-    .update({ [campo]: valor, ...(campo === 'status' && valor === 'emitido' ? { emitido_por: usuarioNome || '' } : {}) })
-    .eq('id', id);
+  try {
+    ultimaEdicao = { id, campo, ts: Date.now() };
+    const { error } = await sb
+      .from('clientes')
+      .update({ [campo]: valor, ...(campo === 'status' && valor === 'emitido' ? { emitido_por: usuarioNome || '' } : {}) })
+      .eq('id', id);
 
-  if (error) { mostrarToast('Erro ao salvar: ' + error.message); return; }
+    if (error) { mostrarToast('Erro ao salvar: ' + error.message); return; }
 
-  const c = clientes.find(c => c.id === id);
-  if (c) { c[campo] = valor; }
-  atualizarStats();
+    const c = clientes.find(c => c.id === id);
+    if (c) { c[campo] = valor; }
+    atualizarStats();
 
-  // Status change → force re-render all tabs (cross-tab migration)
-  if (campo === 'status') {
-    renderizarTabelaAnalises();
-    renderizarTabelaAndamento();
-    renderizarTabelaEmitidos();
-    notificarMudancaStatus(id, c.cliente || '', valor);
-  }
+    // Status change → force re-render all tabs (cross-tab migration)
+    if (campo === 'status') {
+      renderizarTabelaAnalises();
+      renderizarTabelaAndamento();
+      renderizarTabelaEmitidos();
+    }
 
-  // Desmarcar F-U na aba FU → soft-delete o clone (volta pra aba 1 sem duplicar)
-  if (campo === 'follow_up' && valor === false && tabAtivo === 'fu') {
-    await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', id);
-    clientes = clientes.filter(x => x.id !== id);
-    await carregarDados();
-    renderizarTabelaFu();
-    renderizarTabelaAnalises();
-    atualizarStatsFu();
-    mostrarToast('Cliente removido do Follow Up');
-    return;
-  }
+    // Desmarcar F-U na aba FU → soft-delete o clone (volta pra aba 1 sem duplicar)
+    if (campo === 'follow_up' && valor === false && tabAtivo === 'fu') {
+      await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', id);
+      clientes = clientes.filter(x => x.id !== id);
+      await carregarDados();
+      renderizarTabelaFu();
+      renderizarTabelaAnalises();
+      atualizarStatsFu();
+      mostrarToast('Cliente removido do Follow Up');
+      return;
+    }
 
-  // F-U toggle on Analises → clone/remove from FU tab
-  if (campo === 'follow_up' && tabAtivo === 'analises') {
-    const c2 = clientes.find(c => c.id === id);
-    if (!c2) return;
-    const mesRef = (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
-    if (valor === true) {
-      const jaExisteFu = clientes.some(x =>
-        x.cliente === c2.cliente && x.id !== c2.id &&
-        x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
-      );
-      if (!jaExisteFu) {
-        const { data: user } = await sb.auth.getUser();
-        const clone = {
-          indicacao: c2.indicacao || '', cliente: c2.cliente, cpf: c2.cpf || '',
-          agencia: c2.agencia || '', valor_imovel: c2.valor_imovel || '',
-          valor_financiado: c2.valor_financiado || '',
-          produto: c2.produto || 'SBPE', data_vistoria: c2.data_vistoria || '—',
-          status: c2.status || 'aguardando-doc', obs: c2.obs || '', data: c2.data || '',
-          created_by: user?.user?.id,
-          criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
-          follow_up: true, mes_referencia: mesRef,
-          fgts: c2.fgts || false, iq: c2.iq || false, banco: c2.banco || '',
-          banco_caixa: c2.banco_caixa || false, banco_bradesco: c2.banco_bradesco || false,
-          banco_itau: c2.banco_itau || false, banco_santander: c2.banco_santander || false,
-          banco_inter: c2.banco_inter || false,
-          valor_fgts: c2.valor_fgts || '', data_iq: c2.data_iq || '',
-          data_matricula: c2.data_matricula || '', urgente: c2.urgente || false,
-          resultado: c2.resultado || '',
-          resultado_caixa: c2.resultado_caixa || '', resultado_bradesco: c2.resultado_bradesco || '',
-          resultado_itau: c2.resultado_itau || '', resultado_santander: c2.resultado_santander || '',
-          resultado_inter: c2.resultado_inter || ''
-        };
-        const { error } = await sb.from('clientes').insert(clone);
-        if (!error) {
-          // Reverter follow_up do original (só o clone deve ter follow_up = true)
-          c2.follow_up = false;
-          const cOrig = clientes.find(x => x.id === id);
-          if (cOrig) cOrig.follow_up = false;
-          await sb.from('clientes').update({ follow_up: false }).eq('id', id);
-          mostrarToast('Cliente copiado para Follow Up 📋');
+    // F-U toggle on Analises → clone/remove from FU tab
+    if (campo === 'follow_up' && tabAtivo === 'analises') {
+      const c2 = clientes.find(c => c.id === id);
+      if (!c2) return;
+      const mesRef = (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0'));
+      if (valor === true) {
+        const jaExisteFu = clientes.some(x =>
+          x.cliente === c2.cliente && x.id !== c2.id &&
+          x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
+        );
+        if (!jaExisteFu) {
+          const { data: user } = await sb.auth.getUser();
+          const clone = {
+            indicacao: c2.indicacao || '', cliente: c2.cliente, cpf: c2.cpf || '',
+            agencia: c2.agencia || '', valor_imovel: c2.valor_imovel || '',
+            valor_financiado: c2.valor_financiado || '',
+            produto: c2.produto || 'SBPE', data_vistoria: c2.data_vistoria || '—',
+            status: c2.status || 'aguardando-doc', obs: c2.obs || '', data: c2.data || '',
+            created_by: user?.user?.id,
+            criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
+            follow_up: true, mes_referencia: mesRef,
+            fgts: c2.fgts || false, iq: c2.iq || false, banco: c2.banco || '',
+            banco_caixa: c2.banco_caixa || false, banco_bradesco: c2.banco_bradesco || false,
+            banco_itau: c2.banco_itau || false, banco_santander: c2.banco_santander || false,
+            banco_inter: c2.banco_inter || false,
+            valor_fgts: c2.valor_fgts || '', data_iq: c2.data_iq || '',
+            data_matricula: c2.data_matricula || '', urgente: c2.urgente || false,
+            ultimo_andamento_data: c2.ultimo_andamento_data || '', ultimo_andamento_texto: c2.ultimo_andamento_texto || '',
+            resultado: c2.resultado || '',
+            resultado_caixa: c2.resultado_caixa || '', resultado_bradesco: c2.resultado_bradesco || '',
+            resultado_itau: c2.resultado_itau || '', resultado_santander: c2.resultado_santander || '',
+            resultado_inter: c2.resultado_inter || ''
+          };
+          const { error } = await sb.from('clientes').insert(clone);
+          if (!error) {
+            // Reverter follow_up do original (só o clone deve ter follow_up = true)
+            c2.follow_up = false;
+            const cOrig = clientes.find(x => x.id === id);
+            if (cOrig) cOrig.follow_up = false;
+            await sb.from('clientes').update({ follow_up: false }).eq('id', id);
+            mostrarToast('Cliente copiado para Follow Up 📋');
+            await carregarDados();
+            renderizarTabelaAnalises();
+            renderizarTabelaFu();
+            atualizarStatsFu();
+            // Garantir que estado final prevalece (realtime pode ter renderizado estado intermediário)
+            setTimeout(() => { renderizarTabelaAnalises(); renderizarTabelaFu(); }, 500);
+          }
+        } else {
+          mostrarToast('Cliente já está no Follow Up');
+        }
+      } else {
+        // Desmarcou: remover clone da FU (soft-delete)
+        const cloneFu = clientes.find(x =>
+          x.cliente === c2.cliente && x.id !== c2.id &&
+          x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
+        );
+        if (cloneFu) {
+          await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', cloneFu.id);
+          mostrarToast('Cliente removido do Follow Up');
           await carregarDados();
           renderizarTabelaAnalises();
           renderizarTabelaFu();
           atualizarStatsFu();
-          // Garantir que estado final prevalece (realtime pode ter renderizado estado intermediário)
-          setTimeout(() => { renderizarTabelaAnalises(); renderizarTabelaFu(); }, 500);
         }
-      } else {
-        mostrarToast('Cliente já está no Follow Up');
-      }
-    } else {
-      // Desmarcou: remover clone da FU (soft-delete)
-      const cloneFu = clientes.find(x =>
-        x.cliente === c2.cliente && x.id !== c2.id &&
-        x.mes_referencia === mesRef && x.follow_up === true && !x.deleted_at
-      );
-      if (cloneFu) {
-        await sb.from('clientes').update({ follow_up: false, deleted_at: new Date().toISOString() }).eq('id', cloneFu.id);
-        mostrarToast('Cliente removido do Follow Up');
-        await carregarDados();
-        renderizarTabelaAnalises();
-        renderizarTabelaFu();
-        atualizarStatsFu();
       }
     }
+  } catch(e) {
+    console.error('Erro em atualizarCampo:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
   }
-}
-
-async function criarGrupoWhatsApp(clienteId, clienteNome, cpf) {
-  if (!cpf) { mostrarToast('Cliente sem CPF necessário.'); return; }
-  const { data, error } = await sb.from('whatsapp_grupos').insert({
-    cliente_id: clienteId, analista_id: usuarioNome.toLowerCase(),
-    subject: 'Proposta — ' + clienteNome, participantes: ['557192057760']
-  }).select().single();
-  if (error) { mostrarToast('Erro ao criar grupo.'); return; }
-  await sb.from('whatsapp_mensagens').insert({
-    grupo_id: data.id, remetente: 'sistema',
-    texto: 'Grupo criado para ' + clienteNome + '.', tipo: 'sistema'
-  });
-  mostrarToast('Grupo WhatsApp criado!');
-  window.open('/whatsapp.html', '_blank');
-}
-
-async function notificarMudancaStatus(clienteId, clienteNome, novoStatus) {
-  if (!clienteId || !novoStatus) return;
-  try {
-    const { data: grupo } = await sb.from('whatsapp_grupos').select('id').eq('cliente_id', clienteId).eq('ativo', true).maybeSingle();
-    if (!grupo) return;
-    const t = { aprovado: '✅ ' + clienteNome + ' foi APROVADO!', cancelado: '❌ ' + clienteNome + ' foi CANCELADO.', pendente_doc: '📄 ' + clienteNome + ' está PENDENTE DE DOCUMENTO.', emitido: '🏦 ' + clienteNome + ' foi EMITIDO!' };
-    const texto = t[novoStatus] || '📢 ' + clienteNome + ': status alterado para ' + novoStatus + '.';
-    await sb.from('whatsapp_mensagens').insert({ grupo_id: grupo.id, remetente: 'sistema', texto: texto, tipo: 'sistema' });
-  } catch (e) { console.error('[WhatsApp Bot]', e); }
 }
 
 async function converterCliente(id, checked) {
-  const c = clientes.find(c => c.id === id);
-  if (!c) return;
-  
-  const mesRef = new Date().toISOString().slice(0,7);
-  
-  if (checked) {
-    // Criar clone na Aba 2 se não existir
-    const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
-    if (!jaExiste) {
-      const { data: user } = await sb.auth.getUser();
-      const clone = {
-        indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
-        valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
-        produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
-        created_by: user?.user?.id,
-        criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
-        convertido: true, mes_referencia: mesRef,
-        fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
-        banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
-        banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
-        banco_inter: c.banco_inter || false,
-        valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
-        data_matricula: c.data_matricula || '', urgente: false
-      };
-      const { data: novo, error } = await sb.from('clientes').insert(clone).select().single();
-      if (!error && novo) {
-        clientes.push(novo);
-        mostrarToast('Cliente convertido em processo ✅');
+  try {
+    const c = clientes.find(c => c.id === id);
+    if (!c) return;
+    
+    const mesRef = new Date().toISOString().slice(0,7);
+    
+    if (checked) {
+      // Criar clone na Aba 2 se não existir
+      const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
+      if (!jaExiste) {
+        const { data: user } = await sb.auth.getUser();
+        const clone = {
+          indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
+          valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
+          produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
+          created_by: user?.user?.id,
+          criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
+          convertido: true, mes_referencia: mesRef,
+          fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
+          banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
+          banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
+          banco_inter: c.banco_inter || false,
+          valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
+          data_matricula: c.data_matricula || '', urgente: false,
+          ultimo_andamento_data: c.ultimo_andamento_data || '', ultimo_andamento_texto: c.ultimo_andamento_texto || ''
+        };
+        const { data: novo, error } = await sb.from('clientes').insert(clone).select().single();
+        if (!error && novo) {
+          clientes.push(novo);
+          mostrarToast('Cliente convertido em processo ✅');
+        }
+      }
+    } else {
+      // Desmarcar: remover clone da Aba 2 se existir
+      const clone = clientes.find(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
+      if (clone) {
+        await sb.from('clientes').delete().eq('id', clone.id);
+        clientes = clientes.filter(x => x.id !== clone.id);
+        mostrarToast('Conversão desfeita ↩️');
       }
     }
-  } else {
-    // Desmarcar: remover clone da Aba 2 se existir
-    const clone = clientes.find(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
-    if (clone) {
-      await sb.from('clientes').delete().eq('id', clone.id);
-      clientes = clientes.filter(x => x.id !== clone.id);
-      mostrarToast('Conversão desfeita ↩️');
-    }
+    
+    renderizarTabelaAnalises();
+    renderizarTabelaAndamento();
+    atualizarStats();
+  } catch(e) {
+    console.error('Erro em converterCliente:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
   }
-  
-  renderizarTabelaAnalises();
-  renderizarTabelaAndamento();
-  atualizarStats();
 }
 
 function onBancoChange(id, novoBanco) {
@@ -2186,7 +2185,7 @@ function getFiltrados(sourceClientes, tab) {
       if (filtroBancoEmitidos !== 'todos') passaStatus = passaStatus && c.banco === filtroBancoEmitidos;
       else if (filtroEmitidos !== 'todos') passaStatus = passaStatus && (c.produto === filtroEmitidos || c.indicacao === filtroEmitidos);
     } else if (t === 'fu') {
-      passaStatus = c.follow_up === true && c.convertido !== true && c.status !== 'emitido' && (c.mes_referencia || '') === (mesSelecionadoFu || mesSelecionado);
+      passaStatus = c.follow_up === true && c.convertido !== true && c.convertido_fu !== true && c.status !== 'emitido' && (c.mes_referencia || '') === (mesSelecionadoFu || mesSelecionado);
       if (filtroProdutoFu !== 'todos') passaStatus = passaStatus && c.produto === filtroProdutoFu;
       if (filtroResultadoFu !== 'todos') passaStatus = passaStatus && c.resultado === filtroResultadoFu;
       if (filtroBancoFu !== 'todos') passaStatus = passaStatus && c['resultado_' + filtroBancoFu.toLowerCase()] === 'aprovado';
@@ -2469,45 +2468,63 @@ function salvarEdicaoParceiro() {
   
   const novaImobiliaria = document.getElementById('editImobiliaria').value.trim();
 
-  if (novoNome !== nomeOriginal) {
-    // Name changed: update partner entry, old processes keep original name
-    lista[idx].nome = novoNome;
-    lista[idx].tipo = novoTipo;
-    lista[idx].imobiliaria = novaImobiliaria;
-    // Keep old name available by adding an alias if processes reference it
-    if (emUso > 0 && !lista.some(i => i.nome === nomeOriginal)) {
-      lista.push({ nome: nomeOriginal, tipo: novoTipo, imobiliaria: novaImobiliaria, adicionado_em: new Date().toISOString(), _legado: true });
-    }
-  } else {
-    lista[idx].tipo = novoTipo;
-    lista[idx].imobiliaria = novaImobiliaria;
+  lista[idx].nome = novoNome;
+  lista[idx].tipo = novoTipo;
+  lista[idx].imobiliaria = novaImobiliaria;
+  
+  // If name changed and processes reference the old name, update them
+  if (novoNome !== nomeOriginal && emUso > 0) {
+    // Atualizar indicacao nos processos localmente
+    clientes.forEach(c => {
+      if ((c.indicacao || '').trim() === nomeOriginal) {
+        c.indicacao = novoNome;
+      }
+    });
+    // Atualizar no banco
+    (async () => {
+      const { error } = await sb.from('clientes').update({ indicacao: novoNome }).eq('indicacao', nomeOriginal);
+      if (!error) await carregarDados();
+    })();
   }
   
   salvarIndicacoes(lista);
   popularDatalistIndicacoes();
   fecharModalEditarParceiro();
   abrirModalParceiros(); // refresh
-  mostrarToast('✅ Parceiro atualizado' + (emUso > 0 ? ` (${emUso} processos mantêm o nome original)` : ''));
+  mostrarToast('✅ Parceiro atualizado');
 }
 
 function removerParceiro(nome) {
-  // Check if in use
   const emUso = clientes.filter(c => (c.indicacao || '').trim() === nome).length;
   const msg = emUso > 0
-    ? `"${nome}" está vinculado a ${emUso} processo(s). Remover da lista de parceiros? (os processos manterão o nome)`
-    : `Remover "${nome}" da lista de parceiros?`;
-  
+    ? '"' + nome + '" está vinculado a ' + emUso + ' processo(s). A indicação será removida dos processos. Continuar?'
+    : 'Remover "' + nome + '" da lista de parceiros?';
   if (!confirm(msg)) return;
+  
+  // Clear partner name from linked processes
+  if (emUso > 0) {
+    clientes.forEach(c => {
+      if ((c.indicacao || '').trim() === nome) {
+        c.indicacao = '';
+      }
+    });
+    // Atualizar no banco
+    (async () => {
+      await sb.from('clientes').update({ indicacao: '' }).eq('indicacao', nome);
+    })();
+  }
+  
   const lista = carregarIndicacoes();
   const novaLista = lista.filter(i => i.nome !== nome);
   salvarIndicacoes(novaLista);
   popularDatalistIndicacoes();
   abrirModalParceiros();
-  mostrarToast('🗑️ Parceiro removido da lista' + (emUso > 0 ? ` (${emUso} processos mantêm o nome)` : ''));
+  mostrarToast('🗑️ Parceiro removido' + (emUso > 0 ? ' (' + emUso + ' processos limpos)' : ''));
 }
 
 function abrirModalIndicacao() {
   document.getElementById('modalIndicacao').classList.remove('hidden');
+  document.getElementById('indTipo').value = 'Corretor';
   document.getElementById('indNome').focus();
   document.getElementById('indTipo').dispatchEvent(new Event('change'));
 }
@@ -2515,6 +2532,8 @@ function abrirModalIndicacao() {
 function fecharModalIndicacao() {
   document.getElementById('modalIndicacao').classList.add('hidden');
   document.getElementById('indNome').value = '';
+  document.getElementById('indTipo').value = 'Corretor';
+  document.getElementById('indTipo').dispatchEvent(new Event('change'));
   const imo = document.getElementById('indImobiliaria');
   if (imo) imo.value = '';
   const grp = document.getElementById('indImobiliariaGroup');
@@ -2765,8 +2784,14 @@ function coletarEventosCalendario() {
   doMes.forEach(c => {
     if (c.convertido === true && c.status !== 'emitido' && c.data_matricula) {
       const dt = parseDataBR(c.data_matricula);
-      if (dt && dt.getMonth() + 1 === hoje.getMonth() + 1 && dt.getFullYear() === hoje.getFullYear()) {
-        adicionar(dt.getDate(), 'matricula', c.cliente || 'Sem nome');
+      if (dt) {
+        // Vencimento: Itaú = +20 dias, demais bancos = +30 dias
+        const diasVencimento = (c.banco || '').toLowerCase() === 'itaú' ? 20 : 30;
+        const vencimento = new Date(dt);
+        vencimento.setDate(vencimento.getDate() + diasVencimento);
+        if (vencimento.getMonth() + 1 === hoje.getMonth() + 1 && vencimento.getFullYear() === hoje.getFullYear()) {
+          adicionar(vencimento.getDate(), 'matricula', c.cliente || 'Sem nome');
+        }
       }
     }
     if (c.convertido === true && c.status !== 'emitido' && c.iq && c.data_iq) {
@@ -2847,7 +2872,7 @@ function renderizarCalendarioDash(feriados) {
   html += '</div>';
 
   html += '<div class="cal-legenda">';
-  html += '<div class="cal-legenda-item"><span class="cal-legenda-dot matricula"></span> Matrícula</div>';
+  html += '<div class="cal-legenda-item"><span class="cal-legenda-dot matricula"></span> Venc. Matrícula</div>';
   html += '<div class="cal-legenda-item"><span class="cal-legenda-dot iq"></span> IQ</div>';
   html += '<div class="cal-legenda-item"><span class="cal-legenda-dot fu"></span> Follow-up</div>';
   html += '<div class="cal-legenda-item"><span class="cal-legenda-dot feriado"></span> Feriado</div>';
@@ -2980,19 +3005,24 @@ function getResultadoPerBancoHtml(c) {
 }
 
 async function ciclarResultadoBanco(id, banco) {
-  const c = clientes.find(c => c.id === id);
-  if (!c) return;
-  const campo = 'resultado_' + banco;
-  const atual = c[campo] || '';
-  const idx = RESULTADO_CYCLE.indexOf(atual);
-  const proximo = RESULTADO_CYCLE[(idx + 1) % RESULTADO_CYCLE.length];
-  c[campo] = proximo;
-  // Update DOM immediately
-  const td = document.getElementById('resultado-' + id);
-  if (td) td.innerHTML = getResultadoPerBancoHtml(c);
-  // Persist
-  await atualizarCampo(id, campo, proximo);
-  atualizarStats();
+  try {
+    const c = clientes.find(c => c.id === id);
+    if (!c) return;
+    const campo = 'resultado_' + banco;
+    const atual = c[campo] || '';
+    const idx = RESULTADO_CYCLE.indexOf(atual);
+    const proximo = RESULTADO_CYCLE[(idx + 1) % RESULTADO_CYCLE.length];
+    c[campo] = proximo;
+    // Update DOM immediately
+    const td = document.getElementById('resultado-' + id);
+    if (td) td.innerHTML = getResultadoPerBancoHtml(c);
+    // Persist
+    await atualizarCampo(id, campo, proximo);
+    atualizarStats();
+  } catch(e) {
+    console.error('Erro em ciclarResultadoBanco:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
+  }
 }
 
 // ========== BANCO MULTI / RESULTADO ==========
@@ -3237,17 +3267,22 @@ async function duplicarClientes(lista, novoMes) {
 let clientesLixeira = [];
 
 async function carregarLixeira() {
-  const trintaDiasAtras = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-  const { data, error } = await sb
-    .from('clientes')
-    .select('*')
-    .not('deleted_at', 'is', null)
-    .gte('deleted_at', trintaDiasAtras)
-    .order('deleted_at', { ascending: false });
+  try {
+    const trintaDiasAtras = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+    const { data, error } = await sb
+      .from('clientes')
+      .select('*')
+      .not('deleted_at', 'is', null)
+      .gte('deleted_at', trintaDiasAtras)
+      .order('deleted_at', { ascending: false });
 
-  if (error) { mostrarToast('Erro ao carregar lixeira'); return; }
-  clientesLixeira = data || [];
-  renderizarTabelaLixeira();
+    if (error) { mostrarToast('Erro ao carregar lixeira'); return; }
+    clientesLixeira = data || [];
+    renderizarTabelaLixeira();
+  } catch(e) {
+    console.error('Erro em carregarLixeira:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
+  }
 }
 
 function renderizarTabelaLixeira() {
@@ -3266,9 +3301,9 @@ function renderizarTabelaLixeira() {
     return '<tr>' +
       '<td class="px-2 py-2 text-center"><input type="checkbox" class="lixeira-check" value="' + c.id + '" onchange="atualizarBotoesLixeira()"></td>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + (i+1) + '</td>' +
-      '<td class="px-3 py-2 font-medium" style="color:var(--text);">' + (c.cliente || '—') + '</td>' +
-      '<td class="px-3 py-2">' + (c.banco || '—') + '</td>' +
-      '<td class="px-3 py-2">' + (c.produto || '—') + '</td>' +
+      '<td class="px-3 py-2 font-medium" style="color:var(--text);">' + esc(c.cliente || '—') + '</td>' +
+      '<td class="px-3 py-2">' + esc(c.banco || '—') + '</td>' +
+      '<td class="px-3 py-2">' + esc(c.produto || '—') + '</td>' +
       '<td class="px-3 py-2"><span style="color:' + etapaCor + ';font-weight:600;font-size:0.7rem;">' + etapa + '</span></td>' +
       '<td class="px-3 py-2">' + esc(c.deleted_by || '—') + '</td>' +
       '<td class="px-3 py-2" style="color:var(--text-muted);">' + data + '</td>' +
@@ -3281,22 +3316,66 @@ function renderizarTabelaLixeira() {
 }
 
 async function restaurarDaLixeira(id) {
-  const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
-  if (error) { mostrarToast('Erro ao restaurar'); return; }
-  clientesLixeira = clientesLixeira.filter(c => c.id !== id);
-  renderizarTabelaLixeira();
-  await carregarDados();
-  renderizarTudo();
-  mostrarToast('Processo restaurado ↩️');
+  try {
+    const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
+    if (error) { mostrarToast('Erro ao restaurar'); return; }
+    clientesLixeira = clientesLixeira.filter(c => c.id !== id);
+    renderizarTabelaLixeira();
+    await carregarDados();
+    renderizarTudo();
+    mostrarToast('Processo restaurado ↩️');
+  } catch(e) {
+    console.error('Erro em restaurarDaLixeira:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
+  }
 }
 
 async function excluirPermanentemente(id) {
-  if (!confirm('ATENÇÃO: Este processo será EXCLUÍDO PERMANENTEMENTE e não poderá ser recuperado. Continuar?')) return;
-  const { error: delErr } = await sb.from('clientes').delete().eq('id', id);
-  if (delErr) { mostrarToast('Erro ao excluir: apenas o criador pode excluir permanentemente'); return; }
-  clientesLixeira = clientesLixeira.filter(c => c.id !== id);
-  renderizarTabelaLixeira();
-  mostrarToast('Processo excluído permanentemente '+String.fromCharCode(10060));
+  try {
+    if (!confirm('ATENÇÃO: Este processo será EXCLUÍDO PERMANENTEMENTE e não poderá ser recuperado. Continuar?')) return;
+    const { error: delErr } = await sb.from('clientes').delete().eq('id', id);
+    if (delErr) { mostrarToast('Erro ao excluir: apenas o criador pode excluir permanentemente'); return; }
+    clientesLixeira = clientesLixeira.filter(c => c.id !== id);
+    renderizarTabelaLixeira();
+    mostrarToast('Processo excluído permanentemente '+String.fromCharCode(10060));
+  } catch(e) {
+    console.error('Erro em excluirPermanentemente:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
+  }
+}
+
+async function limparTudo() {
+  if (!confirm('ATENÇÃO: Esta ação irá EXCLUIR PERMANENTEMENTE todos os processos do banco de dados e limpar a lista de parceiros. Tem certeza?')) return;
+  if (!confirm('ÚLTIMA CONFIRMAÇÃO: Todos os dados serão perdidos para sempre. Deseja continuar?')) return;
+  
+  mostrarToast('🧹 Limpando dados...');
+  
+  // 1. Tentar RPC hard_reset (SECURITY DEFINER, bypassa RLS)
+  const { error: rpcError } = await sb.rpc('hard_reset');
+  if (rpcError) {
+    console.warn('RPC hard_reset não disponível, tentando deleção individual...');
+    // Fallback: deletar um por um (só funciona para registros do próprio usuário)
+    const { data: allItems, error: fetchErr } = await sb.from('clientes').select('id');
+    if (fetchErr) { mostrarToast('Erro ao buscar registros: ' + fetchErr.message); return; }
+    
+    if (allItems && allItems.length > 0) {
+      let count = 0;
+      let erros = 0;
+      for (const item of allItems) {
+        const { error } = await sb.from('clientes').delete().eq('id', item.id);
+        if (!error) count++;
+        else erros++;
+      }
+      if (count > 0) mostrarToast(count + ' processo(s) excluído(s)');
+      if (erros > 0) mostrarToast('⚠️ ' + erros + ' processo(s) não puderam ser excluídos (rode o SQL no Supabase primeiro)');
+    }
+  }
+  
+  // 2. Limpar parceiros do localStorage
+  localStorage.removeItem('crm_indicacoes');
+  
+  mostrarToast('✅ Dados limpos! Recarregando...');
+  setTimeout(() => location.reload(), 1500);
 }
 
 function toggleTodosLixeira(el) {
@@ -3309,33 +3388,52 @@ function atualizarBotoesLixeira() {
 }
 
 async function restaurarTodosLixeira() {
-  const checks = document.querySelectorAll('.lixeira-check:checked');
-  if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
-  if (!confirm('Restaurar ' + checks.length + ' processo(s)?')) return;
-  let count = 0;
-  for (const cb of checks) {
-    const id = parseInt(cb.value);
-    const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
-    if (!error) count++;
+  try {
+    const checks = document.querySelectorAll('.lixeira-check:checked');
+    if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
+    if (!confirm('Restaurar ' + checks.length + ' processo(s)?')) return;
+    let count = 0;
+    for (const cb of checks) {
+      const id = parseInt(cb.value);
+      const { error } = await sb.from('clientes').update({ deleted_at: null }).eq('id', id);
+      if (!error) count++;
+    }
+    mostrarToast(count + ' processo(s) restaurado(s) ↩️');
+    await carregarLixeira();
+    await carregarDados();
+    renderizarTudo();
+  } catch(e) {
+    console.error('Erro em restaurarTodosLixeira:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
   }
-  mostrarToast(count + ' processo(s) restaurado(s) ↩️');
-  await carregarLixeira();
-  await carregarDados();
-  renderizarTudo();
 }
 
 async function excluirTodosLixeira() {
-  const checks = document.querySelectorAll('.lixeira-check:checked');
-  if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
-  if (!confirm('ATENÇÃO: ' + checks.length + ' processo(s) serão EXCLUÍDOS PERMANENTEMENTE. Continuar?')) return;
-  let count = 0;
-  for (const cb of checks) {
-    const id = parseInt(cb.value);
-    const { error } = await sb.from('clientes').delete().eq('id', id);
-    if (!error) count++;
+  try {
+    const checks = document.querySelectorAll('.lixeira-check:checked');
+    if (checks.length === 0) { mostrarToast('Nenhum item selecionado'); return; }
+    if (!confirm('ATENÇÃO: ' + checks.length + ' processo(s) serão EXCLUÍDOS PERMANENTEMENTE. Continuar?')) return;
+    let count = 0;
+    let erros = 0;
+    for (const cb of checks) {
+      const id = parseInt(cb.value);
+      const { error } = await sb.from('clientes').delete().eq('id', id);
+      if (!error) {
+        count++;
+        clientesLixeira = clientesLixeira.filter(c => c.id !== id);
+      } else {
+        erros++;
+        console.error('Falha ao excluir permanentemente id=' + id + ':', error.message);
+      }
+    }
+    renderizarTabelaLixeira();
+    if (count > 0) mostrarToast(count + ' processo(s) excluído(s) ✕');
+    if (erros > 0) mostrarToast('⚠️ ' + erros + ' processo(s) NÃO puderam ser excluídos (apenas o criador pode excluir permanentemente)');
+    await carregarLixeira();
+  } catch(e) {
+    console.error('Erro em excluirTodosLixeira:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
   }
-  mostrarToast(count + ' processo(s) excluído(s) ✕');
-  await carregarLixeira();
 }
 
 
@@ -3444,7 +3542,7 @@ function renderizarMetricas() {
   const emitidos = doMes.filter(c => c.status === 'emitido').length;
 
   // ---- Dados baseados nos filtros ----
-  const analises = filtrados.filter(c => c.convertido !== true).length;
+  const analises = filtrados.filter(c => c.convertido !== true && c.follow_up !== true).length;
   const andamento = filtrados.filter(c => c.convertido === true && c.status !== 'emitido').length;
   const emit = filtrados.filter(c => c.status === 'emitido').length;
   const totalFinanciado = filtrados
@@ -3465,12 +3563,12 @@ function renderizarMetricas() {
       c.banco_bradesco === true || c.banco_itau === true || 
       c.banco_santander === true || c.banco_inter === true;
   });
-  const caixaAnalises = caixa.filter(c => c.convertido !== true).length;
+  const caixaAnalises = caixa.filter(c => c.convertido !== true && c.follow_up !== true).length;
   const caixaAndamento = caixa.filter(c => c.convertido === true && c.status !== 'emitido').length;
   const caixaEmitidos = caixa.filter(c => c.status === 'emitido').length;
   const caixaFin = caixa.filter(c => c.status === 'emitido')
     .reduce((s,c) => s + (parseFloat(String(c.valor_financiado||'').replace(/[^\d,]/g,'').replace(',','.'))||0), 0);
-  const privAnalises = privados.filter(c => c.convertido !== true).length;
+  const privAnalises = privados.filter(c => c.convertido !== true && c.follow_up !== true).length;
   const privAndamento = privados.filter(c => c.convertido === true && c.status !== 'emitido').length;
   const privEmitidos = privados.filter(c => c.status === 'emitido').length;
   const privFin = privados.filter(c => c.status === 'emitido')
@@ -3791,8 +3889,8 @@ function renderizarTabelaAnalises() {
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
       <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${esc(c.indicacao||'')}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.cliente||'')}</span></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${esc(c.cpf||'')}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data" onfocus="if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data||''}" placeholder="dd/mm" maxlength="5" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5 text-center" style="white-space:nowrap;">
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#0061A8;"><input type="checkbox" ${c.banco_caixa?'checked':''} onchange="toggleBanco(${c.id},'caixa',this.checked)" class="w-3 h-3 accent-blue-600"> Caixa</label>
@@ -3801,7 +3899,7 @@ function renderizarTabelaAnalises() {
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#EC0000;"><input type="checkbox" ${c.banco_santander?'checked':''} onchange="toggleBanco(${c.id},'santander',this.checked)" class="w-3 h-3 accent-red-600"> Santander</label>
         <label class="inline-flex items-center gap-0.5 text-xs cursor-pointer font-semibold" style="color:#FF7A00;"><input type="checkbox" ${c.banco_inter?'checked':''} onchange="toggleBanco(${c.id},'inter',this.checked)" class="w-3 h-3 accent-orange-500"> Inter</label>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${esc(c.agencia||'')}" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_imovel)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_financiado)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
@@ -3810,7 +3908,7 @@ function renderizarTabelaAnalises() {
         </select>
       </td>
       <td class="px-3 py-2.5" id="resultado-${c.id}">${getResultadoPerBancoHtml(c)}</td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.obs||'')}</span></td>
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${clientes.some(x => x.cliente === c.cliente && x.mes_referencia === (String(anoAtual)+'-'+String(mesAtual+1).padStart(2,'0')) && x.follow_up === true && x.id !== c.id)?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="F-U">
       </td>
@@ -3862,11 +3960,11 @@ function renderizarTabelaFu() {
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition main-row" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
       <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${esc(c.indicacao||'')}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.cliente||'')}</span></td>
       <td class="px-1 py-2.5 text-center">
         <span class="expand-btn" onclick="toggleExpandFu(${c.id})" title="Expandir">▼</span>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${esc(c.cpf||'')}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="data" onfocus="if(!this.value)this.value=new Date().toLocaleDateString('pt-BR').slice(0,5)" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data||''}" placeholder="dd/mm" maxlength="5" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5 text-center" style="white-space:nowrap;">
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#0061A8;"><input type="checkbox" ${c.banco_caixa?'checked':''} onchange="toggleBanco(${c.id},'caixa',this.checked)" class="w-3 h-3 accent-blue-600"> Caixa</label>
@@ -3875,7 +3973,7 @@ function renderizarTabelaFu() {
         <label class="inline-flex items-center gap-0.5 mr-2 text-xs cursor-pointer font-semibold" style="color:#EC0000;"><input type="checkbox" ${c.banco_santander?'checked':''} onchange="toggleBanco(${c.id},'santander',this.checked)" class="w-3 h-3 accent-red-600"> Santander</label>
         <label class="inline-flex items-center gap-0.5 text-xs cursor-pointer font-semibold" style="color:#FF7A00;"><input type="checkbox" ${c.banco_inter?'checked':''} onchange="toggleBanco(${c.id},'inter',this.checked)" class="w-3 h-3 accent-orange-500"> Inter</label>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${esc(c.agencia||'')}" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_imovel)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_financiado)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
@@ -3884,7 +3982,7 @@ function renderizarTabelaFu() {
         </select>
       </td>
       <td class="px-3 py-2.5" id="resultado-${c.id}">${getResultadoPerBancoHtml(c)}</td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.obs||'')}</span></td>
       <td class="px-2 py-2.5 text-center">
         <input type="checkbox" ${c.follow_up?'checked':''} onchange="atualizarCampo(${c.id},'follow_up',this.checked)" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer" title="F-U">
       </td>
@@ -3954,41 +4052,47 @@ function toggleExpandFu(id) {
 }
 
 async function converterClienteFu(id, checked) {
-  const c = clientes.find(c => c.id === id);
-  if (!c) return;
-  const mesRef = new Date().toISOString().slice(0,7);
-  if (checked) {
-    const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
-    if (!jaExiste) {
-      const { data: user } = await sb.auth.getUser();
-      const clone = {
-        indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
-        valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
-        produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
-        created_by: user?.user?.id,
-        criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
-        convertido: true, mes_referencia: mesRef,
-        fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
-        banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
-        banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
-        banco_inter: c.banco_inter || false,
-        valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
-        data_matricula: c.data_matricula || '', urgente: false,
-        data: c.data || '', analista: c.analista || ''
-      };
-      const { error } = await sb.from('clientes').insert(clone);
-      if (error) { mostrarToast('Erro ao converter'); return; }
+  try {
+    const c = clientes.find(c => c.id === id);
+    if (!c) return;
+    const mesRef = new Date().toISOString().slice(0,7);
+    if (checked) {
+      const jaExiste = clientes.some(x => x.cliente === c.cliente && x.mes_referencia === mesRef && x.convertido === true && x.id !== id);
+      if (!jaExiste) {
+        const { data: user } = await sb.auth.getUser();
+        const clone = {
+          indicacao: c.indicacao || '', cliente: c.cliente, cpf: c.cpf || '', agencia: c.agencia || '',
+          valor_imovel: c.valor_imovel || '', valor_financiado: c.valor_financiado || '',
+          produto: c.produto || 'SBPE', data_vistoria: '—', status: 'aguardando-doc', obs: '',
+          created_by: user?.user?.id,
+          criado_por: usuarioNome || user?.user?.email?.split('@')[0] || '—',
+          convertido: true, mes_referencia: mesRef,
+          fgts: c.fgts || false, iq: c.iq || false, banco: c.banco || '',
+          banco_caixa: c.banco_caixa || false, banco_bradesco: c.banco_bradesco || false,
+          banco_itau: c.banco_itau || false, banco_santander: c.banco_santander || false,
+          banco_inter: c.banco_inter || false,
+          valor_fgts: c.valor_fgts || '', data_iq: c.data_iq || '',
+          data_matricula: c.data_matricula || '', urgente: false,
+          ultimo_andamento_data: c.ultimo_andamento_data || '', ultimo_andamento_texto: c.ultimo_andamento_texto || '',
+          data: c.data || '', analista: c.analista || ''
+        };
+        const { error } = await sb.from('clientes').insert(clone);
+        if (error) { mostrarToast('Erro ao converter'); return; }
+      }
+      await atualizarCampo(id, 'convertido_fu', true);
+      mostrarToast('Cliente convertido para Em Andamento ✅');
+    } else {
+      await atualizarCampo(id, 'convertido_fu', false);
+      mostrarToast('Conversão desfeita');
     }
-    await atualizarCampo(id, 'convertido_fu', true);
-    mostrarToast('Cliente convertido para Em Andamento ✅');
-  } else {
-    await atualizarCampo(id, 'convertido_fu', false);
-    mostrarToast('Conversão desfeita');
+    await carregarDados();
+    renderizarTabelaFu();
+    renderizarTabelaAndamento();
+    atualizarStatsFu();
+  } catch(e) {
+    console.error('Erro em converterClienteFu:', e);
+    mostrarToast('Erro inesperado. Recarregue a página.');
   }
-  await carregarDados();
-  renderizarTabelaFu();
-  renderizarTabelaAndamento();
-  atualizarStatsFu();
 }
 
 function renderizarMesSelectorFu() {
@@ -4145,18 +4249,18 @@ function renderizarTabelaAndamento() {
     <tr style="border-bottom:1px solid var(--border-light);" data-id="${c.id}" class="main-row">
       <td class="px-2 py-2.5 text-xs text-center" style="color:var(--text-muted);">${i + 1}</td>
       <td class="px-3 py-2.5"><input list="indicacaoSuggestions" data-id="${c.id}" data-campo="indicacao" class="editavel px-1 rounded bg-transparent border-0" onblur="validarIndicacaoInput(this)" onfocus="this.dataset.oldValue=this.value" value="${esc(c.indicacao||'')}" style="color:inherit;width:120px;" autocomplete="off" placeholder="Escolha..."></td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.cliente||''}</span></td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="cliente" class="editavel px-1 -mx-1 rounded" data-placeholder="Cliente" style="min-width:160px;white-space:nowrap;" onblur="capitalizarCliente(this);editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.cliente||'')}</span></td>
       <td class="px-1 py-2.5 text-center">
         <span class="expand-btn" onclick="toggleExpand(${c.id})" title="Expandir">▼</span>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${c.cpf||''}" maxlength="14" style="color:inherit;width:110px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="cpf" class="editavel px-1 rounded font-mono text-xs bg-transparent border-0" oninput="mascaraCPF(this)" onblur="editarCampoInput(this)" value="${esc(c.cpf||'')}" maxlength="14" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
         <select onchange="onBancoChange(${c.id},this.value)" class="text-xs bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:inherit;">
           <option value="" ${!c.banco?'selected':''}>—</option>
           ${['Bradesco','Caixa','Itaú','Santander','Inter'].map(b => `<option value="${b}" ${c.banco===b?'selected':''}>${b}</option>`).join('')}
         </select>
       </td>
-      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${c.agencia||''}" style="color:inherit;width:70px;"></td>
+      <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="agencia" class="editavel px-1 rounded bg-transparent border-0" oninput="apenasNumeros(this)" onblur="editarCampoInput(this)" value="${esc(c.agencia||'')}" style="color:inherit;width:70px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_imovel" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_imovel)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5"><input tabindex="0" data-id="${c.id}" data-campo="valor_financiado" class="editavel px-1 rounded bg-transparent border-0" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this);editarCampoInput(this)" value="${formatarR$(c.valor_financiado)}" style="color:inherit;width:110px;"></td>
       <td class="px-3 py-2.5">
@@ -4164,8 +4268,8 @@ function renderizarTabelaAndamento() {
           ${PRODUTO_OPTS.map(p => `<option value="${p}" ${p===c.produto?'selected':''}>${p}</option>`).join('')}
         </select>
       </td>
-      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_vistoria" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_vistoria||''}" maxlength="10" style="color:inherit;width:90px;"></td>
-      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_emissao" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${c.data_emissao||''}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:100px;"></td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_vistoria" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${esc(c.data_vistoria||'')}" maxlength="10" style="color:inherit;width:90px;"></td>
+      <td class="px-3 py-2.5"><input data-id="${c.id}" data-campo="data_emissao" class="editavel px-1 rounded bg-transparent border-0 text-xs" oninput="mascaraData(this)" onblur="editarCampoInput(this)" value="${esc(c.data_emissao||'')}" placeholder="dd/mm/aaaa" maxlength="10" style="color:inherit;width:100px;"></td>
       <td class="px-3 py-2.5">
         <select onchange="atualizarCampo(${c.id},'status',this.value)" data-id="${c.id}" class="status-select text-xs bg-transparent cursor-pointer rounded-lg p-1 border-0 focus:ring-2 focus:ring-orange-500" style="color:var(--text-secondary);">
           ${statusOpts.map(s => getStatusLabel(s)).map((label,i) => `<option value="${statusOpts[i]}" ${statusOpts[i]===c.status?'selected':''}>${label}</option>`).join('')}
@@ -4180,18 +4284,35 @@ function renderizarTabelaAndamento() {
           style="color:inherit;width:110px;" autocomplete="off"
           placeholder="Analista">
       </td>
-      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${c.obs||''}</span></td>
-      <td class="px-3 py-2.5 criado-por-col">${c.criado_por || '—'}</td>
+      <td class="px-3 py-2.5"><span contenteditable="true" tabindex="0" data-id="${c.id}" data-campo="obs" class="editavel px-1 -mx-1 rounded" onblur="editarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(c.obs||'')}</span></td>
+      <td class="px-3 py-2.5 criado-por-col">${esc(c.criado_por || '—')}</td>
       <td class="px-2 py-2.5 text-center">
-        <button onclick="criarGrupoWhatsApp(${c.id},'${esc(c.cliente||'')}','${c.cpf||''}')" class="text-green-600 hover:text-green-800 transition mr-1" title="Criar Grupo WhatsApp" ${!c.cpf?'disabled style="opacity:0.3;cursor:not-allowed;"':''}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-        </button>
         <button onclick="excluirCliente(${c.id})" class="text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>
       </td>
     </tr>
     <tr class="expanded-row hidden" data-parent="${c.id}">
       <td colspan="15">
         <div class="expanded-grid">
+          <div class="expanded-item">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <label>Último andamento</label>
+            </div>
+            <div style="display:flex;gap:4px;margin-top:4px;">
+              <input type="text" data-id="${c.id}" data-campo="ultimo_andamento_data"
+                class="editavel px-1 rounded bg-transparent border-0 text-xs"
+                oninput="mascaraDataCompleta(this)"
+                onblur="editarCampoInput(this)"
+                value="${esc(c.ultimo_andamento_data||'')}"
+                placeholder="dd/mm/aaaa" maxlength="10"
+                style="color:inherit;width:100px;">
+              <input type="text" data-id="${c.id}" data-campo="ultimo_andamento_texto"
+                class="editavel px-2 py-1 rounded bg-transparent border text-xs"
+                onblur="editarCampoInput(this)"
+                value="${esc(c.ultimo_andamento_texto||'')}"
+                placeholder="Descreva o andamento..."
+                style="color:inherit;flex:1;min-width:160px;border-color:var(--border);">
+            </div>
+          </div>
           <div class="expanded-item">
             <label style="cursor:pointer;" onclick="toggleFGTS(${c.id})">
               <input type="checkbox" ${fgts?'checked':''} onchange="toggleFGTS(${c.id})" style="accent-color:#f97316;"> FGTS
@@ -4213,7 +4334,7 @@ function renderizarTabelaAndamento() {
               <input type="checkbox" ${c.urgente?'checked':''} onchange="toggleUrgente(${c.id})" style="accent-color:#dc2626;"> 🔴 Urgente
             </label>
           </div>
-          <div class="expanded-item" style="justify-content:flex-end;">
+          <div class="expanded-item" style="justify-content:flex-end;display:flex;gap:6px;align-items:center;">
             <button class="btn-briefing" onclick="gerarBriefing(${c.id})" title="Gerar Briefing (em breve)">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
               Briefing
@@ -4251,15 +4372,15 @@ function renderizarTabelaEmitidos() {
     return `
     <tr class="border-b border-[#1f1f1f] hover:bg-orange-900/5 transition" data-id="${c.id}">
       <td class="px-2 py-2.5 text-gray-600 text-xs text-center">${i + 1}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.indicacao||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-200 font-medium">${c.cliente||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-400 font-mono text-xs">${c.cpf||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.banco||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.agencia||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.valor_imovel||'—'}</td>
-      <td class="px-3 py-2.5 text-gray-300">${c.valor_financiado||'—'}</td>
-      <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='FGTS'?'text-orange-400':'text-gray-300'}">${c.produto||'—'}</span></td>
-      <td class="px-3 py-2.5 text-gray-400 text-xs">${c.emitido_por||c.criado_por||'—'}</td>
+      <td class="px-3 py-2.5 text-gray-300">${esc(c.indicacao||'—')}</td>
+      <td class="px-3 py-2.5 text-gray-200 font-medium">${esc(c.cliente||'—')}</td>
+      <td class="px-3 py-2.5 text-gray-400 font-mono text-xs">${esc(c.cpf||'—')}</td>
+      <td class="px-3 py-2.5 text-gray-300">${esc(c.banco||'—')}</td>
+      <td class="px-3 py-2.5 text-gray-300">${esc(c.agencia||'—')}</td>
+      <td class="px-3 py-2.5 text-gray-300">${esc(c.valor_imovel||'—')}</td>
+      <td class="px-3 py-2.5 text-gray-300">${esc(c.valor_financiado||'—')}</td>
+      <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='FGTS'?'text-orange-400':'text-gray-300'}">${esc(c.produto||'—')}</span></td>
+      <td class="px-3 py-2.5 text-gray-400 text-xs">${esc(c.emitido_por||c.criado_por||'—')}</td>
       <td class="px-2 py-2.5 text-center">
         ${master ? `<button onclick="reverterEmitido(${c.id})" class="text-xs px-2 py-1 rounded-lg border transition" style="color:var(--accent);border-color:var(--accent);background:transparent;" title="Reverter para Análises"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>` : ''}
         ${master ? `<button onclick="excluirCliente(${c.id})" class="ml-1 text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>` : ''}
@@ -4381,7 +4502,6 @@ function filtrarBancoAndamento(banco, btn) {
     document.getElementById('sidebar').addEventListener('click', function(e) {
       const link = e.target.closest('a[data-tab]');
       if (!link) return;
-      if (link.getAttribute('data-tab') === 'whatsapp') return;
       e.preventDefault();
       mudarTab(link.getAttribute('data-tab'));
     });
@@ -4390,7 +4510,7 @@ function filtrarBancoAndamento(banco, btn) {
       const h = location.hash;
       if (h && h.startsWith('#tab-')) {
         const t = h.replace('#tab-', '');
-        if (t && t !== 'whatsapp') mudarTab(t);
+        if (t) mudarTab(t);
       }
     })();
 
@@ -4409,5 +4529,6 @@ function filtrarBancoAndamento(banco, btn) {
   }
 })();
 </script>
+
 </body>
 </html>
