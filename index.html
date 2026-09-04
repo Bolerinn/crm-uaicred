@@ -1401,6 +1401,7 @@ const NOME_PARA_EMAIL = {
   'luana': 'salvador+luana@primeassessoria.net',
   'fernanda': 'salvador+fernanda@primeassessoria.net',
   'marjore': 'salvador+marjore@primeassessoria.net',
+  'aline': 'salvador+aline@primeassessoria.net',
   'teste': 'salvador+teste@primeassessoria.net',
 };
 
@@ -1753,7 +1754,7 @@ async function carregarDados() {
     }
   });
 
-    popularDatalistIndicacoes();
+    await popularDatalistIndicacoes();
     renderizarTudo();
   } catch(e) {
     console.error('Erro em carregarDados:', e);
@@ -2350,23 +2351,92 @@ function extrairIndicacoesDoBanco() {
   return Array.from(nomes);
 }
 
-function sincronizarIndicacoes() {
-  const salvas = carregarIndicacoes();
-  const doBanco = extrairIndicacoesDoBanco();
-  const nomesSalvos = new Set(salvas.map(i => i.nome));
-  let changed = false;
-  doBanco.forEach(nome => {
-    if (!nomesSalvos.has(nome)) {
-      salvas.push({ nome, tipo: 'Outro', adicionado_em: new Date().toISOString(), _legado: true });
-      changed = true;
-    }
-  });
-  if (changed) salvarIndicacoes(salvas);
-  return salvas;
+// ---- Persistência compartilhada (tabela parceiros no Supabase) ----
+// Os tipos dos parceiros agora vivem no BANCO (fonte da verdade), não só no
+// localStorage. Se a tabela ainda não existir (SQL pendente), cai em modo
+// legado (localStorage) sem quebrar nada — ao criar a tabela, migra sozinho.
+let parceirosBancoOk = null; // null=desconhecido | true=ativo | false=legado
+
+async function testarBancoParceiros() {
+  if (parceirosBancoOk !== null) return parceirosBancoOk;
+  try {
+    const { error } = await sb.from('parceiros').select('id').limit(1);
+    parceirosBancoOk = !error;
+    if (error) console.warn('[parceiros] tabela indisponível — modo legado (localStorage):', error.message);
+  } catch (e) { parceirosBancoOk = false; }
+  return parceirosBancoOk;
 }
 
-function popularDatalistIndicacoes() {
-  const lista = sincronizarIndicacoes();
+async function carregarParceirosBanco() {
+  if (!(await testarBancoParceiros())) return null;
+  const { data, error } = await sb.from('parceiros').select('*').order('nome');
+  return error ? null : (data || []);
+}
+
+async function deletarParceiroBanco(nome) {
+  if (!(await testarBancoParceiros())) return;
+  const banco = await carregarParceirosBanco();
+  const alvo = (banco || []).find(p => p.nome.toLowerCase() === String(nome).toLowerCase());
+  if (alvo) await sb.from('parceiros').delete().eq('id', alvo.id);
+}
+
+async function sincronizarIndicacoes() {
+  const doBancoClientes = extrairIndicacoesDoBanco();
+  const banco = await carregarParceirosBanco();
+  const locals = carregarIndicacoes();
+
+  if (!banco) {
+    // MODO LEGADO — tabela parceiros ainda não criada: comportamento antigo
+    const nomesSalvos = new Set(locals.map(i => String(i.nome || '').toLowerCase()));
+    let changed = false;
+    doBancoClientes.forEach(nome => {
+      if (!nomesSalvos.has(nome.toLowerCase())) {
+        locals.push({ nome, tipo: 'Outro', adicionado_em: new Date().toISOString(), _legado: true });
+        changed = true;
+      }
+    });
+    if (changed) salvarIndicacoes(locals);
+    return locals;
+  }
+
+  // BANCO ATIVO — une banco + localStorage + nomes usados em processos.
+  // Prioridade de tipo: local corrigido ('Corretor' etc.) vence 'Outro' do banco;
+  // banco com tipo real vence 'Outro' do local. Nome sem tipo conhecido → 'Outro'.
+  const porNome = new Map();
+  banco.forEach(p => porNome.set(p.nome.toLowerCase(), p));
+  const toInsert = [], toUpdate = [];
+  const seed = (nome, tipo, imobiliaria) => {
+    const k = String(nome).toLowerCase();
+    if (!k) return;
+    const p = porNome.get(k);
+    if (!p) {
+      const novo = { nome, tipo: tipo || 'Outro', imobiliaria: imobiliaria || '', adicionado_em: new Date().toISOString() };
+      porNome.set(k, novo);
+      toInsert.push(novo);
+    } else {
+      if (tipo && tipo !== 'Outro' && p.tipo === 'Outro') { p.tipo = tipo; if (!toUpdate.includes(p)) toUpdate.push(p); }
+      if (imobiliaria && !p.imobiliaria) { p.imobiliaria = imobiliaria; if (!toUpdate.includes(p)) toUpdate.push(p); }
+    }
+  };
+  locals.forEach(i => seed(i.nome, i.tipo, i.imobiliaria));          // 1º local (tipos corrigidos)
+  doBancoClientes.forEach(nome => seed(nome, null, null));           // 2º processos (só o que falta)
+
+  for (const p of toInsert) {
+    const { error } = await sb.from('parceiros').insert({ nome: p.nome, tipo: p.tipo, imobiliaria: p.imobiliaria });
+    if (error) console.error('[parceiros] insert falhou:', error.message);
+  }
+  for (const p of toUpdate) {
+    const { error } = await sb.from('parceiros').update({ tipo: p.tipo, imobiliaria: p.imobiliaria }).eq('id', p.id);
+    if (error) console.error('[parceiros] update falhou:', error.message);
+  }
+  const final = await carregarParceirosBanco();
+  const resultado = final || Array.from(porNome.values());
+  salvarIndicacoes(resultado);
+  return resultado;
+}
+
+async function popularDatalistIndicacoes() {
+  const lista = await sincronizarIndicacoes();
   const dl = document.getElementById('indicacaoSuggestions');
   if (!dl) return;
   dl.innerHTML = lista.map(i => `<option value="${i.nome.replace(/"/g,'&quot;')}">${i.tipo || ''}</option>`).join('');
@@ -2374,11 +2444,11 @@ function popularDatalistIndicacoes() {
 }
 
 
-function abrirModalParceiros() {
+async function abrirModalParceiros() {
   const modal = document.getElementById('modalParceiros');
   const container = document.getElementById('modalParceirosLista');
   if (!modal || !container) return;
-  const lista = carregarIndicacoes();
+  const lista = await sincronizarIndicacoes();
   if (lista.length === 0) {
     container.innerHTML = '<div class="text-xs text-center py-8" style="color:var(--text-muted);">Nenhum parceiro cadastrado</div>';
   } else {
@@ -2446,7 +2516,7 @@ function fecharModalEditarParceiro() {
   if (grp) grp.classList.add('hidden');
 }
 
-function salvarEdicaoParceiro() {
+async function salvarEdicaoParceiro() {
   const nomeOriginal = document.getElementById('editParceiroNomeOriginal').value;
   const novoNome = document.getElementById('editParceiroNome').value.trim();
   const novoTipo = document.getElementById('editParceiroTipo').value;
@@ -2487,14 +2557,17 @@ function salvarEdicaoParceiro() {
     })();
   }
   
+  // Renomeou: remove o registro antigo do banco (o novo nome sobe na sincronização)
+  if (novoNome !== nomeOriginal) await deletarParceiroBanco(nomeOriginal);
+
   salvarIndicacoes(lista);
-  popularDatalistIndicacoes();
+  await popularDatalistIndicacoes();
   fecharModalEditarParceiro();
-  abrirModalParceiros(); // refresh
+  await abrirModalParceiros(); // refresh
   mostrarToast('✅ Parceiro atualizado');
 }
 
-function removerParceiro(nome) {
+async function removerParceiro(nome) {
   const emUso = clientes.filter(c => (c.indicacao || '').trim() === nome).length;
   const msg = emUso > 0
     ? '"' + nome + '" está vinculado a ' + emUso + ' processo(s). A indicação será removida dos processos. Continuar?'
@@ -2517,8 +2590,9 @@ function removerParceiro(nome) {
   const lista = carregarIndicacoes();
   const novaLista = lista.filter(i => i.nome !== nome);
   salvarIndicacoes(novaLista);
-  popularDatalistIndicacoes();
-  abrirModalParceiros();
+  await deletarParceiroBanco(nome);
+  await popularDatalistIndicacoes();
+  await abrirModalParceiros();
   mostrarToast('🗑️ Parceiro removido' + (emUso > 0 ? ' (' + emUso + ' processos limpos)' : ''));
 }
 
@@ -2573,7 +2647,7 @@ function validarIndicacaoInput(el) {
   }
 }
 
-function adicionarIndicacao() {
+async function adicionarIndicacao() {
   const tipo = document.getElementById('indTipo').value;
   const nome = document.getElementById('indNome').value.trim();
   if (!nome) { mostrarToast('Preencha o nome'); return; }
@@ -2588,7 +2662,7 @@ function adicionarIndicacao() {
   }
   lista.push({ nome: nomeCompleto, tipo, adicionado_em: new Date().toISOString() });
   salvarIndicacoes(lista);
-  popularDatalistIndicacoes();
+  await popularDatalistIndicacoes();
   fecharModalIndicacao();
   mostrarToast('✅ Indicação adicionada: ' + nomeCompleto);
 }
@@ -4360,7 +4434,7 @@ function renderizarTabelaEmitidos() {
   const filtrados = getFiltrados(null, 'emitidos');
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-16 text-gray-600">Nenhum contrato emitido ainda.</td></tr>';
     atualizarStatsEmitidos();
     return;
   }
@@ -4375,12 +4449,14 @@ function renderizarTabelaEmitidos() {
       <td class="px-3 py-2.5 text-gray-300">${esc(c.indicacao||'—')}</td>
       <td class="px-3 py-2.5 text-gray-200 font-medium">${esc(c.cliente||'—')}</td>
       <td class="px-3 py-2.5 text-gray-400 font-mono text-xs">${esc(c.cpf||'—')}</td>
+      <td class="px-3 py-2.5 text-gray-400 text-xs">${esc(c.data||'—')}</td>
       <td class="px-3 py-2.5 text-gray-300">${esc(c.banco||'—')}</td>
       <td class="px-3 py-2.5 text-gray-300">${esc(c.agencia||'—')}</td>
       <td class="px-3 py-2.5 text-gray-300">${esc(c.valor_imovel||'—')}</td>
       <td class="px-3 py-2.5 text-gray-300">${esc(c.valor_financiado||'—')}</td>
       <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='FGTS'?'text-orange-400':'text-gray-300'}">${esc(c.produto||'—')}</span></td>
-      <td class="px-3 py-2.5 text-gray-400 text-xs">${esc(c.emitido_por||c.criado_por||'—')}</td>
+      <td class="px-3 py-2.5 text-gray-400 text-xs">${esc(c.data_emissao||'—')}</td>
+      <td class="px-3 py-2.5 criado-por-col text-gray-400 text-xs">${esc(c.emitido_por||c.criado_por||'—')}</td>
       <td class="px-2 py-2.5 text-center">
         ${master ? `<button onclick="reverterEmitido(${c.id})" class="text-xs px-2 py-1 rounded-lg border transition" style="color:var(--accent);border-color:var(--accent);background:transparent;" title="Reverter para Análises"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>` : ''}
         ${master ? `<button onclick="excluirCliente(${c.id})" class="ml-1 text-gray-500 hover:text-red-500 transition" title="Excluir">🗑️</button>` : ''}
