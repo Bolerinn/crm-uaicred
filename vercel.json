@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
-    { "src": "briefings/(.*)", "use": "@vercel/static" },
+    { "src": "briefings/*.docx", "use": "@vercel/static" },
     { "src": "logo-p.png", "use": "@vercel/static" },
     { "src": "package.json", "use": "@vercel/static" }
   ],
