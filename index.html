@@ -7,6 +7,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/pizzip@3/dist/pizzip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docxtemplater@3/build/docxtemplater.js"></script>
 <script>
 // === profiles-init ===
 let usuarioNome  = '';
@@ -2393,11 +2395,18 @@ function fmtMoedaBriefing(n) {
 }
 
 function confirmarBriefing(id) {
+  const c = (typeof clientes !== 'undefined' ? clientes : []).find(x => x.id === id);
   const prazo = (document.getElementById('bfPrazo').value || '').trim();
   if (!prazo || parseInt(prazo) <= 0) { mostrarToast('Informe o prazo em meses'); return; }
+  if (parseInt(prazo) > 420) { mostrarToast('Prazo máximo: 420 meses'); return; }
   const custas = document.getElementById('bfCustas').value;
   const valorCustas = (document.getElementById('bfValorCustas').value || '').trim();
   if (custas === 'SIM' && !parseMoedaBriefing(valorCustas)) { mostrarToast('Informe o valor das despesas de cartório'); return; }
+  if (c) {
+    const vImovel = parseMoedaBriefing(c.valor_imovel);
+    const vFin = parseMoedaBriefing(c.valor_financiado);
+    if (vImovel > 0 && vFin > vImovel * 0.8) { mostrarToast('Financiamento máximo: 80% do valor do imóvel (' + fmtMoedaBriefing(vImovel * 0.8) + ')'); return; }
+  }
   const extra = {
     conjuge: (document.getElementById('bfConjuge').value || '').trim(),
     conta: (document.getElementById('bfConta').value || '').trim(),
@@ -2408,54 +2417,54 @@ function confirmarBriefing(id) {
   imprimirBriefing(id, extra);
 }
 
-function imprimirBriefing(id, extra) {
+async function imprimirBriefing(id, extra) {
   const c = (typeof clientes !== 'undefined' ? clientes : []).find(x => x.id === id);
   if (!c) { mostrarToast('Cliente não encontrado'); return; }
+  if ((c.banco || '').toLowerCase() !== 'bradesco') { mostrarToast('Modelo piloto: apenas Bradesco por enquanto'); return; }
+  if (typeof PizZip === 'undefined' || typeof docxtemplater === 'undefined') { mostrarToast('Erro ao carregar gerador — recarregue a página'); return; }
   const fgts = !!c.fgts, iq = !!c.iq;
+  const tpl = (fgts && iq) ? 'bradesco-iq-fgts.docx' : fgts ? 'bradesco-fgts.docx' : iq ? 'bradesco-iq.docx' : 'bradesco-nenhum.docx';
   const produto = c.produto === 'MCMV' ? 'Minha Casa Minha Vida' : (c.produto || '—');
-  const vImovel = parseMoedaBriefing(c.valor_imovel);
   const vFin = parseMoedaBriefing(c.valor_financiado);
   const vCustas = extra.custas === 'SIM' ? parseMoedaBriefing(extra.valorCustas) : 0;
   const vTotal = vFin + vCustas;
-  const row = (k, v) => `<tr><td style="padding:6px 10px;border:1px solid #999;font-weight:700;width:42%;">${k}</td><td style="padding:6px 10px;border:1px solid #999;">${v}</td></tr>`;
-  const blocoFgts = fgts ? `
-    <h3>POSSO UTILIZAR MEU FGTS NA OPERAÇÃO?</h3>
-    <ul>
-      <li>Ter no mínimo 3 anos de trabalho sob o regime do FGTS (consecutivos ou não).</li>
-      <li>Não possuir financiamento ativo no SFH em qualquer parte do país.</li>
-      <li>Não ser proprietário de imóvel residencial urbano na região do imóvel objeto.</li>
-      <li>Ser imóvel residencial urbano destinado à moradia do titular.</li>
-    </ul>` : '';
-  const w = window.open('', '_blank');
-  if (!w) { mostrarToast('Permita pop-ups para imprimir o briefing'); return; }
-  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Briefing — ${esc(c.cliente || '')}</title>
-  <style>body{font-family:Arial,sans-serif;color:#111;margin:32px;}h1{font-size:20px;text-align:center;}h2{font-size:15px;margin-top:18px;border-bottom:2px solid #f97316;padding-bottom:4px;}h3{font-size:13px;margin-top:14px;}table{border-collapse:collapse;width:100%;font-size:13px;margin-top:8px;}ul{font-size:12px;}p{font-size:12px;}@media print{body{margin:12px;}}</style>
-  </head><body>
-    <h1>INFORMAÇÕES DO FINANCIAMENTO IMOBILIÁRIO — ${esc((c.banco || 'Bradesco').toUpperCase())}</h1>
-    <h2>CONFERÊNCIA DE DADOS DO SEU FINANCIAMENTO</h2>
-    <table>
-      ${row('Proponente principal', esc(c.cliente || '—'))}
-      ${row('Cônjuge / Comprador secundário', esc(extra.conjuge || '—'))}
-      ${row('Corretor / Imobiliária', esc(c.indicacao || '—'))}
-      ${row('Banco', esc(c.banco || '—'))}
-      ${row('Agência', esc(c.agencia || '—'))}
-      ${row('Conta corrente', esc(extra.conta || '—'))}
-      ${row('Produto', esc(produto))}
-      ${row('Valor do imóvel', vImovel ? fmtMoedaBriefing(vImovel) : esc(c.valor_imovel || '—'))}
-      ${row('Valor financiado', vFin ? fmtMoedaBriefing(vFin) : esc(c.valor_financiado || '—'))}
-      ${row('Despesas de cartório', extra.custas === 'SIM' ? fmtMoedaBriefing(vCustas) : 'NÃO HÁ')}
-      ${row('Total financiado', vTotal ? fmtMoedaBriefing(vTotal) : '—')}
-      ${row('Utilização de FGTS', fgts ? 'SIM' : 'NÃO HÁ')}
-      ${row('Valor do FGTS', fgts ? esc(c.valor_fgts || 'R$ 0,00') : 'NÃO HÁ')}
-      ${row('IQ', iq ? 'SIM' : 'NÃO HÁ')}
-      ${row('Prazo', esc(extra.prazo) + ' meses')}
-      ${row('Sistema de amortização', esc(extra.sistema))}
-    </table>
-    ${blocoFgts}
-    <p>* O financiamento das despesas de cartório e ITBI ocorre conforme contratação. Valor de referência: 5% do valor do imóvel.</p>
-    <script>window.onload = function(){ window.print(); }<\/script>
-  </body></html>`);
-  w.document.close();
+  const data = {
+    proponente: c.cliente || '—',
+    conjuge: extra.conjuge || '—',
+    corretor: c.indicacao || '—',
+    banco: c.banco || '—',
+    agencia: c.agencia || '—',
+    conta: extra.conta || '—',
+    produto,
+    valor_imovel: c.valor_imovel || '—',
+    valor_financiado: c.valor_financiado || '—',
+    despesas: extra.custas === 'SIM' ? fmtMoedaBriefing(vCustas) : 'NÃO HÁ',
+    total: vTotal ? fmtMoedaBriefing(vTotal) : '—',
+    fgts: fgts ? 'SIM' : 'NÃO HÁ',
+    valor_fgts: fgts ? (c.valor_fgts || 'R$ 0,00') : 'NÃO HÁ',
+    iq: iq ? 'SIM' : 'NÃO HÁ',
+    prazo: extra.prazo + ' meses',
+    sistema: extra.sistema
+  };
+  try {
+    mostrarToast('⏳ Gerando briefing...');
+    const res = await fetch('briefings/' + tpl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const zip = new PizZip(await res.arrayBuffer());
+    const doc = new docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+    doc.render(data);
+    const blob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Briefing ' + (c.cliente || 'cliente') + '.docx';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+    mostrarToast('📄 Briefing gerado');
+  } catch (e) {
+    console.error('Erro briefing:', e);
+    mostrarToast('Erro ao gerar briefing');
+  }
 }
 
 // ========== URGENTE ==========

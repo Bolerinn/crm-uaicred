@@ -2,10 +2,12 @@
   "version": 2,
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
+    { "src": "briefings/(.*)", "use": "@vercel/static" },
     { "src": "logo-p.png", "use": "@vercel/static" },
     { "src": "package.json", "use": "@vercel/static" }
   ],
   "routes": [
+    { "src": "/briefings/(.*)", "dest": "/briefings/$1" },
     { "src": "/logo-p\\.png", "dest": "/logo-p.png" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
