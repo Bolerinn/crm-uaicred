@@ -1311,7 +1311,7 @@ const STATUS_OPTS = [
   { id: 'analise-juridica',label: 'Análise Jurídica' },
   { id: 'emitido',         label: 'Contrato Emitido' },
 ];
-const PRODUTO_OPTS = ['SBPE', 'FGTS', 'FGTS a vista', 'HomeEquity', 'Terreno', 'Comercial', 'Construção'];
+const PRODUTO_OPTS = ['SBPE', 'MCMV', 'FGTS a vista', 'HomeEquity', 'Terreno', 'Comercial', 'Construção'];
 const BANCO_OPTS = ['','Caixa','Bradesco','Itaú','Santander','Inter'];
 const STATUS_POR_BANCO = {
   '':           ['aguardando-doc','aguardando-vis','emitido'],
@@ -1723,6 +1723,8 @@ async function carregarDados() {
     if (!error) {
       clientes = data || [];
       clientes = [...new Map(clientes.map(c => [c.id, c])).values()]; // dedup
+      // Migração FGTS→MCMV (produto renomeado; "FGTS a vista" preservado)
+      clientes.forEach(c => { if (c.produto === 'FGTS') { c.produto = 'MCMV'; sb.from('clientes').update({ produto: 'MCMV' }).eq('id', c.id).then(() => {}); } });
 
       // Limpeza: reverter follow_up em originais que têm clone na FU (dados sujos do bug antigo)
       const fuRecords = clientes.filter(c => c.follow_up === true && !c.deleted_at);
@@ -1742,6 +1744,7 @@ async function carregarDados() {
       const { data: d2, error: e2 } = await sb.rpc('get_clientes');
       if (!e2) {
         clientes = (d2 || []).filter(c => !c.deleted_at);
+        clientes.forEach(c => { if (c.produto === 'FGTS') c.produto = 'MCMV'; });
       } else {
         mostrarToast('Erro ao carregar dados'); return;
       }
@@ -3650,12 +3653,12 @@ function renderizarMetricas() {
 
   // Produtos
   const produtos = {};
-  ['SBPE','FGTS','Carta de Crédito'].forEach(p => {
+  ['SBPE','MCMV','Carta de Crédito'].forEach(p => {
     produtos[p] = filtrados.filter(c => c.produto === p).length;
   });
-  produtos['Outros'] = filtrados.filter(c => !['SBPE','FGTS','Carta de Crédito'].includes(c.produto||'')).length;
+  produtos['Outros'] = filtrados.filter(c => !['SBPE','MCMV','Carta de Crédito'].includes(c.produto||'')).length;
   const totalProd = Object.values(produtos).reduce((a,b)=>a+b,0) || 1;
-  const coresProduto = { 'SBPE':'#f97316', 'FGTS':'#1e40af', 'Carta de Crédito':'#7c3aed', 'Outros':'#059669' };
+  const coresProduto = { 'SBPE':'#f97316', 'MCMV':'#1e40af', 'Carta de Crédito':'#7c3aed', 'Outros':'#059669' };
   let pieGrad = '';
   let acum = 0;
   Object.entries(produtos).forEach(([nome, qtd]) => {
@@ -4201,7 +4204,7 @@ function renderizarFiltrosFu() {
 function renderizarFiltrosProdutoFu() {
   const container = document.getElementById('filtrosProdutoFu');
   if (!container) return;
-  container.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Produto:</span> <button class="filter-btn ${filtroProdutoFu==='todos'?'active':''}" onclick="filtrarProdutoFu('todos', this)">Todos</button> ${['SBPE','FGTS','Carta Crédito','Rural','Imobiliário'].map(p => `<button class="filter-btn ${filtroProdutoFu===p?'active':''}" onclick="filtrarProdutoFu('${p}', this)">${p}</button>`).join('')}`;
+  container.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Produto:</span> <button class="filter-btn ${filtroProdutoFu==='todos'?'active':''}" onclick="filtrarProdutoFu('todos', this)">Todos</button> ${['SBPE','MCMV','Carta Crédito','Rural','Imobiliário'].map(p => `<button class="filter-btn ${filtroProdutoFu===p?'active':''}" onclick="filtrarProdutoFu('${p}', this)">${p}</button>`).join('')}`;
 }
 
 function filtrarProdutoFu(produto, btn) {
@@ -4454,7 +4457,7 @@ function renderizarTabelaEmitidos() {
       <td class="px-3 py-2.5 text-gray-300">${esc(c.agencia||'—')}</td>
       <td class="px-3 py-2.5 text-gray-300">${esc(c.valor_imovel||'—')}</td>
       <td class="px-3 py-2.5 text-gray-300">${esc(c.valor_financiado||'—')}</td>
-      <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='FGTS'?'text-orange-400':'text-gray-300'}">${esc(c.produto||'—')}</span></td>
+      <td class="px-3 py-2.5"><span class="text-xs font-semibold ${c.produto==='MCMV'?'text-orange-400':'text-gray-300'}">${esc(c.produto||'—')}</span></td>
       <td class="px-3 py-2.5 text-gray-400 text-xs">${esc(c.data_emissao||'—')}</td>
       <td class="px-3 py-2.5 criado-por-col text-gray-400 text-xs">${esc(c.emitido_por||c.criado_por||'—')}</td>
       <td class="px-2 py-2.5 text-center">
@@ -4489,7 +4492,7 @@ function renderizarFiltros() {
     <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Produto:</span>
     <button class="filter-btn filter-btn-produto ${filtroProduto==='todos'?'active':''}" onclick="filtrarProduto('todos', this)">Todos</button>
     <button class="filter-btn filter-btn-produto ${filtroProduto==='SBPE'?'active':''}" onclick="filtrarProduto('SBPE', this)">SBPE</button>
-    <button class="filter-btn filter-btn-produto ${filtroProduto==='FGTS'?'active':''}" onclick="filtrarProduto('FGTS', this)">FGTS</button>
+    <button class="filter-btn filter-btn-produto ${filtroProduto==='MCMV'?'active':''}" onclick="filtrarProduto('MCMV', this)">MCMV</button>
     <button class="filter-btn filter-btn-produto ${filtroProduto==='FGTS a vista'?'active':''}" onclick="filtrarProduto('FGTS a vista', this)">FGTS a vista</button>
     <button class="filter-btn filter-btn-produto ${filtroProduto==='HomeEquity'?'active':''}" onclick="filtrarProduto('HomeEquity', this)">HomeEquity</button>
     <button class="filter-btn filter-btn-produto ${filtroProduto==='Terreno'?'active':''}" onclick="filtrarProduto('Terreno', this)">Terreno</button>
