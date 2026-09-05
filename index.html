@@ -2453,6 +2453,24 @@ async function imprimirBriefing(id, extra) {
     const zip = new PizZip(await res.arrayBuffer());
     const doc = new docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
     doc.render(data);
+    // Aceitar revisões (texto cru, sem marcas): remove dels, desembrulha ins, limpa *Change
+    try {
+      const WNS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+      const xmlDoc = new DOMParser().parseFromString(doc.getZip().file('word/document.xml').asText(), 'application/xml');
+      let dels = xmlDoc.getElementsByTagNameNS(WNS, 'del');
+      while (dels.length) dels[0].parentNode.removeChild(dels[0]);
+      let inss = xmlDoc.getElementsByTagNameNS(WNS, 'ins');
+      while (inss.length) {
+        const ins = inss[0], parent = ins.parentNode;
+        while (ins.firstChild) parent.insertBefore(ins.firstChild, ins);
+        parent.removeChild(ins);
+      }
+      ['rPrChange', 'pPrChange'].forEach(t => {
+        let els = xmlDoc.getElementsByTagNameNS(WNS, t);
+        while (els.length) els[0].parentNode.removeChild(els[0]);
+      });
+      doc.getZip().file('word/document.xml', new XMLSerializer().serializeToString(xmlDoc));
+    } catch (e) { console.error('Limpeza de revisões:', e); }
     const blob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
