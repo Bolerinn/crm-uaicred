@@ -2325,8 +2325,137 @@ function toggleIQ(id) {
   if (!novo) atualizarCampo(id, 'data_iq', '');
 }
 
+// ========== BRIEFING (piloto Bradesco) ==========
 function gerarBriefing(id) {
-  mostrarToast('📄 Briefing em desenvolvimento — em breve disponível');
+  abrirPopupBriefing(id);
+}
+
+function abrirPopupBriefing(id) {
+  fecharPopupBriefing();
+  const overlay = document.createElement('div');
+  overlay.id = 'briefingOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML = `
+    <div style="background:var(--bg-card,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;padding:20px;width:100%;max-width:440px;color:var(--text,#e2e8f0);">
+      <h3 style="margin:0 0 12px;font-size:16px;font-weight:700;">📄 Gerar Briefing — Bradesco</h3>
+      <label style="display:block;font-size:12px;margin-bottom:8px;">Cônjuge / Comprador secundário
+        <input id="bfConjuge" type="text" placeholder="Nome (opcional)" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg-input,#0f172a);color:inherit;">
+      </label>
+      <label style="display:block;font-size:12px;margin-bottom:8px;">Conta corrente
+        <input id="bfConta" type="text" placeholder="Ex: 20277 51-1" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg-input,#0f172a);color:inherit;">
+      </label>
+      <label style="display:block;font-size:12px;margin-bottom:8px;">Prazo (meses)
+        <input id="bfPrazo" type="number" min="1" max="420" placeholder="Ex: 420" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg-input,#0f172a);color:inherit;">
+      </label>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <label style="flex:1;font-size:12px;">Embutir custas cartorárias
+          <select id="bfCustas" onchange="toggleCustasBriefing()" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg-input,#0f172a);color:inherit;">
+            <option value="NAO">Não</option>
+            <option value="SIM">Sim</option>
+          </select>
+        </label>
+        <label style="flex:1;font-size:12px;">Sistema de amortização
+          <select id="bfSistema" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg-input,#0f172a);color:inherit;">
+            <option value="SAC">SAC</option>
+            <option value="PRICE">Price</option>
+          </select>
+        </label>
+      </div>
+      <label id="bfValorCustasWrap" style="display:none;font-size:12px;margin-bottom:12px;">Valor das despesas de cartório (R$)
+        <input id="bfValorCustas" type="text" placeholder="R$ 0,00" onfocus="this.value=this.value.replace(/[^0-9]/g,'')" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onblur="formatarMoeda(this)" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg-input,#0f172a);color:inherit;">
+      </label>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="fecharPopupBriefing()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border,#334155);background:transparent;color:inherit;cursor:pointer;">Cancelar</button>
+        <button onclick="confirmarBriefing(${id})" style="padding:8px 14px;border-radius:8px;border:0;background:#f97316;color:#fff;font-weight:700;cursor:pointer;">Imprimir</button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) fecharPopupBriefing(); });
+  document.body.appendChild(overlay);
+}
+
+function fecharPopupBriefing() {
+  const o = document.getElementById('briefingOverlay');
+  if (o) o.remove();
+}
+
+function toggleCustasBriefing() {
+  const v = document.getElementById('bfCustas').value;
+  document.getElementById('bfValorCustasWrap').style.display = v === 'SIM' ? 'block' : 'none';
+}
+
+function parseMoedaBriefing(v) {
+  if (!v) return 0;
+  return parseFloat(String(v).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+}
+
+function fmtMoedaBriefing(n) {
+  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function confirmarBriefing(id) {
+  const prazo = (document.getElementById('bfPrazo').value || '').trim();
+  if (!prazo || parseInt(prazo) <= 0) { mostrarToast('Informe o prazo em meses'); return; }
+  const custas = document.getElementById('bfCustas').value;
+  const valorCustas = (document.getElementById('bfValorCustas').value || '').trim();
+  if (custas === 'SIM' && !parseMoedaBriefing(valorCustas)) { mostrarToast('Informe o valor das despesas de cartório'); return; }
+  const extra = {
+    conjuge: (document.getElementById('bfConjuge').value || '').trim(),
+    conta: (document.getElementById('bfConta').value || '').trim(),
+    prazo, custas, valorCustas,
+    sistema: document.getElementById('bfSistema').value
+  };
+  fecharPopupBriefing();
+  imprimirBriefing(id, extra);
+}
+
+function imprimirBriefing(id, extra) {
+  const c = (typeof clientes !== 'undefined' ? clientes : []).find(x => x.id === id);
+  if (!c) { mostrarToast('Cliente não encontrado'); return; }
+  const fgts = !!c.fgts, iq = !!c.iq;
+  const produto = c.produto === 'MCMV' ? 'Minha Casa Minha Vida' : (c.produto || '—');
+  const vImovel = parseMoedaBriefing(c.valor_imovel);
+  const vFin = parseMoedaBriefing(c.valor_financiado);
+  const vCustas = extra.custas === 'SIM' ? parseMoedaBriefing(extra.valorCustas) : 0;
+  const vTotal = vFin + vCustas;
+  const row = (k, v) => `<tr><td style="padding:6px 10px;border:1px solid #999;font-weight:700;width:42%;">${k}</td><td style="padding:6px 10px;border:1px solid #999;">${v}</td></tr>`;
+  const blocoFgts = fgts ? `
+    <h3>POSSO UTILIZAR MEU FGTS NA OPERAÇÃO?</h3>
+    <ul>
+      <li>Ter no mínimo 3 anos de trabalho sob o regime do FGTS (consecutivos ou não).</li>
+      <li>Não possuir financiamento ativo no SFH em qualquer parte do país.</li>
+      <li>Não ser proprietário de imóvel residencial urbano na região do imóvel objeto.</li>
+      <li>Ser imóvel residencial urbano destinado à moradia do titular.</li>
+    </ul>` : '';
+  const w = window.open('', '_blank');
+  if (!w) { mostrarToast('Permita pop-ups para imprimir o briefing'); return; }
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Briefing — ${esc(c.cliente || '')}</title>
+  <style>body{font-family:Arial,sans-serif;color:#111;margin:32px;}h1{font-size:20px;text-align:center;}h2{font-size:15px;margin-top:18px;border-bottom:2px solid #f97316;padding-bottom:4px;}h3{font-size:13px;margin-top:14px;}table{border-collapse:collapse;width:100%;font-size:13px;margin-top:8px;}ul{font-size:12px;}p{font-size:12px;}@media print{body{margin:12px;}}</style>
+  </head><body>
+    <h1>INFORMAÇÕES DO FINANCIAMENTO IMOBILIÁRIO — ${esc((c.banco || 'Bradesco').toUpperCase())}</h1>
+    <h2>CONFERÊNCIA DE DADOS DO SEU FINANCIAMENTO</h2>
+    <table>
+      ${row('Proponente principal', esc(c.cliente || '—'))}
+      ${row('Cônjuge / Comprador secundário', esc(extra.conjuge || '—'))}
+      ${row('Corretor / Imobiliária', esc(c.indicacao || '—'))}
+      ${row('Banco', esc(c.banco || '—'))}
+      ${row('Agência', esc(c.agencia || '—'))}
+      ${row('Conta corrente', esc(extra.conta || '—'))}
+      ${row('Produto', esc(produto))}
+      ${row('Valor do imóvel', vImovel ? fmtMoedaBriefing(vImovel) : esc(c.valor_imovel || '—'))}
+      ${row('Valor financiado', vFin ? fmtMoedaBriefing(vFin) : esc(c.valor_financiado || '—'))}
+      ${row('Despesas de cartório', extra.custas === 'SIM' ? fmtMoedaBriefing(vCustas) : 'NÃO HÁ')}
+      ${row('Total financiado', vTotal ? fmtMoedaBriefing(vTotal) : '—')}
+      ${row('Utilização de FGTS', fgts ? 'SIM' : 'NÃO HÁ')}
+      ${row('Valor do FGTS', fgts ? esc(c.valor_fgts || 'R$ 0,00') : 'NÃO HÁ')}
+      ${row('IQ', iq ? 'SIM' : 'NÃO HÁ')}
+      ${row('Prazo', esc(extra.prazo) + ' meses')}
+      ${row('Sistema de amortização', esc(extra.sistema))}
+    </table>
+    ${blocoFgts}
+    <p>* O financiamento das despesas de cartório e ITBI ocorre conforme contratação. Valor de referência: 5% do valor do imóvel.</p>
+    <script>window.onload = function(){ window.print(); }<\/script>
+  </body></html>`);
+  w.document.close();
 }
 
 // ========== URGENTE ==========
