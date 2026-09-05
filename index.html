@@ -2465,7 +2465,7 @@ async function imprimirBriefing(id, extra) {
         while (ins.firstChild) parent.insertBefore(ins.firstChild, ins);
         parent.removeChild(ins);
       }
-      ['rPrChange', 'pPrChange'].forEach(t => {
+      ['rPrChange', 'pPrChange', 'commentRangeStart', 'commentRangeEnd', 'commentReference'].forEach(t => {
         let els = xmlDoc.getElementsByTagNameNS(WNS, t);
         while (els.length) els[0].parentNode.removeChild(els[0]);
       });
