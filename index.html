@@ -2448,7 +2448,7 @@ async function imprimirBriefing(id, extra) {
   };
   try {
     mostrarToast('⏳ Gerando briefing...');
-    const res = await fetch('briefings/' + tpl);
+    const res = await fetch('briefings/' + tpl + '?v=3', { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const zip = new PizZip(await res.arrayBuffer());
     const doc = new docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
