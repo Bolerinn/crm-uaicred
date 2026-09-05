@@ -2453,32 +2453,6 @@ async function imprimirBriefing(id, extra) {
     const zip = new PizZip(await res.arrayBuffer());
     const doc = new docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
     doc.render(data);
-    // Aceitar revisões (texto cru, sem marcas): remove dels, desembrulha ins, limpa *Change
-    // em document.xml, cabeçalhos, rodapés, footnotes e endnotes
-    try {
-      const WNS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-      const limparXml = (xmlDoc) => {
-        let dels = xmlDoc.getElementsByTagNameNS(WNS, 'del');
-        while (dels.length) dels[0].parentNode.removeChild(dels[0]);
-        let inss = xmlDoc.getElementsByTagNameNS(WNS, 'ins');
-        while (inss.length) {
-          const ins = inss[0], parent = ins.parentNode;
-          while (ins.firstChild) parent.insertBefore(ins.firstChild, ins);
-          parent.removeChild(ins);
-        }
-        ['rPrChange', 'pPrChange', 'commentRangeStart', 'commentRangeEnd', 'commentReference'].forEach(t => {
-          let els = xmlDoc.getElementsByTagNameNS(WNS, t);
-          while (els.length) els[0].parentNode.removeChild(els[0]);
-        });
-        return new XMLSerializer().serializeToString(xmlDoc);
-      };
-      Object.keys(doc.getZip().files).forEach(n => {
-        if (/^word\/(document|header\d*|footer\d*|footnotes|endnotes)\.xml$/.test(n)) {
-          const f = doc.getZip().file(n);
-          if (f) doc.getZip().file(n, limparXml(new DOMParser().parseFromString(f.asText(), 'application/xml')));
-        }
-      });
-    } catch (e) { console.error('Limpeza de revisões:', e); }
     const blob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
