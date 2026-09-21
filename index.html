@@ -173,6 +173,7 @@ Object.defineProperty(window, 'usuarioTipo', { get() { return usuarioTipo; } });
     background: var(--bg-body);
     color: var(--text);
     transition: background 0.3s ease, color 0.3s ease;
+    zoom: 0.9; /* escala global do CRM — equivale ao zoom 90% do navegador */
   }
 
   /* === SIDEBAR === */
@@ -4037,16 +4038,33 @@ function metricaSetEmpresa(e) {
 }
 
 // ===== Altura das tabelas: mantém o cabeçalho sempre visível na tela =====
+// O CRM usa zoom:0.9 no body. getBoundingClientRect() devolve px JÁ escalonados
+// (pintados), enquanto maxHeight é interpretado em px LOCAIS — por isso tudo é
+// normalizado pelo fator de zoom medido antes de calcular.
+function fatorZoomCrm() {
+  try {
+    var p = document.createElement('div');
+    p.style.cssText = 'position:absolute;top:0;left:0;width:1000px;height:0;visibility:hidden;pointer-events:none';
+    document.body.appendChild(p);
+    var w = p.getBoundingClientRect().width;
+    if (p.parentNode) p.parentNode.removeChild(p);
+    return (w > 0 && isFinite(w)) ? (w / 1000) : 1;
+  } catch (e) { return 1; }
+}
+
 function ajustarAlturaTabelas() {
   try {
+    var z = fatorZoomCrm();
     document.querySelectorAll('.table-container').forEach(function (el) {
       var r = el.getBoundingClientRect();
-      if (!r.width) { el.style.maxHeight = ''; return; }        // aba oculta
-      var docTop = r.top + window.scrollY;
-      var espaco = window.innerHeight - docTop - 72;            // folga p/ botões abaixo
-      var limite = window.innerHeight - 150;
+      if (!r.width) { el.style.maxHeight = ''; return; }          // aba oculta
+      var vhLocal = window.innerHeight / z;                       // viewport em px locais
+      var topLocal = (r.top + window.scrollY) / z;                // topo do container em px locais
+      var espaco = vhLocal - topLocal - (72 / z);                 // folga p/ botões abaixo
+      var limite = vhLocal - (150 / z);
       if (espaco > limite) espaco = limite;
-      el.style.maxHeight = (espaco > 260 ? Math.round(espaco) : 260) + 'px';
+      var minimo = 260 / z;
+      el.style.maxHeight = Math.round(espaco > minimo ? espaco : minimo) + 'px';
     });
   } catch (e) { console.warn('ajustarAlturaTabelas', e); }
 }
